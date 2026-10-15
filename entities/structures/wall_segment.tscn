@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3 uid="uid://d4e5f6g7h8i9j"]
+
+[ext_resource type="Script" path="res://entities/structures/wall_segment.gd" id="1_wall_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
+size = Vector3(4, 3.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metal_wall"]
+albedo_color = Color(0.22, 0.25, 0.28, 1)
+metallic = 0.85
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_main"]
+material = SubResource("StandardMaterial3D_metal_wall")
+size = Vector3(4, 3.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_accent_trim"]
+albedo_color = Color(0.12, 0.45, 0.85, 1)
+metallic = 0.6
+roughness = 0.2
+emission_enabled = true
+emission = Color(0.05, 0.2, 0.4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_trim"]
+material = SubResource("StandardMaterial3D_accent_trim")
+size = Vector3(4.05, 0.3, 1.25)
+
+[node name="WallSegment" type="StaticBody3D" groups=["structures"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_wall_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+shape = SubResource("BoxShape3D_wall")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="MainMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+mesh = SubResource("BoxMesh_wall_main")
+
+[node name="TrimMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+mesh = SubResource("BoxMesh_wall_trim")

@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3 uid="uid://f6g7h8i9j0k1l"]
+
+[ext_resource type="Script" path="res://levels/move_indicator.gd" id="1_indicator_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring_indicator"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.1, 1, 0.35, 0.9)
+
+[sub_resource type="TorusMesh" id="TorusMesh_indicator"]
+material = SubResource("StandardMaterial3D_ring_indicator")
+inner_radius = 0.55
+outer_radius = 0.75
+
+[node name="MoveIndicator" type="Node3D"]
+script = ExtResource("1_indicator_script")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("TorusMesh_indicator")

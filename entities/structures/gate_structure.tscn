@@ -1,0 +1,89 @@
+[gd_scene load_steps=11 format=3 uid="uid://c8x1y2z3a4b5c"]
+
+[ext_resource type="Script" path="res://entities/structures/gate_structure.gd" id="1_gate_script"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_left_pillar"]
+size = Vector3(1, 3.6, 1.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_right_pillar"]
+size = Vector3(1, 3.6, 1.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_door"]
+size = Vector3(4, 3.3, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_gate_frame"]
+albedo_color = Color(0.28, 0.3, 0.34, 1)
+metallic = 0.85
+roughness = 0.3
+
+[sub_resource type="BoxMesh" id="BoxMesh_pillar"]
+material = SubResource("StandardMaterial3D_gate_frame")
+size = Vector3(1, 3.6, 1.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_lintel"]
+material = SubResource("StandardMaterial3D_gate_frame")
+size = Vector3(6, 0.6, 1.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_door_blast"]
+albedo_color = Color(0.18, 0.2, 0.22, 1)
+metallic = 0.9
+roughness = 0.25
+
+[sub_resource type="BoxMesh" id="BoxMesh_door"]
+material = SubResource("StandardMaterial3D_door_blast")
+size = Vector3(4, 3.3, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_status_light"]
+size = Vector3(0.8, 0.25, 0.2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_proximity"]
+size = Vector3(5.5, 3, 8)
+
+[node name="GateStructure" type="StaticBody3D" groups=["gates", "structures"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_gate_script")
+
+[node name="PillarLeftCol" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.8, 0)
+shape = SubResource("BoxShape3D_left_pillar")
+
+[node name="PillarRightCol" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1.8, 0)
+shape = SubResource("BoxShape3D_right_pillar")
+
+[node name="DoorCollisionShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
+shape = SubResource("BoxShape3D_door")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="PillarLeftMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 1.8, 0)
+mesh = SubResource("BoxMesh_pillar")
+
+[node name="PillarRightMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1.8, 0)
+mesh = SubResource("BoxMesh_pillar")
+
+[node name="TopLintelMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0)
+mesh = SubResource("BoxMesh_lintel")
+
+[node name="StatusLight" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6, 0.75)
+mesh = SubResource("BoxMesh_status_light")
+
+[node name="DoorSlidingPart" type="Node3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
+
+[node name="DoorMesh" type="MeshInstance3D" parent="VisualRoot/DoorSlidingPart"]
+mesh = SubResource("BoxMesh_door")
+
+[node name="ProximityArea" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ProximityArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("BoxShape3D_proximity")

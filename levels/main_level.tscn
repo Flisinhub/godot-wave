@@ -1,0 +1,218 @@
+[gd_scene load_steps=18 format=3 uid="uid://d1e2f3a4b5c6d"]
+
+[ext_resource type="Script" path="res://levels/main_level.gd" id="1_main_script"]
+[ext_resource type="PackedScene" path="res://levels/rts_camera_3d.tscn" id="2_camera_scene"]
+[ext_resource type="Script" path="res://core/rts_controller.gd" id="3_controller_script"]
+[ext_resource type="Script" path="res://ui/selection_box_ui.gd" id="4_box_ui_script"]
+[ext_resource type="PackedScene" path="res://entities/structures/command_center.tscn" id="5_cc_scene"]
+[ext_resource type="PackedScene" path="res://entities/structures/gate_structure.tscn" id="6_gate_scene"]
+[ext_resource type="PackedScene" path="res://entities/structures/wall_segment.tscn" id="7_wall_scene"]
+[ext_resource type="PackedScene" path="res://entities/allies/base_unit_3d.tscn" id="8_unit_scene"]
+
+[sub_resource type="Environment" id="Environment_volcanic"]
+background_mode = 1
+background_color = Color(0.045, 0.035, 0.04, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.24, 0.12, 0.1, 1)
+ambient_light_energy = 1.1
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.2
+glow_blend_mode = 0
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_map"]
+geometry_parsed_geometry_type = 1
+cell_size = 0.25
+cell_height = 0.25
+agent_height = 1.75
+agent_radius = 0.5
+agent_max_climb = 0.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(80, 1, 80)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_volcanic_ground"]
+albedo_color = Color(0.12, 0.11, 0.13, 1)
+metallic = 0.15
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+material = SubResource("StandardMaterial3D_volcanic_ground")
+size = Vector3(80, 1, 80)
+
+[node name="MainLevel" type="Node3D"]
+script = ExtResource("1_main_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_volcanic")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.819152, 0.32899, -0.469846, 0, 0.819152, 0.573576, 0.573576, -0.469846, 0.67101, 0, 30, 0)
+light_color = Color(1, 0.78, 0.62, 1)
+light_energy = 1.35
+shadow_enabled = true
+directional_shadow_max_distance = 150.0
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_map")
+
+[node name="Ground" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Ground"]
+shape = SubResource("BoxShape3D_ground")
+
+[node name="GroundMesh" type="MeshInstance3D" parent="NavigationRegion3D/Ground"]
+mesh = SubResource("BoxMesh_ground")
+
+[node name="BasePerimeter" type="Node3D" parent="NavigationRegion3D"]
+
+[node name="CommandCenter" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("5_cc_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
+
+[node name="WestGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 4)
+
+[node name="EastGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 4)
+
+[node name="WallCenter1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 4)
+
+[node name="WallCenter2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 4)
+
+[node name="WallNorthWest1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 4)
+
+[node name="WallNorthWest2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 4)
+
+[node name="WallNorthEast1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 4)
+
+[node name="WallNorthEast2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 4)
+
+[node name="WallWest1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 8)
+
+[node name="WallWest2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 12)
+
+[node name="WallWest3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 16)
+
+[node name="WallWest4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 20)
+
+[node name="WallEast1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 8)
+
+[node name="WallEast2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 12)
+
+[node name="WallEast3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 16)
+
+[node name="WallEast4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 20)
+
+[node name="WallSouth1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 22)
+
+[node name="WallSouth2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 22)
+
+[node name="WallSouth3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 22)
+
+[node name="WallSouth4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 22)
+
+[node name="WallSouth5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
+
+[node name="WallSouth6" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 22)
+
+[node name="WallSouth7" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 22)
+
+[node name="WallSouth8" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 22)
+
+[node name="WallSouth9" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 22)
+
+[node name="Allies" type="Node3D" parent="."]
+
+[node name="Marine1" parent="Allies" instance=ExtResource("8_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 9.5)
+
+[node name="Marine2" parent="Allies" instance=ExtResource("8_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 8.5)
+
+[node name="Marine3" parent="Allies" instance=ExtResource("8_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+
+[node name="Marine4" parent="Allies" instance=ExtResource("8_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 8.5)
+
+[node name="Marine5" parent="Allies" instance=ExtResource("8_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 9.5)
+
+[node name="RTSCamera3D" parent="." instance=ExtResource("2_camera_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 11)
+
+[node name="RTSController" type="Node" parent="." node_paths=PackedStringArray("camera_rig", "selection_box_ui")]
+script = ExtResource("3_controller_script")
+camera_rig = NodePath("../RTSCamera3D")
+selection_box_ui = NodePath("../UI/SelectionBoxUI")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="SelectionBoxUI" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4_box_ui_script")
+
+[node name="HUDPanel" type="PanelContainer" parent="UI"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 380.0
+offset_bottom = 120.0
+mouse_filter = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/HUDPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/HUDPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="UI/HUDPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "STARCRAFT II DEFENSE // SPRINT 1"
+
+[node name="HelpLabel" type="Label" parent="UI/HUDPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+text = "• Click Izq: Seleccionar / Arrastrar para Caja de Selección
+• Click Der: Mover en Formación Táctica
+• Compuertas: Abre al acercar aliados o al hacer click
+• WASD / Flechas / Bordes: Mover Cámara | Rueda: Zoom"
