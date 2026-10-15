@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+enemy_name = "Roach"
+max_health = 110.0
+move_speed = 4.2
+attack_damage = 14.0
+attack_range = 3.8
+attack_cooldown = 1.1
+kill_reward = 15
+body_color = Color(0.3, 0.2, 0.12, 1)
+accent_color = Color(0.1, 1, 0.3, 1)
+mesh_scale = Vector3(1.15, 0.95, 1.3)

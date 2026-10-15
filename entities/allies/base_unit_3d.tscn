@@ -1,7 +1,8 @@
-[gd_scene load_steps=9 format=3 uid="uid://df2m3n5o1p0q1"]
+[gd_scene load_steps=12 format=3 uid="uid://df2m3n5o1p0q1"]
 
 [ext_resource type="Script" path="res://entities/allies/base_unit_3d.gd" id="1_base_unit"]
 [ext_resource type="Resource" path="res://data/units/marine_data.tres" id="2_unit_data"]
+[ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="3_health_scene"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_unit"]
 radius = 0.4
@@ -25,6 +26,14 @@ roughness = 0.2
 [sub_resource type="BoxMesh" id="BoxMesh_rifle"]
 material = SubResource("StandardMaterial3D_rifle_dark")
 size = Vector3(0.15, 0.2, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flash"]
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_flash"]
+material = SubResource("StandardMaterial3D_flash")
+size = Vector3(0.12, 0.12, 0.25)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
 shading_mode = 0
@@ -63,7 +72,15 @@ mesh = SubResource("CapsuleMesh_body")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1, -0.4)
 mesh = SubResource("BoxMesh_rifle")
 
+[node name="MuzzleFlash" type="MeshInstance3D" parent="VisualRoot/RifleMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.45)
+visible = false
+mesh = SubResource("BoxMesh_flash")
+
 [node name="SelectionRing" type="MeshInstance3D" parent="VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 visible = false
 mesh = SubResource("TorusMesh_ring")
+
+[node name="HealthBar3D" parent="." instance=ExtResource("3_health_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)

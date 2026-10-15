@@ -14,6 +14,13 @@ signal move_command_issued(target_position: Vector3)
 signal unit_health_changed(unit: Node, current_hp: float, max_hp: float)
 signal unit_died(unit: Node)
 
+# Combat & Wave Signals
+signal wave_started(wave_number: int, total_enemies: int)
+signal wave_completed(wave_number: int)
+signal wave_enemy_count_changed(alive_count: int)
+signal enemy_died(enemy: Node, reward: int)
+signal base_destroyed()
+
 # Structures Signals
 signal gate_state_changed(gate: Node, is_open: bool)
 signal structure_damaged(structure: Node, current_hp: float, max_hp: float)

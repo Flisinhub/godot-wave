@@ -17,6 +17,7 @@ enum GateState { CLOSED, OPEN }
 @onready var door_collision: CollisionShape3D = $DoorCollisionShape
 @onready var status_light_mesh: MeshInstance3D = $VisualRoot/StatusLight
 @onready var proximity_area: Area3D = $ProximityArea
+@onready var health_bar: HealthBar3D = $HealthBar3D
 
 var current_state: GateState = GateState.CLOSED
 var current_health: float = 800.0
@@ -37,6 +38,8 @@ func _ready() -> void:
 	add_to_group("structures")
 	add_to_group("gates")
 	current_health = max_health
+	if health_bar:
+		health_bar.setup(current_health, max_health)
 
 	_door_closed_y = door_visual.position.y
 	_door_open_y = _door_closed_y - door_travel_distance
@@ -160,6 +163,8 @@ func _clean_nearby_allies() -> void:
 
 func take_damage(amount: float) -> void:
 	current_health = max(0.0, current_health - amount)
+	if health_bar:
+		health_bar.update_health(current_health, max_health)
 	SignalBus.structure_damaged.emit(self, current_health, max_health)
 	if current_health <= 0.0:
 		SignalBus.structure_destroyed.emit(self)

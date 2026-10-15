@@ -1,6 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://e5f6g7h8i9j0k"]
+[gd_scene load_steps=10 format=3 uid="uid://e5f6g7h8i9j0k"]
 
 [ext_resource type="Script" path="res://entities/structures/command_center.gd" id="1_cc_script"]
+[ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="2_health_scene"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_cc"]
 size = Vector3(8, 4, 8)
@@ -59,3 +60,6 @@ mesh = SubResource("BoxMesh_cc_bridge")
 [node name="AntennaCorner" type="MeshInstance3D" parent="VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2, 4, 3.2)
 mesh = SubResource("CylinderMesh_antenna")
+
+[node name="HealthBar3D" parent="." instance=ExtResource("2_health_scene")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 5.2, 0)

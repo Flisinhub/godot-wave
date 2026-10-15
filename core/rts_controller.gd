@@ -1,7 +1,7 @@
 class_name RTSController
 extends Node
 
-## RTSController - Handles RTS unit selection, box selection, and tactical movement orders.
+## RTSController - Handles RTS unit selection, box selection, focus fire, and tactical movement orders.
 
 @export var camera_rig: RTSCamera3D
 @export var selection_box_ui: SelectionBoxUI
@@ -48,13 +48,21 @@ func _unhandled_input(event: InputEvent) -> void:
 					else:
 						_handle_single_click_selection(mb.position, is_shift_held)
 
-		# RIGHT CLICK - Tactical Movement & Interaction Orders
+		# RIGHT CLICK - Tactical Movement & Interaction / Attack Orders
 		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.is_pressed():
 			_handle_right_click_order(mb.position)
 
 	elif event is InputEventMouseMotion:
 		if is_box_selecting and selection_box_ui:
 			selection_box_ui.update_box(event.position)
+
+	elif event is InputEventKey and event.is_pressed() and not event.is_echo():
+		var key_ev: InputEventKey = event as InputEventKey
+		# Stop / Hold position hotkeys (S or H)
+		if key_ev.keycode == KEY_S or key_ev.keycode == KEY_H:
+			for unit in selected_units:
+				if is_instance_valid(unit):
+					unit.stop_action()
 
 
 func _handle_single_click_selection(screen_pos: Vector2, is_shift_held: bool) -> void:
@@ -123,9 +131,19 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	if selected_units.is_empty():
 		return
 
-	var target_pos: Vector3 = Vector3.ZERO
 	var ray_res: Dictionary = _raycast_from_screen(screen_pos)
-	
+
+	# 1. Target Focus Fire: Right-click directly on an enemy
+	if not ray_res.is_empty() and ray_res.collider is BaseEnemy3D:
+		var enemy: BaseEnemy3D = ray_res.collider as BaseEnemy3D
+		_spawn_move_indicator(enemy.global_position, Color(1.0, 0.2, 0.2, 0.95))
+		for unit in selected_units:
+			if is_instance_valid(unit):
+				unit.set_attack_target(enemy)
+		return
+
+	# 2. Movement Order to ground position
+	var target_pos: Vector3 = Vector3.ZERO
 	if not ray_res.is_empty():
 		target_pos = ray_res.position
 	else:
@@ -144,8 +162,8 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 
 	target_pos.y = 0.0
 
-	# Spawn visual click indicator on the ground
-	_spawn_move_indicator(target_pos)
+	# Spawn visual green click indicator on the ground
+	_spawn_move_indicator(target_pos, Color(0.1, 1.0, 0.35, 0.9))
 	
 	# Calculate formation positions to prevent infinite collisions/crowding
 	var formation_positions: Array[Vector3] = _calculate_formation_positions(target_pos, selected_units.size(), formation_spacing)
@@ -166,12 +184,13 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	SignalBus.move_command_issued.emit(target_pos)
 
 
-func _spawn_move_indicator(pos: Vector3) -> void:
+func _spawn_move_indicator(pos: Vector3, color: Color = Color(0.1, 1.0, 0.35, 0.9)) -> void:
 	if not move_indicator_scene:
 		return
-	var indicator: Node3D = move_indicator_scene.instantiate() as Node3D
+	var indicator: MoveIndicator = move_indicator_scene.instantiate() as MoveIndicator
 	get_tree().current_scene.add_child(indicator)
 	indicator.global_position = pos + Vector3(0.0, 0.05, 0.0)
+	indicator.set_color(color)
 
 
 func _calculate_formation_positions(center: Vector3, count: int, spacing: float) -> Array[Vector3]:
@@ -234,5 +253,6 @@ func _raycast_from_screen(screen_pos: Vector2) -> Dictionary:
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
+	query.collision_mask = 7 # Detect Layer 1 (World/Walls), Layer 2 (Allies), Layer 4 (Enemies)
 
 	return space_state.intersect_ray(query)

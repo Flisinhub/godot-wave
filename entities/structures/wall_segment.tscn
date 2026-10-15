@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://d4e5f6g7h8i9j"]
+[gd_scene load_steps=8 format=3 uid="uid://d4e5f6g7h8i9j"]
 
 [ext_resource type="Script" path="res://entities/structures/wall_segment.gd" id="1_wall_script"]
+[ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="2_health_scene"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
 size = Vector3(4, 3.2, 1.2)
@@ -43,3 +44,6 @@ mesh = SubResource("BoxMesh_wall_main")
 [node name="TrimMesh" type="MeshInstance3D" parent="VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
 mesh = SubResource("BoxMesh_wall_trim")
+
+[node name="HealthBar3D" parent="." instance=ExtResource("2_health_scene")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 3.8, 0)

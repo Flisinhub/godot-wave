@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3 uid="uid://b1c2d3e4f5a6b"]
+
+[ext_resource type="Script" path="res://entities/enemies/acid_splash_3d.gd" id="1_splash_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_acid"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.2, 0.95, 0.25, 0.9)
+
+[sub_resource type="SphereMesh" id="SphereMesh_drop"]
+material = SubResource("StandardMaterial3D_acid")
+radius = 0.25
+height = 0.5
+
+[node name="AcidSplash3D" type="Node3D"]
+script = ExtResource("1_splash_script")
+
+[node name="Center" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = SubResource("SphereMesh_drop")
+
+[node name="Drop1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.6, 0, 0, 0, 0.6, 0, 0, 0, 0.6, 0.4, 0.4, 0.3)
+mesh = SubResource("SphereMesh_drop")
+
+[node name="Drop2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, -0.4, 0.3, -0.3)
+mesh = SubResource("SphereMesh_drop")
+
+[node name="Drop3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0.2, 0.2, -0.4)
+mesh = SubResource("SphereMesh_drop")

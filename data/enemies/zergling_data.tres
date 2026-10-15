@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+enemy_name = "Zergling"
+max_health = 35.0
+move_speed = 7.2
+attack_damage = 5.0
+attack_range = 1.6
+attack_cooldown = 0.5
+kill_reward = 5
+body_color = Color(0.25, 0.08, 0.35, 1)
+accent_color = Color(0.2, 0.95, 0.2, 1)
+mesh_scale = Vector3(0.8, 0.7, 1.1)
