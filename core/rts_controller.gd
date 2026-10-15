@@ -117,12 +117,27 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	if selected_units.is_empty():
 		return
 
+	var target_pos: Vector3 = Vector3.ZERO
 	var ray_res: Dictionary = _raycast_from_screen(screen_pos)
-	if ray_res.is_empty():
-		return
-
-	var target_pos: Vector3 = ray_res.position
 	
+	if not ray_res.is_empty():
+		target_pos = ray_res.position
+	else:
+		# Fallback to horizontal ground plane at Y = 0.0
+		if not camera_rig or not camera_rig.get_camera():
+			return
+		var cam: Camera3D = camera_rig.get_camera()
+		var ray_origin: Vector3 = cam.project_ray_origin(screen_pos)
+		var ray_dir: Vector3 = cam.project_ray_normal(screen_pos)
+		var ground_plane: Plane = Plane(Vector3.UP, 0.0)
+		var hit = ground_plane.intersects_ray(ray_origin, ray_dir)
+		if hit:
+			target_pos = hit
+		else:
+			return
+
+	target_pos.y = 0.0
+
 	# Spawn visual click indicator on the ground
 	_spawn_move_indicator(target_pos)
 	

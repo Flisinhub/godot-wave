@@ -9,7 +9,16 @@ extends Node3D
 @onready var camera_rig: RTSCamera3D = $RTSCamera3D
 
 func _ready() -> void:
-	# Ensure the navigation mesh is baked and ready for immediate unit micromanagement
+	# Temporarily disable gate door collisions during bake so the navigation mesh
+	# creates walkable corridors through the blast door openings.
+	var gates: Array[Node] = get_tree().get_nodes_in_group("gates")
+	for node in gates:
+		if node is GateStructure:
+			var gate: GateStructure = node as GateStructure
+			if gate.door_collision:
+				gate.door_collision.disabled = true
+
+	# Ensure navigation mesh is baked with Static Colliders
 	if nav_region:
 		if not nav_region.navigation_mesh:
 			var nav_mesh: NavigationMesh = NavigationMesh.new()
@@ -22,6 +31,14 @@ func _ready() -> void:
 			nav_region.navigation_mesh = nav_mesh
 		else:
 			nav_region.navigation_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-		
-		# Bake navigation mesh synchronously so units have paths ready on frame 1
+
 		nav_region.bake_navigation_mesh(false)
+
+	# Restore gate states and collisions according to their configured initial_state
+	for node in gates:
+		if node is GateStructure:
+			var gate: GateStructure = node as GateStructure
+			if gate.initial_state == GateStructure.GateState.CLOSED:
+				gate.close_gate(false)
+			else:
+				gate.open_gate(false)

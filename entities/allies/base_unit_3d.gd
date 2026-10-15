@@ -15,6 +15,7 @@ var move_speed: float = 5.0
 var is_selected: bool = false
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 
+
 func _ready() -> void:
 	add_to_group("allies")
 	
@@ -26,11 +27,11 @@ func _ready() -> void:
 	if selection_ring:
 		selection_ring.visible = false
 	
-	# Configure navigation agent for responsive RTS movement
+	# Configure navigation agent for responsive RTS movement with proper thresholds
 	if nav_agent:
-		nav_agent.path_desired_distance = 0.5
-		nav_agent.target_desired_distance = 0.5
-		nav_agent.path_max_distance = 3.0
+		nav_agent.path_desired_distance = 1.2
+		nav_agent.target_desired_distance = 0.8
+		nav_agent.path_max_distance = 4.0
 
 
 func _physics_process(delta: float) -> void:
@@ -41,8 +42,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	if not nav_agent or nav_agent.is_navigation_finished():
-		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 5.0)
-		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 5.0)
+		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 8.0)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 8.0)
 		move_and_slide()
 		return
 
@@ -61,14 +62,15 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_dir.x * move_speed
 		velocity.z = move_dir.z * move_speed
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 5.0)
-		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 5.0)
+		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 8.0)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 8.0)
 
 	move_and_slide()
 
 
 func move_to(target_pos: Vector3) -> void:
 	if nav_agent:
+		target_pos.y = 0.0
 		nav_agent.target_position = target_pos
 
 
