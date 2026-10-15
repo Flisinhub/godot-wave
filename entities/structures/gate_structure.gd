@@ -2,14 +2,14 @@ class_name GateStructure
 extends StaticBody3D
 
 ## GateStructure - Heavy blast door that opens for allies and blocks paths when closed.
-## Supports manual toggle and automatic proximity detection.
+## Supports manual toggle/locking and automatic proximity detection.
 
 enum GateState { CLOSED, OPEN }
 
 @export var initial_state: GateState = GateState.CLOSED
 @export var auto_open_for_allies: bool = true
 @export var door_travel_distance: float = 3.6
-@export var slide_speed: float = 5.0
+@export var slide_speed: float = 8.0
 @export var max_health: float = 800.0
 
 @onready var visual_root: Node3D = $VisualRoot
@@ -20,16 +20,17 @@ enum GateState { CLOSED, OPEN }
 
 var current_state: GateState = GateState.CLOSED
 var current_health: float = 800.0
+var is_locked_by_player: bool = false
 
 var _door_closed_y: float = 1.7
 var _door_open_y: float = -1.9
 var _target_door_y: float = 1.7
 var _nearby_allies: Array[Node3D] = []
-var _manual_override: bool = false
 
 # Materials for status light
 var _mat_closed: StandardMaterial3D
 var _mat_open: StandardMaterial3D
+var _mat_locked: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -65,6 +66,12 @@ func _setup_materials() -> void:
 	_mat_open.emission = Color(0.1, 1.0, 0.35)
 	_mat_open.emission_energy_multiplier = 2.0
 
+	_mat_locked = StandardMaterial3D.new()
+	_mat_locked.albedo_color = Color(1.0, 0.65, 0.05)
+	_mat_locked.emission_enabled = true
+	_mat_locked.emission = Color(1.0, 0.65, 0.1)
+	_mat_locked.emission_energy_multiplier = 2.5
+
 
 func _process(delta: float) -> void:
 	# Clean up any freed nodes from nearby allies list
@@ -82,18 +89,28 @@ func _process(delta: float) -> void:
 
 
 func toggle_gate() -> void:
-	_manual_override = true
-	if current_state == GateState.CLOSED:
-		open_gate(true)
+	if not is_locked_by_player:
+		# Player manually locks gate in opposite state
+		is_locked_by_player = true
+		if current_state == GateState.CLOSED:
+			open_gate(true)
+		else:
+			close_gate(true)
 	else:
-		close_gate(true)
+		# Unlock manual override and restore automatic behavior
+		is_locked_by_player = false
+		if auto_open_for_allies and not _nearby_allies.is_empty():
+			open_gate(false)
+		else:
+			close_gate(false)
+	
+	_update_status_light()
 
 
 func open_gate(_manual: bool = false) -> void:
 	current_state = GateState.OPEN
 	_target_door_y = _door_open_y
-	if status_light_mesh and _mat_open:
-		status_light_mesh.material_override = _mat_open
+	_update_status_light()
 	SignalBus.gate_state_changed.emit(self, true)
 
 
@@ -102,24 +119,33 @@ func close_gate(_manual: bool = false) -> void:
 	_target_door_y = _door_closed_y
 	if door_collision:
 		door_collision.disabled = false
-	if status_light_mesh and _mat_closed:
-		status_light_mesh.material_override = _mat_closed
+	_update_status_light()
 	SignalBus.gate_state_changed.emit(self, false)
+
+
+func _update_status_light() -> void:
+	if not status_light_mesh:
+		return
+	if is_locked_by_player and _mat_locked:
+		status_light_mesh.material_override = _mat_locked
+	elif current_state == GateState.OPEN and _mat_open:
+		status_light_mesh.material_override = _mat_open
+	elif current_state == GateState.CLOSED and _mat_closed:
+		status_light_mesh.material_override = _mat_closed
 
 
 func _on_proximity_body_entered(body: Node3D) -> void:
 	if body.is_in_group("allies"):
 		if not _nearby_allies.has(body):
 			_nearby_allies.append(body)
-		if auto_open_for_allies and current_state == GateState.CLOSED:
+		if not is_locked_by_player and auto_open_for_allies and current_state == GateState.CLOSED:
 			open_gate(false)
 
 
 func _on_proximity_body_exited(body: Node3D) -> void:
 	if body.is_in_group("allies"):
 		_nearby_allies.erase(body)
-		if auto_open_for_allies and _nearby_allies.is_empty():
-			# No allies nearby anymore, close the security gate
+		if not is_locked_by_player and auto_open_for_allies and _nearby_allies.is_empty():
 			close_gate(false)
 
 
@@ -128,7 +154,7 @@ func _clean_nearby_allies() -> void:
 		if not is_instance_valid(_nearby_allies[i]):
 			_nearby_allies.remove_at(i)
 	
-	if auto_open_for_allies and _nearby_allies.is_empty() and current_state == GateState.OPEN and not _manual_override:
+	if not is_locked_by_player and auto_open_for_allies and _nearby_allies.is_empty() and current_state == GateState.OPEN:
 		close_gate(false)
 
 

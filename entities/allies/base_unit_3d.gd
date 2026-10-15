@@ -1,7 +1,7 @@
 class_name BaseUnit3D
 extends CharacterBody3D
 
-## BaseUnit3D - Standard RTS Unit with Navigation, Visual Decoupling & Micromanagement Support
+## BaseUnit3D - Standard RTS Unit with Navigation, RVO Avoidance & Micromanagement Support
 
 @export var unit_data: UnitData
 
@@ -27,11 +27,15 @@ func _ready() -> void:
 	if selection_ring:
 		selection_ring.visible = false
 	
-	# Configure navigation agent for responsive RTS movement with proper thresholds
+	# Configure navigation agent for responsive RTS movement and RVO local avoidance
 	if nav_agent:
-		nav_agent.path_desired_distance = 1.2
-		nav_agent.target_desired_distance = 0.8
+		nav_agent.path_desired_distance = 0.6
+		nav_agent.target_desired_distance = 0.5
 		nav_agent.path_max_distance = 4.0
+		nav_agent.avoidance_enabled = true
+		nav_agent.radius = 0.45
+		nav_agent.max_speed = move_speed
+		nav_agent.velocity_computed.connect(_on_navigation_agent_3d_velocity_computed)
 
 
 func _physics_process(delta: float) -> void:
@@ -42,6 +46,8 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 
 	if not nav_agent or nav_agent.is_navigation_finished():
+		if nav_agent and nav_agent.avoidance_enabled:
+			nav_agent.set_velocity(Vector3.ZERO)
 		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 8.0)
 		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 8.0)
 		move_and_slide()
@@ -54,17 +60,32 @@ func _physics_process(delta: float) -> void:
 
 	if move_dir.length_squared() > 0.001:
 		move_dir = move_dir.normalized()
-		
-		# Smoothly rotate on Y axis towards move direction
-		var target_angle_y: float = atan2(-move_dir.x, -move_dir.z)
-		rotation.y = lerp_angle(rotation.y, target_angle_y, delta * 12.0)
-		
-		velocity.x = move_dir.x * move_speed
-		velocity.z = move_dir.z * move_speed
+		var intended_velocity: Vector3 = move_dir * move_speed
+		if nav_agent.avoidance_enabled:
+			nav_agent.set_velocity(intended_velocity)
+		else:
+			_apply_movement_velocity(intended_velocity, delta)
 	else:
+		if nav_agent.avoidance_enabled:
+			nav_agent.set_velocity(Vector3.ZERO)
 		velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 8.0)
 		velocity.z = move_toward(velocity.z, 0.0, move_speed * delta * 8.0)
+		move_and_slide()
 
+
+func _on_navigation_agent_3d_velocity_computed(safe_velocity: Vector3) -> void:
+	if not is_instance_valid(self):
+		return
+	_apply_movement_velocity(safe_velocity, get_physics_process_delta_time())
+
+
+func _apply_movement_velocity(vel: Vector3, delta: float) -> void:
+	if vel.length_squared() > 0.01:
+		var target_angle_y: float = atan2(-vel.x, -vel.z)
+		rotation.y = lerp_angle(rotation.y, target_angle_y, delta * 12.0)
+	
+	velocity.x = vel.x
+	velocity.z = vel.z
 	move_and_slide()
 
 

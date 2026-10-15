@@ -74,10 +74,10 @@ mesh = SubResource("BoxMesh_ground")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
 
 [node name="WestGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, 4)
 
 [node name="EastGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 4)
 
 [node name="WallCenter1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 4)
@@ -98,55 +98,61 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 4)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 4)
 
 [node name="WallWest1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 8)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 6)
 
 [node name="WallWest2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 12)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 10)
 
 [node name="WallWest3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 16)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 14)
 
 [node name="WallWest4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 20)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 18)
+
+[node name="WallWest5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 22)
 
 [node name="WallEast1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 8)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 6)
 
 [node name="WallEast2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 12)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 10)
 
 [node name="WallEast3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 16)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 14)
 
 [node name="WallEast4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 20)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 18)
+
+[node name="WallEast5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 22)
 
 [node name="WallSouth1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 24)
 
 [node name="WallSouth2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 24)
 
 [node name="WallSouth3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 24)
 
 [node name="WallSouth4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 24)
 
 [node name="WallSouth5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
 
 [node name="WallSouth6" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 24)
 
 [node name="WallSouth7" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 24)
 
 [node name="WallSouth8" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 24)
 
 [node name="WallSouth9" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 24)
 
 [node name="Allies" type="Node3D" parent="."]
 

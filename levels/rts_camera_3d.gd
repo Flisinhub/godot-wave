@@ -19,6 +19,8 @@ extends Node3D
 @export_group("Bounds")
 @export var map_bounds: Rect2 = Rect2(-38.0, -38.0, 76.0, 76.0)
 
+var block_edge_scroll: bool = false
+
 @onready var camera: Camera3D = $Camera3D
 
 var _target_zoom_height: float = 18.0
@@ -62,7 +64,7 @@ func _handle_panning(delta: float) -> void:
 		move_vec.x += 1.0
 
 	# Edge scrolling
-	if edge_scroll_enabled:
+	if edge_scroll_enabled and not block_edge_scroll:
 		var viewport: Viewport = get_viewport()
 		if viewport:
 			var mouse_pos: Vector2 = viewport.get_mouse_position()

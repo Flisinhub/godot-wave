@@ -46,9 +46,12 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_unit")
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
-path_desired_distance = 0.5
+path_desired_distance = 0.6
 target_desired_distance = 0.5
-path_max_distance = 3.0
+path_max_distance = 4.0
+avoidance_enabled = true
+radius = 0.45
+max_speed = 5.0
 
 [node name="VisualRoot" type="Node3D" parent="."]
 

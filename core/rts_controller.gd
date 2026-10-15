@@ -28,11 +28,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			if mb.is_pressed():
 				box_start_pos = mb.position
 				is_box_selecting = true
+				if camera_rig:
+					camera_rig.block_edge_scroll = true
 				if selection_box_ui:
 					selection_box_ui.start_box(mb.position)
 			else:
 				if is_box_selecting:
 					is_box_selecting = false
+					if camera_rig:
+						camera_rig.block_edge_scroll = false
 					var rect: Rect2 = Rect2()
 					if selection_box_ui:
 						rect = selection_box_ui.end_box()
@@ -103,10 +107,12 @@ func _handle_box_selection(screen_rect: Rect2, is_shift_held: bool) -> void:
 			if not is_instance_valid(unit):
 				continue
 			
-			if cam.is_position_behind(unit.global_position):
+			# Project torso center (0.9m above ground) instead of feet for natural box selection
+			var torso_pos: Vector3 = unit.global_position + Vector3(0.0, 0.9, 0.0)
+			if cam.is_position_behind(torso_pos):
 				continue
 			
-			var unit_screen_pos: Vector2 = cam.unproject_position(unit.global_position)
+			var unit_screen_pos: Vector2 = cam.unproject_position(torso_pos)
 			if screen_rect.has_point(unit_screen_pos):
 				select_unit(unit)
 
@@ -143,11 +149,19 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	
 	# Calculate formation positions to prevent infinite collisions/crowding
 	var formation_positions: Array[Vector3] = _calculate_formation_positions(target_pos, selected_units.size(), formation_spacing)
+	var nav_map: RID = get_viewport().world_3d.navigation_map
 	
 	for i in range(selected_units.size()):
 		var unit: BaseUnit3D = selected_units[i]
 		if is_instance_valid(unit):
-			unit.move_to(formation_positions[i])
+			var pos: Vector3 = formation_positions[i]
+			# Validate formation target on navigable mesh
+			if nav_map.is_valid():
+				var valid_pos: Vector3 = NavigationServer3D.map_get_closest_point(nav_map, pos)
+				valid_pos.y = 0.0
+				unit.move_to(valid_pos)
+			else:
+				unit.move_to(pos)
 
 	SignalBus.move_command_issued.emit(target_pos)
 

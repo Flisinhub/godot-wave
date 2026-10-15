@@ -18,6 +18,9 @@ func _ready() -> void:
 			if gate.door_collision:
 				gate.door_collision.disabled = true
 
+	# Ensure Jolt physics has updated the collision shape state before baking
+	await get_tree().physics_frame
+
 	# Ensure navigation mesh is baked with Static Colliders
 	if nav_region:
 		if not nav_region.navigation_mesh:
@@ -33,6 +36,9 @@ func _ready() -> void:
 			nav_region.navigation_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 
 		nav_region.bake_navigation_mesh(false)
+
+	# Ensure navigation mesh is fully registered before restoring gate physical collision
+	await get_tree().physics_frame
 
 	# Restore gate states and collisions according to their configured initial_state
 	for node in gates:
