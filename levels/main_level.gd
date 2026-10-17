@@ -23,6 +23,9 @@ const SecretBossZone3D = preload("res://core/events/secret_boss_zone_3d.gd")
 const HellsGateZone3D = preload("res://core/events/hells_gate_zone_3d.gd")
 const PedestalPuzzleManager = preload("res://core/puzzles/pedestal_puzzle_manager.gd")
 const CombatVFXPool = preload("res://core/vfx/combat_vfx_pool.gd")
+const SFEStartModal = preload("res://ui/sfe_start_modal.gd")
+const BankManager = preload("res://core/persistence/bank_manager.gd")
+const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -52,8 +55,10 @@ const CombatVFXPool = preload("res://core/vfx/combat_vfx_pool.gd")
 @onready var game_over_panel: PanelContainer = get_node_or_null("UI/GameOverPanel")
 @onready var restart_btn: Button = get_node_or_null("UI/GameOverPanel/MarginContainer/VBoxContainer/RestartBtn")
 
-# Active Hero Entity
+# Active Hero Entity & Modal State
 var active_hero: HeroUnit3D = null
+var start_modal: SFEStartModal = null
+var session_kills: int = 0
 
 # Swarm Combat Throttle
 var _swarm_combat_accumulator: float = 0.0
@@ -83,6 +88,59 @@ func _ready() -> void:
 
 	# 7. Milestone 6 Startup Diagnostics
 	_log_milestone_6_diagnostics()
+
+	# 8. SFE5 Pre-Mission Modal (Difficulty + Hero Selection + Player Profile)
+	_setup_start_modal()
+
+
+func _process(_delta: float) -> void:
+	if sc2_hud_root:
+		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
+
+
+func _setup_start_modal() -> void:
+	# Initial Top Bar Sync from Bank
+	var bank: Dictionary = BankManager.load_bank()
+	if sc2_hud_root:
+		sc2_hud_root.update_veterancy(bank.get("veterancy_level", 1))
+		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), SFEDifficultyManager.get_difficulty())
+		if economy_manager:
+			sc2_hud_root.update_minerals(economy_manager.current_minerals)
+
+	start_modal = SFEStartModal.new()
+	start_modal.name = "SFEStartModal"
+	add_child(start_modal)
+	start_modal.deployment_confirmed.connect(_on_deployment_confirmed)
+
+
+func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random: bool) -> void:
+	# 1. Apply difficulty scaling
+	if difficulty_manager:
+		difficulty_manager.set_difficulty(diff_tier)
+	elif SFEDifficultyManager.instance:
+		SFEDifficultyManager.set_difficulty(diff_tier)
+
+	# 2. Apply Random Hero Bonus (+50 minerals)
+	if is_random and economy_manager:
+		economy_manager.add_minerals(50, "Random Hero Deployment Bonus")
+
+	# 3. Bind Selected Hero Data & Visuals
+	if selected_hero and active_hero:
+		active_hero.hero_data = selected_hero
+		active_hero._bind_hero_data()
+		active_hero.apply_archetype_visuals(selected_hero)
+		if rts_controller:
+			rts_controller.clear_selection()
+			rts_controller.select_unit(active_hero)
+			SignalBus.units_selected.emit([active_hero])
+
+	# 4. Update SC2 Top Bar
+	if sc2_hud_root:
+		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
+		if economy_manager:
+			sc2_hud_root.update_minerals(economy_manager.current_minerals)
+
+	start_modal = null
 
 
 func _prepare_navigation_and_gates() -> void:
@@ -404,9 +462,39 @@ func _process_swarm_combat(dt: float) -> void:
 				if killed:
 					if combat_vfx_pool:
 						combat_vfx_pool.spawn_acid_burst(target_pos)
-					award_kill_bounty(null, ally, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
+					var bounty: int = award_kill_bounty(null, ally, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
+					FloatingTextManager.spawn_text(self, target_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+					if active_hero:
+						active_hero.gain_experience(15)
+					session_kills += 1
 					if wave_manager:
 						wave_manager.on_swarm_unit_died(5)
+
+	# 3. Fortified Bunkers Automated Defense Firing
+	for s_node in structures:
+		if not is_instance_valid(s_node) or not (s_node is Node3D):
+			continue
+		if s_node.name.to_lower().contains("bunker") or s_node.is_in_group("bunkers"):
+			var b_node: Node3D = s_node as Node3D
+			if swarm_simulation.spatial_hash:
+				var b_center := Vector2(b_node.global_position.x, b_node.global_position.z)
+				var b_candidates = swarm_simulation.spatial_hash.query_radius(b_center, 9.5, sdata)
+				if b_candidates.size() > 0:
+					var b_target_idx: int = b_candidates[0]
+					var b_target_pos := Vector3(sdata.pos_x[b_target_idx], 0.35, sdata.pos_z[b_target_idx])
+					if combat_vfx_pool:
+						combat_vfx_pool.spawn_tracer(b_node.global_position + Vector3(0.0, 1.8, 0.0), b_target_pos)
+					var b_killed: bool = swarm_simulation.apply_damage_to_unit(b_target_idx, 16.0)
+					if b_killed:
+						if combat_vfx_pool:
+							combat_vfx_pool.spawn_acid_burst(b_target_pos)
+						var b_bounty: int = award_kill_bounty(null, b_node, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
+						FloatingTextManager.spawn_text(self, b_target_pos, "+%d Minerals" % b_bounty, Color(0.2, 0.95, 1.0))
+						if active_hero:
+							active_hero.gain_experience(10)
+						session_kills += 1
+						if wave_manager:
+							wave_manager.on_swarm_unit_died(5)
 
 
 ## Awards mineral kill bounty honoring the strict Crossfire Nullification Rule (Requirement R3).
@@ -443,14 +531,18 @@ func _on_hero_skill_cast(skill: Variant, target: Variant) -> void:
 	for unit_idx in candidates:
 		var killed: bool = swarm_simulation.apply_damage_to_unit(unit_idx, power)
 		if killed:
+			var victim_pos := Vector3(
+				swarm_simulation.swarm_data.pos_x[unit_idx],
+				0.35,
+				swarm_simulation.swarm_data.pos_z[unit_idx]
+			)
 			if combat_vfx_pool:
-				var victim_pos := Vector3(
-					swarm_simulation.swarm_data.pos_x[unit_idx],
-					0.35,
-					swarm_simulation.swarm_data.pos_z[unit_idx]
-				)
 				combat_vfx_pool.spawn_acid_burst(victim_pos)
-			award_kill_bounty(null, active_hero, 5, EconomyTypes.Faction.ALLIED, dmg_type)
+			var bounty: int = award_kill_bounty(null, active_hero, 5, EconomyTypes.Faction.ALLIED, dmg_type)
+			FloatingTextManager.spawn_text(self, victim_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+			if active_hero:
+				active_hero.gain_experience(15)
+			session_kills += 1
 			if wave_manager:
 				wave_manager.on_swarm_unit_died(5)
 
@@ -502,12 +594,15 @@ func _on_structure_destroyed(structure: Node) -> void:
 
 
 func _on_structure_damaged(structure: Node, current_hp: float, max_hp: float) -> void:
-	if structure is CommandCenter and cc_health_label:
-		cc_health_label.text = "Integridad Command Center: %d / %d" % [int(current_hp), int(max_hp)]
-		if current_hp <= max_hp * 0.3:
-			cc_health_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.2))
-		elif current_hp <= max_hp * 0.6:
-			cc_health_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	if structure is CommandCenter:
+		if cc_health_label:
+			cc_health_label.text = "Integridad Command Center: %d / %d" % [int(current_hp), int(max_hp)]
+			if current_hp <= max_hp * 0.3:
+				cc_health_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.2))
+			elif current_hp <= max_hp * 0.6:
+				cc_health_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+		if sc2_hud_root:
+			sc2_hud_root.update_command_center_hp(current_hp, max_hp)
 
 
 func _on_wave_started(wave_number: int, total_enemies: int) -> void:
@@ -518,11 +613,16 @@ func _on_wave_started(wave_number: int, total_enemies: int) -> void:
 		state_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
 	if start_wave_btn:
 		start_wave_btn.visible = false
+	if sc2_hud_root:
+		sc2_hud_root.update_wave_status(wave_number, total_enemies, true)
 
 
 func _on_wave_enemy_count_changed(alive_count: int) -> void:
 	if state_label and wave_manager and wave_manager.is_wave_in_progress:
 		state_label.text = "¡OLEADA EN CURSO! (Hostiles: %d)" % alive_count
+	if sc2_hud_root:
+		var cur_w: int = wave_manager.current_wave if wave_manager else 1
+		sc2_hud_root.update_wave_status(cur_w, alive_count, true)
 
 
 func _on_wave_completed(wave_number: int) -> void:
@@ -534,24 +634,37 @@ func _on_wave_completed(wave_number: int) -> void:
 	if start_wave_btn:
 		start_wave_btn.visible = true
 		start_wave_btn.text = "▶ INICIAR RONDA %d" % (wave_number + 1)
+	if sc2_hud_root:
+		sc2_hud_root.update_wave_status(wave_number, 0, false)
+	_save_bank_progress(false)
 
 
 func _on_enemy_died(enemy: Node, reward: int) -> void:
 	var killer_faction: int = EconomyTypes.Faction.ALLIED
 	var killer_node: Object = active_hero
+	var enemy_pos := Vector3.ZERO
 	if is_instance_valid(enemy):
 		if enemy.has_meta("killer_faction"):
 			killer_faction = enemy.get_meta("killer_faction")
 		if enemy.has_meta("killer"):
 			killer_node = enemy.get_meta("killer")
-		if enemy is Node3D and combat_vfx_pool:
-			combat_vfx_pool.spawn_acid_burst((enemy as Node3D).global_position)
+		if enemy is Node3D:
+			enemy_pos = (enemy as Node3D).global_position
+			if combat_vfx_pool:
+				combat_vfx_pool.spawn_acid_burst(enemy_pos)
 
-	award_kill_bounty(enemy, killer_node, reward, killer_faction)
+	var bounty: int = award_kill_bounty(enemy, killer_node, reward, killer_faction)
+	if bounty > 0 and enemy_pos != Vector3.ZERO:
+		FloatingTextManager.spawn_text(self, enemy_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+	if active_hero:
+		active_hero.gain_experience(reward * 3)
+	session_kills += 1
 
 
 func _on_minerals_changed(new_amount: int, _delta: int, _reason: String) -> void:
 	_update_minerals_ui(new_amount)
+	if sc2_hud_root:
+		sc2_hud_root.update_minerals(new_amount)
 
 
 func _update_minerals_ui(amount: int) -> void:
@@ -565,8 +678,29 @@ func _on_start_wave_pressed() -> void:
 
 
 func _on_base_destroyed() -> void:
+	_save_bank_progress(true)
 	if game_over_panel:
 		game_over_panel.visible = true
+
+
+func _save_bank_progress(is_game_over: bool) -> void:
+	var bank: Dictionary = BankManager.load_bank()
+	var prev_kills: int = bank.get("total_kills", 0)
+	var new_total_kills: int = prev_kills + session_kills
+	session_kills = 0
+	bank["total_kills"] = new_total_kills
+	var new_vet: int = maxi(1, 1 + int(new_total_kills / 100))
+	bank["veterancy_level"] = new_vet
+
+	if is_game_over:
+		bank["losses"] = bank.get("losses", 0) + 1
+	else:
+		bank["highest_wave"] = maxi(bank.get("highest_wave", 0), wave_manager.current_wave if wave_manager else 1)
+		bank["wins"] = bank.get("wins", 0) + 1
+
+	BankManager.save_bank(bank)
+	if sc2_hud_root:
+		sc2_hud_root.update_veterancy(new_vet)
 
 
 func _on_restart_pressed() -> void:

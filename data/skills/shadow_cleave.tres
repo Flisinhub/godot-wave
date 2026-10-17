@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"shadow_cleave"
+skill_name = "Shadow Cleave"
+description = "Sweeps warp blades in a lethal 360-degree arc, cleaving all swarms in melee radius with void energy."
+target_type = 1
+energy_cost = 30.0
+cooldown = 7.0
+cast_range = 0.0
+area_radius = 3.8
+base_power = 120.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "W"
+icon_path = ""
+max_rank = 4
+current_rank = 1

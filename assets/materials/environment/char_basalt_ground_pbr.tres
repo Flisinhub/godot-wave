@@ -5,9 +5,9 @@
 [resource]
 render_priority = 0
 shader = ExtResource("1_if0ok")
-shader_parameter/basalt_dark = null
-shader_parameter/basalt_mid = null
-shader_parameter/ash_color = null
-shader_parameter/micro_fissure_color = null
-shader_parameter/micro_emission_energy = null
-shader_parameter/uv_scale = null
+shader_parameter/basalt_dark = Color(0.09, 0.08, 0.09, 1)
+shader_parameter/basalt_mid = Color(0.16, 0.13, 0.14, 1)
+shader_parameter/ash_color = Color(0.25, 0.2, 0.19, 1)
+shader_parameter/micro_fissure_color = Color(1, 0.4, 0.08, 1)
+shader_parameter/micro_emission_energy = 1.5
+shader_parameter/uv_scale = 32.0

@@ -42,6 +42,7 @@ func _run_all_suites() -> void:
 	_run_suite("R4: Hero Progression & RPG", preload("res://tests/test_r4_heroes.gd").new())
 	_run_suite("R5: Boss Events, Puzzles & Persistence", preload("res://tests/test_r5_events_persistence.gd").new())
 	_run_suite("Tier 4: Full System Integration", preload("res://tests/test_integration_full.gd").new())
+	_run_suite("Phase 1: SFE5 Playable Integration", preload("res://tests/test_sfe5_phase1_playable_integration.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

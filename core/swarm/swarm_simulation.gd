@@ -365,7 +365,7 @@ func simulate_step(delta: float) -> void:
 		var a_id: int = arch_ids[i]
 		var sep_radius: float = cached_sep[a_id] if (a_id >= 0 and a_id < cached_sep_size) else def_sep_rad
 		
-		var sep_force: Vector2 = spatial_hash.compute_separation_force(i, swarm_data, sep_radius, 8) if spatial_hash else Vector2.ZERO
+		var sep_force: Vector2 = spatial_hash.compute_separation_force(i, swarm_data, sep_radius, 5) if spatial_hash else Vector2.ZERO
 		var sep_len_sq: float = sep_force.x * sep_force.x + sep_force.y * sep_force.y
 		
 		# Organic vector blending: Flow Field + Boids Separation

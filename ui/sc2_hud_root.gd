@@ -16,6 +16,15 @@ var minimap_box: PanelContainer
 var stat_panel: SC2StatPanel
 var command_card: SC2CommandCard
 
+# Top Bar Elements
+var top_bar: PanelContainer
+var top_diff_badge: Label
+var top_hive_label: Label
+var top_wave_label: Label
+var top_cc_hp_label: Label
+var top_minerals_label: Label
+var top_vet_label: Label
+
 func _init() -> void:
 	_build_hud_layout()
 
@@ -114,6 +123,84 @@ func _build_hud_layout() -> void:
 	command_card.name = "CommandCard"
 	bottom_console.add_child(command_card)
 
+	# 4. StarCraft II Procedural Top Command Bar
+	top_bar = PanelContainer.new()
+	top_bar.name = "TopBar"
+	top_bar.anchor_left = 0.0
+	top_bar.anchor_right = 1.0
+	top_bar.anchor_top = 0.0
+	top_bar.anchor_bottom = 0.0
+	top_bar.offset_top = 0.0
+	top_bar.offset_bottom = 40.0
+
+	var top_style := StyleBoxFlat.new()
+	top_style.bg_color = Color(0.04, 0.065, 0.095, 0.94)
+	top_style.border_width_bottom = 2
+	top_style.border_color = Color(0.22, 0.52, 0.85, 0.85)
+	top_style.shadow_color = Color(0.0, 0.0, 0.0, 0.7)
+	top_style.shadow_size = 6
+	top_style.content_margin_left = 16.0
+	top_style.content_margin_right = 16.0
+	top_style.content_margin_top = 6.0
+	top_style.content_margin_bottom = 6.0
+	top_bar.add_theme_stylebox_override("panel", top_style)
+
+	var top_hbox := HBoxContainer.new()
+	top_hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
+	top_hbox.add_theme_constant_override("separation", 18)
+	top_bar.add_child(top_hbox)
+
+	# Left: Difficulty Badge & Hive Evolution
+	top_diff_badge = Label.new()
+	top_diff_badge.text = "[ NORMAL ]"
+	top_diff_badge.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0))
+	top_diff_badge.add_theme_font_size_override("font_size", 13)
+	top_hbox.add_child(top_diff_badge)
+
+	top_hive_label = Label.new()
+	top_hive_label.text = "HIVE LVL 0 (Next: 120s)"
+	top_hive_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.95))
+	top_hive_label.add_theme_font_size_override("font_size", 12)
+	top_hbox.add_child(top_hive_label)
+
+	# Spacer
+	var spacer1 := Control.new()
+	spacer1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_hbox.add_child(spacer1)
+
+	# Center: Wave info & Command Center Integrity
+	top_wave_label = Label.new()
+	top_wave_label.text = "RONDA 1  |  HOSTILES: 0"
+	top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	top_wave_label.add_theme_font_size_override("font_size", 13)
+	top_hbox.add_child(top_wave_label)
+
+	top_cc_hp_label = Label.new()
+	top_cc_hp_label.text = "COMMAND CENTER: 2000 / 2000 HP"
+	top_cc_hp_label.add_theme_color_override("font_color", Color(0.25, 0.95, 0.45))
+	top_cc_hp_label.add_theme_font_size_override("font_size", 12)
+	top_hbox.add_child(top_cc_hp_label)
+
+	# Spacer
+	var spacer2 := Control.new()
+	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_hbox.add_child(spacer2)
+
+	# Right: Minerals Wallet & Operator Veterancy
+	top_minerals_label = Label.new()
+	top_minerals_label.text = "💎 50 MINERALS"
+	top_minerals_label.add_theme_color_override("font_color", Color(0.2, 0.95, 1.0))
+	top_minerals_label.add_theme_font_size_override("font_size", 13)
+	top_hbox.add_child(top_minerals_label)
+
+	top_vet_label = Label.new()
+	top_vet_label.text = "⭐ VET LVL 1"
+	top_vet_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	top_vet_label.add_theme_font_size_override("font_size", 12)
+	top_hbox.add_child(top_vet_label)
+
+	root_control.add_child(top_bar)
+
 func _connect_signal_bus() -> void:
 	# Check if running headless with dummy display server
 	var is_headless: bool = DisplayServer.get_name() == "headless"
@@ -150,3 +237,52 @@ func _on_units_deselected() -> void:
 		stat_panel.bind_unit(null)
 	if command_card:
 		command_card.populate_for_unit(null)
+
+
+func update_minerals(amount: int) -> void:
+	if top_minerals_label:
+		top_minerals_label.text = "💎 %d MINERALS" % amount
+
+
+func update_difficulty(diff_name: String, diff_tier: int = 1) -> void:
+	if top_diff_badge:
+		top_diff_badge.text = "[ %s ]" % diff_name.to_upper()
+		var color: Color = Color(0.35, 0.85, 1.0)
+		match diff_tier:
+			0: color = Color(0.25, 0.95, 0.45) # Casual green
+			1: color = Color(0.35, 0.85, 1.0)  # Normal cyan
+			2: color = Color(1.0, 0.85, 0.25)  # Hard amber
+			3: color = Color(1.0, 0.45, 0.2)   # Brutal orange
+			4: color = Color(1.0, 0.2, 0.25)   # Torment crimson
+		top_diff_badge.add_theme_color_override("font_color", color)
+
+
+func update_hive_evolution(lvl: int, time_remaining: float) -> void:
+	if top_hive_label:
+		top_hive_label.text = "HIVE LVL %d (Next: %ds)" % [lvl, int(ceilf(time_remaining))]
+
+
+func update_wave_status(wave_num: int, swarm_alive: int, is_in_progress: bool = false) -> void:
+	if top_wave_label:
+		if is_in_progress:
+			top_wave_label.text = "RONDA %d  |  ¡HOSTILES ACTIVOS: %d!" % [wave_num, swarm_alive]
+			top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+		else:
+			top_wave_label.text = "RONDA %d  |  FASE TÁCTICA" % wave_num
+			top_wave_label.add_theme_color_override("font_color", Color(0.25, 0.95, 0.45))
+
+
+func update_command_center_hp(curr_hp: float, max_hp: float) -> void:
+	if top_cc_hp_label:
+		top_cc_hp_label.text = "COMMAND CENTER: %d / %d HP" % [int(curr_hp), int(max_hp)]
+		if curr_hp <= max_hp * 0.3:
+			top_cc_hp_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.25))
+		elif curr_hp <= max_hp * 0.6:
+			top_cc_hp_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+		else:
+			top_cc_hp_label.add_theme_color_override("font_color", Color(0.25, 0.95, 0.45))
+
+
+func update_veterancy(vet_level: int) -> void:
+	if top_vet_label:
+		top_vet_label.text = "⭐ VET LVL %d" % vet_level

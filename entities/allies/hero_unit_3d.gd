@@ -11,6 +11,7 @@ const SFEBuffEngine = preload("res://core/combat/sfe_buff_engine.gd")
 const CombatResult = preload("res://core/combat/combat_result.gd")
 const HeroData = preload("res://core/heroes/hero_data.gd")
 const HeroSkillData = preload("res://data/skills/hero_skill_data.gd")
+const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 
 signal skill_cast(skill: HeroSkillData, target: Variant)
 signal hero_leveled_up(new_level: int)
@@ -300,6 +301,11 @@ func _fire_at(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
 
+	# Tychus Minigun Passive: Each attack stacks minigun cadence buff up to 20 stacks
+	if hero_data and (hero_data.archetype_id == &"tychus" or hero_data.archetype_id == &"marauder"):
+		if buff_engine:
+			buff_engine.apply_buff(&"tychus_passive", 4.0, 20)
+
 	var base_dmg: float = hero_data.weapon_damage if hero_data else attack_damage
 	var buff_mult: float = buff_engine.get_total_stat_multiplier("attack_damage") if buff_engine else 1.0
 	var final_damage: float = base_dmg * buff_mult
@@ -315,6 +321,33 @@ func _fire_at(target: Node3D) -> void:
 		tween.tween_interval(0.06)
 		tween.tween_callback(func(): if is_instance_valid(muzzle_flash): muzzle_flash.visible = false)
 
+
+func get_world_pos() -> Vector3:
+	return global_position if is_inside_tree() else position
+
+
+func set_world_pos(p: Vector3) -> void:
+	if is_inside_tree():
+		global_position = p
+	else:
+		position = p
+
+
+func get_facing_direction() -> Vector3:
+	var b: Basis = global_transform.basis if is_inside_tree() else transform.basis
+	return -b.z
+
+
+## Activates a skill by slot index (0 = Q, 1 = W, 2 = E, 3 = R).
+func activate_skill(slot_index: int, target: Variant = null) -> bool:
+	if hero_data == null or slot_index < 0 or slot_index >= hero_data.skills.size():
+		return false
+	var skill: HeroSkillData = hero_data.skills[slot_index] as HeroSkillData
+	if skill == null:
+		return false
+	return cast_skill(skill, target)
+
+
 ## Casts an active ability using energy from HeroData and tracking cooldown.
 func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 	if skill == null or hero_data == null:
@@ -323,6 +356,98 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 	var remaining_cd: float = skill_cooldowns.get(skill.skill_id, 0.0)
 	if not skill.can_cast(hero_data.current_energy, remaining_cd > 0.0):
 		return false
+
+	# Archetype-specific casting preconditions & mechanics
+	match skill.skill_id:
+		&"stimpack":
+			# Stimpack consumes 10 HP (cannot kill, min 1.0 HP)
+			if current_health <= 10.0:
+				return false
+			current_health = maxf(1.0, current_health - 10.0)
+			hero_data.current_hp = current_health
+			if health_bar and health_bar.has_method("update_health"):
+				health_bar.update_health(current_health, max_health)
+			_spawn_stimpack_vfx()
+
+		&"blink":
+			var cur_pos: Vector3 = get_world_pos()
+			var dest: Vector3 = cur_pos + (get_facing_direction() * 8.0)
+			if target is Vector3:
+				var delta_v: Vector3 = (target as Vector3) - cur_pos
+				delta_v.y = 0.0
+				if delta_v.length() > 8.0:
+					delta_v = delta_v.normalized() * 8.0
+				dest = cur_pos + delta_v
+			_spawn_blink_vfx(cur_pos, dest)
+			set_world_pos(dest)
+			if nav_agent:
+				nav_agent.target_position = dest
+
+		&"psionic_storm":
+			var cur_pos: Vector3 = get_world_pos()
+			var storm_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0))
+			_spawn_psionic_storm_vfx(storm_center, 4.5)
+			_apply_aoe_damage(storm_center, 4.5, skill.base_power, CombatTypes.DamageType.SPELL)
+
+		&"heal_beam":
+			var cur_pos: Vector3 = get_world_pos()
+			var lowest_ally: Node3D = null
+			var lowest_pct: float = 1.0
+			var allies: Array[Node] = get_tree().get_nodes_in_group("allies") if is_inside_tree() else []
+			for a in allies:
+				if a is Node3D and is_instance_valid(a) and a != self:
+					var hp_cur: float = a.current_health if "current_health" in a else 100.0
+					var hp_max: float = a.max_health if "max_health" in a else 100.0
+					if hp_max > 0.0 and hp_cur < hp_max:
+						var pct: float = hp_cur / hp_max
+						var a_pos: Vector3 = a.global_position if a.is_inside_tree() else a.position
+						if pct < lowest_pct and cur_pos.distance_to(a_pos) <= 9.0:
+							lowest_pct = pct
+							lowest_ally = a
+			if lowest_ally:
+				if lowest_ally.has_method("heal"):
+					lowest_ally.heal(skill.base_power)
+				elif "current_health" in lowest_ally:
+					lowest_ally.current_health = minf(lowest_ally.max_health, lowest_ally.current_health + skill.base_power)
+					if "health_bar" in lowest_ally and lowest_ally.health_bar and lowest_ally.health_bar.has_method("update_health"):
+						lowest_ally.health_bar.update_health(lowest_ally.current_health, lowest_ally.max_health)
+				var a_pos: Vector3 = lowest_ally.global_position if lowest_ally.is_inside_tree() else lowest_ally.position
+				_spawn_heal_beam_vfx(cur_pos + Vector3(0, 1.2, 0), a_pos + Vector3(0, 1.0, 0))
+				FloatingTextManager.spawn_text(self, a_pos, "+%d HP" % int(skill.base_power), Color(0.2, 0.95, 0.4))
+			else:
+				# Self-heal fallback
+				current_health = minf(max_health, current_health + skill.base_power)
+				hero_data.current_hp = current_health
+				if health_bar and health_bar.has_method("update_health"):
+					health_bar.update_health(current_health, max_health)
+				FloatingTextManager.spawn_text(self, cur_pos, "+%d HP" % int(skill.base_power), Color(0.2, 0.95, 0.4))
+
+		&"plasma_shield", &"defensive_matrix":
+			hero_data.current_shield = minf(hero_data.max_shield if hero_data.max_shield > 0.0 else 200.0, hero_data.current_shield + 150.0)
+			_spawn_shield_bubble_vfx()
+
+		&"shadow_cleave":
+			var cur_pos: Vector3 = get_world_pos()
+			_spawn_shadow_cleave_vfx(cur_pos, 3.2)
+			_apply_aoe_damage(cur_pos, 3.2, skill.base_power, CombatTypes.DamageType.PHYSICAL)
+
+		&"frag_grenade", &"shredder_grenade":
+			var cur_pos: Vector3 = get_world_pos()
+			var nade_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0))
+			_spawn_grenade_explosion_vfx(nade_center, skill.area_radius if skill.area_radius > 0.0 else 3.5)
+			_apply_aoe_damage(nade_center, skill.area_radius if skill.area_radius > 0.0 else 3.5, skill.base_power, skill.damage_type)
+
+		_:
+			# Generic fallback execution
+			if skill.base_power > 0.0:
+				if target is Node3D and is_instance_valid(target):
+					if target.has_method("take_damage_context"):
+						target.take_damage_context(skill.base_power, skill.damage_type, skill.area_radius > 0.0)
+					elif target.has_method("take_damage"):
+						target.take_damage(skill.base_power)
+				elif skill.area_radius > 0.0:
+					var target_pos: Vector3 = target if target is Vector3 else get_world_pos()
+					_apply_aoe_damage(target_pos, skill.area_radius, skill.base_power, skill.damage_type)
 
 	# Deduct energy
 	hero_data.current_energy -= skill.energy_cost
@@ -335,19 +460,9 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 		var duration: float = skill.buff_duration if skill.buff_duration > 0.0 else 5.0
 		buff_engine.apply_buff(skill.buff_id, duration)
 
-	# Execute skill combat payload
-	if skill.base_power > 0.0:
-		if target is Node3D and is_instance_valid(target):
-			if target.has_method("take_damage_context"):
-				target.take_damage_context(skill.base_power, skill.damage_type, skill.area_radius > 0.0)
-			elif target.has_method("take_damage"):
-				target.take_damage(skill.base_power)
-		elif skill.area_radius > 0.0:
-			var target_pos: Vector3 = target if target is Vector3 else global_position
-			_apply_aoe_damage(target_pos, skill.area_radius, skill.base_power, skill.damage_type)
-
 	skill_cast.emit(skill, target)
 	return true
+
 
 func _apply_aoe_damage(center: Vector3, radius: float, damage: float, damage_type: int) -> void:
 	if not is_inside_tree():
@@ -362,18 +477,22 @@ func _apply_aoe_damage(center: Vector3, radius: float, damage: float, damage_typ
 				elif e.has_method("take_damage"):
 					e.take_damage(damage)
 
+
 func get_skill_cooldown_remaining(skill_id: StringName) -> float:
 	return skill_cooldowns.get(skill_id, 0.0)
+
 
 func gain_experience(amount: int) -> bool:
 	if hero_data:
 		return hero_data.add_experience(amount)
 	return false
 
+
 func allocate_attribute(attr_name: String, amount: int = 1) -> bool:
 	if hero_data:
 		return hero_data.allocate_attribute(attr_name, amount)
 	return false
+
 
 func move_to(target_pos: Vector3) -> void:
 	focus_target = null
@@ -381,8 +500,10 @@ func move_to(target_pos: Vector3) -> void:
 		target_pos.y = 0.0
 		nav_agent.target_position = target_pos
 
+
 func set_attack_target(target: Node3D) -> void:
 	focus_target = target
+
 
 func stop_action() -> void:
 	focus_target = null
@@ -390,18 +511,261 @@ func stop_action() -> void:
 		nav_agent.target_position = global_position
 	velocity = Vector3.ZERO
 
+
 func set_selected(selected: bool) -> void:
 	is_selected = selected
 	if selection_ring:
 		selection_ring.visible = selected
+
 
 func die() -> void:
 	if is_inside_tree() and has_node("/root/SignalBus"):
 		get_node("/root/SignalBus").emit_signal("unit_died", self)
 	queue_free()
 
+
 func _on_derived_stats_updated(_stats: Dictionary) -> void:
 	_apply_hero_stats_to_unit()
 
+
 func _on_hero_level_up(new_lvl: int) -> void:
+	if hero_data:
+		current_health = minf(hero_data.max_hp, current_health + (hero_data.max_hp * 0.25))
+		hero_data.current_hp = current_health
+		hero_data.current_energy = minf(hero_data.max_energy, hero_data.current_energy + (hero_data.max_energy * 0.50))
+		if health_bar and health_bar.has_method("update_health"):
+			health_bar.update_health(current_health, max_health)
+
+	_spawn_level_up_vfx(new_lvl)
+	FloatingTextManager.spawn_text(self, get_world_pos(), "LEVEL UP! Lv. %d" % new_lvl, Color(1.0, 0.85, 0.2), 1.5)
 	hero_leveled_up.emit(new_lvl)
+
+
+## Updates visual appearance and materials of the hero model to reflect the selected archetype.
+func apply_archetype_visuals(h_data: HeroData) -> void:
+	if h_data == null or visual_root == null:
+		return
+	var body_mesh_inst: MeshInstance3D = visual_root.get_node_or_null("BodyMesh") as MeshInstance3D
+	if body_mesh_inst == null:
+		return
+
+	var arch: StringName = h_data.archetype_id
+	var mat := StandardMaterial3D.new()
+	mat.roughness = 0.3
+	mat.metallic = 0.8
+
+	match arch:
+		&"marine", &"raynor":
+			visual_root.scale = Vector3(1.0, 1.0, 1.0)
+			mat.albedo_color = Color(0.18, 0.45, 0.9)
+		&"marauder", &"tychus":
+			visual_root.scale = Vector3(1.2, 1.15, 1.2)
+			mat.albedo_color = Color(0.25, 0.35, 0.45)
+			mat.metallic = 0.95
+		&"ghost", &"nova":
+			visual_root.scale = Vector3(0.95, 0.98, 0.95)
+			mat.albedo_color = Color(0.85, 0.88, 0.92)
+			mat.emission_enabled = true
+			mat.emission = Color(0.2, 0.85, 1.0)
+			mat.emission_energy_multiplier = 0.6
+		&"zeratul":
+			visual_root.scale = Vector3(1.05, 1.05, 1.05)
+			mat.albedo_color = Color(0.12, 0.14, 0.18)
+			mat.emission_enabled = true
+			mat.emission = Color(0.3, 1.0, 0.3)
+			mat.emission_energy_multiplier = 1.0
+		&"tassadar":
+			visual_root.scale = Vector3(1.05, 1.08, 1.05)
+			mat.albedo_color = Color(0.85, 0.72, 0.25)
+			mat.emission_enabled = true
+			mat.emission = Color(0.35, 0.75, 1.0)
+			mat.emission_energy_multiplier = 0.8
+		&"medic", &"stetmann":
+			visual_root.scale = Vector3(0.98, 0.98, 0.98)
+			mat.albedo_color = Color(0.95, 0.95, 0.95)
+			mat.emission_enabled = true
+			mat.emission = Color(0.2, 0.95, 0.4)
+			mat.emission_energy_multiplier = 0.7
+		&"harbinger":
+			visual_root.scale = Vector3(1.25, 1.25, 1.25)
+			mat.albedo_color = Color(1.0, 0.85, 0.3)
+			mat.emission_enabled = true
+			mat.emission = Color(0.9, 0.4, 1.0)
+			mat.emission_energy_multiplier = 1.5
+
+	body_mesh_inst.material_override = mat
+
+
+# -----------------------------------------------------------------------------
+# Headless-Safe Procedural Visual Effects
+# -----------------------------------------------------------------------------
+
+func _spawn_stimpack_vfx() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.55
+	torus.outer_radius = 0.75
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(1.0, 0.25, 0.25, 0.9)
+	ring.mesh = torus
+	ring.material_override = mat
+	add_child(ring)
+	ring.position = Vector3(0, 0.9, 0)
+	var tw: Tween = ring.create_tween()
+	tw.parallel().tween_property(ring, "scale", Vector3(1.8, 1.8, 1.8), 0.35)
+	tw.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.35)
+	tw.tween_callback(ring.queue_free)
+
+
+func _spawn_blink_vfx(from_p: Vector3, to_p: Vector3) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	for p in [from_p, to_p]:
+		var flash := MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.6
+		sphere.height = 1.2
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.albedo_color = Color(0.2, 0.9, 0.5, 0.95)
+		flash.mesh = sphere
+		flash.material_override = mat
+		get_parent().add_child(flash)
+		flash.global_position = p + Vector3(0, 0.8, 0)
+		var tw: Tween = flash.create_tween()
+		tw.parallel().tween_property(flash, "scale", Vector3(1.6, 1.6, 1.6), 0.25)
+		tw.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.25)
+		tw.tween_callback(flash.queue_free)
+
+
+func _spawn_psionic_storm_vfx(center: Vector3, radius: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var storm := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius
+	cyl.height = 0.5
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.4, 0.5, 1.0, 0.65)
+	storm.mesh = cyl
+	storm.material_override = mat
+	get_parent().add_child(storm)
+	storm.global_position = center + Vector3(0, 0.3, 0)
+	var tw: Tween = storm.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 1.8)
+	tw.tween_callback(storm.queue_free)
+
+
+func _spawn_heal_beam_vfx(from_p: Vector3, to_p: Vector3) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.08
+	cyl.bottom_radius = 0.08
+	cyl.height = from_p.distance_to(to_p)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.2, 0.95, 0.4, 0.95)
+	beam.mesh = cyl
+	beam.material_override = mat
+	get_parent().add_child(beam)
+	beam.global_position = (from_p + to_p) * 0.5
+	beam.look_at(to_p, Vector3.UP)
+	beam.rotate_object_local(Vector3.RIGHT, deg_to_rad(90.0))
+	var tw: Tween = beam.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.25)
+	tw.tween_callback(beam.queue_free)
+
+
+func _spawn_shield_bubble_vfx() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var bubble := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.3, 0.85, 1.0, 0.55)
+	bubble.mesh = sphere
+	bubble.material_override = mat
+	add_child(bubble)
+	bubble.position = Vector3(0, 1.0, 0)
+	var tw: Tween = bubble.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.6)
+	tw.tween_callback(bubble.queue_free)
+
+
+func _spawn_shadow_cleave_vfx(center: Vector3, radius: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var disk := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius * 0.7
+	torus.outer_radius = radius
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.2, 1.0, 0.5, 0.9)
+	disk.mesh = torus
+	disk.material_override = mat
+	get_parent().add_child(disk)
+	disk.global_position = center + Vector3(0, 0.8, 0)
+	var tw: Tween = disk.create_tween()
+	tw.parallel().tween_property(disk, "scale", Vector3(1.3, 1.3, 1.3), 0.25)
+	tw.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.25)
+	tw.tween_callback(disk.queue_free)
+
+
+func _spawn_grenade_explosion_vfx(center: Vector3, radius: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var blast := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = radius * 0.6
+	sphere.height = radius * 1.2
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(1.0, 0.55, 0.15, 0.9)
+	blast.mesh = sphere
+	blast.material_override = mat
+	get_parent().add_child(blast)
+	blast.global_position = center + Vector3(0, 0.5, 0)
+	var tw: Tween = blast.create_tween()
+	tw.parallel().tween_property(blast, "scale", Vector3(1.5, 1.5, 1.5), 0.3)
+	tw.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.3)
+	tw.tween_callback(blast.queue_free)
+
+
+func _spawn_level_up_vfx(new_lvl: int) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	var column := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.85
+	cyl.bottom_radius = 0.85
+	cyl.height = 3.5
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(1.0, 0.88, 0.3, 0.85)
+	column.mesh = cyl
+	column.material_override = mat
+	add_child(column)
+	column.position = Vector3(0, 1.75, 0)
+	var tw: Tween = column.create_tween()
+	tw.parallel().tween_property(column, "position:y", 2.8, 0.7)
+	tw.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.7)
+	tw.tween_callback(column.queue_free)

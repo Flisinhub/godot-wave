@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"psionic_storm"
+skill_name = "Psionic Storm"
+description = "Channels high-energy psionic tempest lightning over an area, dealing continuous spell damage that bypasses all armor."
+target_type = 3
+energy_cost = 50.0
+cooldown = 10.0
+cast_range = 11.0
+area_radius = 5.2
+base_power = 140.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "Q"
+icon_path = ""
+max_rank = 4
+current_rank = 1

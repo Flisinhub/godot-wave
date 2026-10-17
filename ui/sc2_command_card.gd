@@ -272,6 +272,29 @@ func _update_slot_states() -> void:
 				btn.text = "[%s]\n%s" % [hotkey, skill.skill_name.left(6)]
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.is_pressed() or event.is_echo():
+		return
+	if bound_unit == null or not is_instance_valid(bound_unit):
+		return
+
+	var key_char: String = OS.get_keycode_string(event.keycode).to_upper()
+	if key_char.is_empty():
+		return
+
+	# Match hotkey directly against active slots
+	for i in range(slot_data.size()):
+		var info: Dictionary = slot_data[i]
+		if info.is_empty():
+			continue
+		var hotkey: String = str(info.get("hotkey", "")).to_upper()
+		if hotkey == key_char and i < slot_buttons.size() and not slot_buttons[i].disabled:
+			_on_slot_pressed(i)
+			if get_viewport():
+				get_viewport().set_input_as_handled()
+			return
+
+
 func _on_slot_pressed(slot_idx: int) -> void:
 	if slot_idx >= slot_data.size():
 		return
@@ -282,12 +305,23 @@ func _on_slot_pressed(slot_idx: int) -> void:
 	var slot_type: String = info.get("type", "")
 	if slot_type == "skill":
 		var skill: HeroSkillData = info.get("skill")
-		if bound_unit and bound_unit.has_method("cast_skill"):
-			bound_unit.cast_skill(skill, null)
+		if bound_unit and is_instance_valid(bound_unit):
+			if bound_unit.has_method("activate_skill"):
+				bound_unit.activate_skill(slot_idx, null)
+			elif bound_unit.has_method("cast_skill"):
+				bound_unit.cast_skill(skill, null)
 		command_triggered.emit("cast_skill", skill)
 	elif slot_type == "order":
 		var order_id: String = info.get("id", "")
 		if bound_unit and is_instance_valid(bound_unit):
-			if order_id == "STOP" and bound_unit.has_method("stop_action"):
+			if (order_id == "STOP" or order_id == "HOLD") and bound_unit.has_method("stop_action"):
 				bound_unit.stop_action()
 		command_triggered.emit(order_id, null)
+
+
+## Programmatic API to trigger an ability slot directly (e.g. for testing)
+func activate_skill_by_slot(slot_idx: int) -> bool:
+	if slot_idx < 0 or slot_idx >= slot_buttons.size() or slot_buttons[slot_idx].disabled:
+		return false
+	_on_slot_pressed(slot_idx)
+	return true

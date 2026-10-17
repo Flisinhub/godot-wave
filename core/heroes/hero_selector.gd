@@ -60,6 +60,36 @@ static func _load_or_create_archetypes() -> void:
 		16, 8, 6
 	)
 
+	var zeratul := _load_or_create(
+		"res://data/heroes/zeratul.tres",
+		&"zeratul",
+		"Zeratul",
+		"Dark Templar Prelate & Void Assassin",
+		false,
+		480.0, 52.0, 0.75, 1.0, 150.0, 1.8, 14.0, 2.0,
+		14, 18, 12
+	)
+
+	var tassadar := _load_or_create(
+		"res://data/heroes/tassadar.tres",
+		&"tassadar",
+		"Tassadar",
+		"High Templar & Psionic Storm Channeler",
+		false,
+		420.0, 32.0, 1.0, 1.0, 220.0, 2.5, 15.0, 1.0,
+		10, 10, 20
+	)
+
+	var medic := _load_or_create(
+		"res://data/heroes/medic.tres",
+		&"medic",
+		"Egon Stetmann (Medic)",
+		"Combat Support & Nano-Repair Specialist",
+		false,
+		460.0, 18.0, 0.85, 2.0, 200.0, 2.2, 14.0, 2.0,
+		11, 11, 16
+	)
+
 	var harbinger := _load_or_create(
 		"res://data/heroes/secret_harbinger.tres",
 		&"harbinger",
@@ -70,7 +100,7 @@ static func _load_or_create_archetypes() -> void:
 		18, 18, 22
 	)
 
-	_standard_archetypes = [marine, ghost, reaper, marauder]
+	_standard_archetypes = [marine, marauder, ghost, zeratul, tassadar, medic, reaper]
 	_secret_archetype = harbinger
 
 	# Index by ID and canonical aliases
@@ -87,6 +117,14 @@ static func _load_or_create_archetypes() -> void:
 	_catalog_by_id[&"marauder"] = marauder
 	_catalog_by_id[&"tychus"] = marauder
 	_catalog_by_id[&"tychus_findlay"] = marauder
+
+	_catalog_by_id[&"zeratul"] = zeratul
+
+	_catalog_by_id[&"tassadar"] = tassadar
+
+	_catalog_by_id[&"medic"] = medic
+	_catalog_by_id[&"stetmann"] = medic
+	_catalog_by_id[&"egon_stetmann"] = medic
 
 	_catalog_by_id[&"harbinger"] = harbinger
 	_catalog_by_id[&"secret_harbinger"] = harbinger

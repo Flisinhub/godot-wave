@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"frag_grenade"
+skill_name = "Frag Grenade"
+description = "Hurls an explosive fragmentation canister dealing heavy AoE spell damage in an area."
+target_type = 3
+energy_cost = 25.0
+cooldown = 8.0
+cast_range = 10.0
+area_radius = 4.0
+base_power = 65.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "E"
+icon_path = ""
+max_rank = 4
+current_rank = 1

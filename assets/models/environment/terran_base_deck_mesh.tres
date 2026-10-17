@@ -5,11 +5,11 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pnktx"]
 render_priority = 0
 shader = ExtResource("1_xnqg4")
-shader_parameter/steel_albedo = null
-shader_parameter/steel_dark = null
-shader_parameter/hazard_yellow = null
-shader_parameter/hazard_black = null
-shader_parameter/conduit_blue = null
+shader_parameter/steel_albedo = Color(0.22, 0.25, 0.28, 1)
+shader_parameter/steel_dark = Color(0.13, 0.15, 0.17, 1)
+shader_parameter/hazard_yellow = Color(0.95, 0.75, 0.1, 1)
+shader_parameter/hazard_black = Color(0.1, 0.1, 0.1, 1)
+shader_parameter/conduit_blue = Color(0.15, 0.55, 1, 1)
 shader_parameter/conduit_emission_energy = 2.5
 
 [resource]
