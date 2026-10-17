@@ -157,19 +157,26 @@ func _stamp_cost_runtime(world_min: Vector2, world_max: Vector2, cost: int = COS
 			cost_field[row + gx] = cost
 
 
-func register_obstacle(id: Variant, world_min: Vector2, world_max: Vector2, is_blocking: bool = true) -> void:
+func register_obstacle(id: Variant, world_min: Vector2, world_max: Vector2, is_blocking: bool = true, cost: int = COST_IMPASSABLE) -> void:
 	registered_obstacles[id] = {
 		"min": world_min,
 		"max": world_max,
-		"blocking": is_blocking
+		"blocking": is_blocking,
+		"cost": cost
 	}
 	is_cost_field_dirty = true
 
 
-func update_obstacle(id: Variant, is_blocking: bool) -> void:
+func update_obstacle(id: Variant, is_blocking: bool, cost: int = COST_IMPASSABLE) -> void:
 	if registered_obstacles.has(id):
+		var changed: bool = false
 		if registered_obstacles[id]["blocking"] != is_blocking:
 			registered_obstacles[id]["blocking"] = is_blocking
+			changed = true
+		if registered_obstacles[id].get("cost", COST_IMPASSABLE) != cost:
+			registered_obstacles[id]["cost"] = cost
+			changed = true
+		if changed:
 			is_cost_field_dirty = true
 
 
@@ -182,7 +189,8 @@ func rebuild_cost_field() -> void:
 	cost_field = base_cost_field.duplicate()
 	for obs in registered_obstacles.values():
 		if obs["blocking"]:
-			_stamp_cost_runtime(obs["min"], obs["max"], COST_IMPASSABLE)
+			var obstacle_cost: int = obs.get("cost", COST_IMPASSABLE)
+			_stamp_cost_runtime(obs["min"], obs["max"], obstacle_cost)
 
 
 # -----------------------------------------------------------------------------

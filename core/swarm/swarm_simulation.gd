@@ -171,16 +171,20 @@ func _discover_scene_structures() -> void:
 				var is_closed: bool = true
 				if "current_state" in s:
 					is_closed = (s.get("current_state") == 0) # 0 is GateState.CLOSED
-				register_structure_node(s, 3.0, is_closed)
+				var gate_cost: int = 20 if is_closed else 1
+				register_structure_node(s, 3.0, is_closed, gate_cost)
 			elif s.is_in_group("walls") or s.name.to_lower().contains("wall"):
-				register_structure_node(s, 2.0, true)
+				var is_front: bool = (s.global_position.z <= 5.0)
+				var wall_cost: int = 60 if is_front else 255
+				register_structure_node(s, 2.0, true, wall_cost)
 			else:
 				register_structure_node(s, 2.5, true)
 
 
 func _on_gate_state_changed(gate: Node, is_open: bool) -> void:
 	if flow_field:
-		flow_field.update_obstacle(gate, not is_open)
+		var gate_cost: int = 1 if is_open else 20
+		flow_field.update_obstacle(gate, not is_open, gate_cost)
 
 
 func _on_structure_destroyed(structure: Node) -> void:
@@ -188,17 +192,24 @@ func _on_structure_destroyed(structure: Node) -> void:
 		flow_field.unregister_obstacle(structure)
 
 
-func register_structure_node(node: Node3D, footprint_radius: float = 2.0, is_blocking: bool = true) -> void:
+func register_structure_node(node: Node3D, footprint_radius: float = 2.0, is_blocking: bool = true, cost: int = 255) -> void:
 	var pos := node.global_position
-	var min_pos := Vector2(pos.x - footprint_radius, pos.z - footprint_radius)
-	var max_pos := Vector2(pos.x + footprint_radius, pos.z + footprint_radius)
+	var half_x := footprint_radius
+	var half_z := footprint_radius
+	if node is WallSegment or node.name.to_lower().contains("wall"):
+		var local_half := Vector3(2.0, 1.6, 0.6)
+		var basis := node.global_transform.basis
+		half_x = absf(basis.x.x * local_half.x) + absf(basis.z.x * local_half.z) + 0.15
+		half_z = absf(basis.x.z * local_half.x) + absf(basis.z.z * local_half.z) + 0.15
+	var min_pos := Vector2(pos.x - half_x, pos.z - half_z)
+	var max_pos := Vector2(pos.x + half_x, pos.z + half_z)
 	if flow_field:
-		flow_field.register_obstacle(node, min_pos, max_pos, is_blocking)
+		flow_field.register_obstacle(node, min_pos, max_pos, is_blocking, cost)
 
 
-func register_obstacle_aabb(id: Variant, min_pos: Vector3, max_pos: Vector3, is_blocking: bool = true) -> void:
+func register_obstacle_aabb(id: Variant, min_pos: Vector3, max_pos: Vector3, is_blocking: bool = true, cost: int = 255) -> void:
 	if flow_field:
-		flow_field.register_obstacle(id, Vector2(min_pos.x, min_pos.z), Vector2(max_pos.x, max_pos.z), is_blocking)
+		flow_field.register_obstacle(id, Vector2(min_pos.x, min_pos.z), Vector2(max_pos.x, max_pos.z), is_blocking, cost)
 
 
 func unregister_obstacle(id: Variant) -> void:
@@ -331,6 +342,14 @@ func simulate_step(delta: float) -> void:
 	var def_sep_rad: float = default_separation_radius
 	var cached_sep := _cached_sep_radius
 	var cached_sep_size := cached_sep.size()
+
+	var has_ff: bool = (flow_field != null)
+	var ff_cost: PackedByteArray = flow_field.cost_field if has_ff else PackedByteArray()
+	var ff_w: int = flow_field.width if has_ff else 0
+	var ff_h: int = flow_field.height if has_ff else 0
+	var ff_inv_cs: float = flow_field.inv_cell_size if has_ff else 1.0
+	var ff_ox: float = flow_field.origin.x if has_ff else 0.0
+	var ff_oz: float = flow_field.origin.y if has_ff else 0.0
 	
 	for i in range(cap):
 		if alive[i] == 0:
@@ -393,6 +412,33 @@ func simulate_step(delta: float) -> void:
 		# Position integration with boundary clamping
 		var next_x: float = cur_px + new_vx * delta
 		var next_z: float = cur_pz + new_vz * delta
+
+		# Obstacle collision & sliding: prevent penetrating walls or closed gates (cost >= 15)
+		if has_ff:
+			var gx := int(floor((next_x - ff_ox) * ff_inv_cs))
+			var gz := int(floor((next_z - ff_oz) * ff_inv_cs))
+			if gx >= 0 and gx < ff_w and gz >= 0 and gz < ff_h:
+				var cell_cost: int = ff_cost[gz * ff_w + gx]
+				if cell_cost >= 15:
+					var cur_gx := int(floor((cur_px - ff_ox) * ff_inv_cs))
+					var cur_gz := int(floor((cur_pz - ff_oz) * ff_inv_cs))
+					var can_slide_x: bool = (cur_gz >= 0 and cur_gz < ff_h and gx >= 0 and gx < ff_w) and ff_cost[cur_gz * ff_w + gx] < 15
+					var can_slide_z: bool = (gz >= 0 and gz < ff_h and cur_gx >= 0 and cur_gx < ff_w) and ff_cost[gz * ff_w + cur_gx] < 15
+					if can_slide_x and not can_slide_z:
+						next_z = cur_pz
+						new_vz = 0.0
+						vz[i] = 0.0
+					elif can_slide_z and not can_slide_x:
+						next_x = cur_px
+						new_vx = 0.0
+						vx[i] = 0.0
+					else:
+						next_x = cur_px
+						next_z = cur_pz
+						new_vx = 0.0
+						new_vz = 0.0
+						vx[i] = 0.0
+						vz[i] = 0.0
 		
 		# Soft position relaxation push to prevent coordinate collapse under bottleneck congestion
 		if spatial_hash and spatial_hash.last_min_dist < 0.095:

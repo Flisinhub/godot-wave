@@ -347,13 +347,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 9.5)
 [node name="EnemySpawners" type="Node3D" parent="."]
 
 [node name="SpawnerNorthWest" type="Marker3D" parent="EnemySpawners"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, -34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -34)
 
 [node name="SpawnerNorthCenter" type="Marker3D" parent="EnemySpawners"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -34)
 
 [node name="SpawnerNorthEast" type="Marker3D" parent="EnemySpawners"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -34)
 
 [node name="SwarmSimulation" type="Node3D" parent="."]
 script = ExtResource("10_swarm_sim_script")

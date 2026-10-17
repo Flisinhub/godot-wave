@@ -171,19 +171,26 @@ func _register_all_perimeter_obstacles() -> void:
 		var s: Node3D = node as Node3D
 
 		if s is WallSegment:
-			var half_size: Vector3 = Vector3(2.0, 1.0, 1.0)
-			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true)
+			var local_half := Vector3(2.0, 1.6, 0.6)
+			var basis := s.global_transform.basis
+			var world_half_x: float = absf(basis.x.x * local_half.x) + absf(basis.z.x * local_half.z)
+			var world_half_z: float = absf(basis.x.z * local_half.x) + absf(basis.z.z * local_half.z)
+			var half_size := Vector3(world_half_x + 0.15, 1.6, world_half_z + 0.15)
+			var is_front_wall: bool = (s.global_position.z <= 5.0)
+			var wall_cost: int = 60 if is_front_wall else 255
+			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, wall_cost)
 		elif s is GateStructure:
 			var gate: GateStructure = s as GateStructure
-			var half_size: Vector3 = Vector3(3.0, 1.0, 1.5)
-			var is_blocking: bool = (gate.current_state == GateStructure.GateState.CLOSED)
-			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, is_blocking)
+			var half_size: Vector3 = Vector3(3.1, 1.6, 0.8)
+			var is_closed: bool = (gate.current_state == GateStructure.GateState.CLOSED)
+			var gate_cost: int = 20 if is_closed else 1
+			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, is_closed, gate_cost)
 		elif s is CommandCenter:
 			var half_size: Vector3 = Vector3(4.0, 2.0, 4.0)
 			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true)
 		elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
 			var half_size: Vector3 = Vector3(2.5, 1.5, 2.5)
-			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true)
+			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, 80)
 
 
 func _setup_hero_and_controls() -> void:
@@ -462,8 +469,9 @@ func _on_pedestal_puzzle_solved(reward_data: Dictionary) -> void:
 func _on_gate_state_changed(gate: Node, is_open: bool) -> void:
 	if swarm_simulation and is_instance_valid(gate) and gate is Node3D:
 		var g: Node3D = gate as Node3D
-		var half_size: Vector3 = Vector3(3.0, 1.0, 1.5)
-		swarm_simulation.register_obstacle_aabb(g, g.global_position - half_size, g.global_position + half_size, not is_open)
+		var half_size: Vector3 = Vector3(3.1, 1.6, 0.8)
+		var gate_cost: int = 1 if is_open else 20
+		swarm_simulation.register_obstacle_aabb(g, g.global_position - half_size, g.global_position + half_size, not is_open, gate_cost)
 
 
 func _on_structure_destroyed(structure: Node) -> void:
