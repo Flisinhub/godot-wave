@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"celestial_singularity"
+skill_name = "Celestial Singularity"
+description = "Creates a catastrophic gravitational vortex pulling enemies to center and dealing devastating psionic spell damage."
+target_type = 3
+energy_cost = 85.0
+cooldown = 15.0
+cast_range = 12.0
+area_radius = 6.0
+base_power = 350.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "R"
+icon_path = ""
+max_rank = 4
+current_rank = 1

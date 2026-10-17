@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://d1e2f3a4b5c6d"]
+[gd_scene load_steps=37 format=3 uid="uid://d1e2f3a4b5c6d"]
 
 [ext_resource type="Script" path="res://levels/main_level.gd" id="1_main_script"]
 [ext_resource type="PackedScene" path="res://levels/rts_camera_3d.tscn" id="2_camera_scene"]
@@ -9,6 +9,19 @@
 [ext_resource type="PackedScene" path="res://entities/structures/wall_segment.tscn" id="7_wall_scene"]
 [ext_resource type="PackedScene" path="res://entities/allies/base_unit_3d.tscn" id="8_unit_scene"]
 [ext_resource type="Script" path="res://core/wave_manager.gd" id="9_wave_script"]
+[ext_resource type="Script" path="res://core/swarm/swarm_simulation.gd" id="10_swarm_sim_script"]
+[ext_resource type="Script" path="res://entities/allies/hero_unit_3d.gd" id="11_hero_unit_script"]
+[ext_resource type="Script" path="res://ui/sc2_hud_root.gd" id="12_sc2_hud_root_script"]
+[ext_resource type="Script" path="res://core/economy/sfe_economy_manager.gd" id="13_economy_manager_script"]
+[ext_resource type="Script" path="res://core/economy/sfe_difficulty_manager.gd" id="14_difficulty_manager_script"]
+[ext_resource type="Script" path="res://core/events/secret_boss_zone_3d.gd" id="15_secret_boss_zone_script"]
+[ext_resource type="Script" path="res://core/events/hells_gate_zone_3d.gd" id="16_hells_gate_zone_script"]
+[ext_resource type="Script" path="res://core/puzzles/pedestal_puzzle_manager.gd" id="17_pedestal_puzzle_script"]
+[ext_resource type="Script" path="res://levels/pedestal_node.gd" id="18_pedestal_node_script"]
+[ext_resource type="Script" path="res://levels/bunker_structure.gd" id="19_bunker_script"]
+[ext_resource type="PackedScene" path="res://entities/enemies/boss_omega_ultralisk_3d.tscn" id="20_omega_boss_scene"]
+[ext_resource type="PackedScene" path="res://entities/enemies/boss_nydus_3d.tscn" id="21_nydus_boss_scene"]
+[ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="22_health_scene"]
 
 [sub_resource type="Environment" id="Environment_volcanic"]
 background_mode = 1
@@ -42,6 +55,83 @@ roughness = 0.85
 material = SubResource("StandardMaterial3D_volcanic_ground")
 size = Vector3(80, 1, 80)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_bunker"]
+size = Vector3(3.5, 2.5, 3.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bunker"]
+albedo_color = Color(0.25, 0.28, 0.32, 1)
+metallic = 0.85
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_bunker"]
+material = SubResource("StandardMaterial3D_bunker")
+size = Vector3(3.5, 2.5, 3.5)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hero"]
+radius = 0.45
+height = 1.85
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hero_commander"]
+albedo_color = Color(0.18, 0.45, 0.9, 1)
+metallic = 0.85
+roughness = 0.25
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_hero"]
+material = SubResource("StandardMaterial3D_hero_commander")
+radius = 0.45
+height = 1.85
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hero_ring"]
+shading_mode = 0
+albedo_color = Color(0.95, 0.85, 0.15, 1)
+
+[sub_resource type="TorusMesh" id="TorusMesh_hero_ring"]
+material = SubResource("StandardMaterial3D_hero_ring")
+inner_radius = 0.75
+outer_radius = 0.9
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rifle_dark"]
+albedo_color = Color(0.12, 0.13, 0.15, 1)
+metallic = 0.9
+roughness = 0.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_rifle"]
+material = SubResource("StandardMaterial3D_rifle_dark")
+size = Vector3(0.18, 0.22, 0.9)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flash"]
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_flash"]
+material = SubResource("StandardMaterial3D_flash")
+size = Vector3(0.14, 0.14, 0.3)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_secret_boss"]
+height = 4.0
+radius = 6.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_hells_gate"]
+height = 4.0
+radius = 7.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pedestal"]
+height = 0.5
+radius = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pedestal_mat"]
+albedo_color = Color(0.3, 0.35, 0.45, 1)
+metallic = 0.7
+roughness = 0.3
+emission = Color(0.2, 0.8, 1, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_pedestal"]
+material = SubResource("StandardMaterial3D_pedestal_mat")
+top_radius = 0.8
+bottom_radius = 0.9
+height = 0.5
+
 [node name="MainLevel" type="Node3D"]
 script = ExtResource("1_main_script")
 
@@ -73,6 +163,9 @@ mesh = SubResource("BoxMesh_ground")
 
 [node name="CommandCenter" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("5_cc_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
+
+[node name="RallyPoint" type="Marker3D" parent="NavigationRegion3D/BasePerimeter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
 
 [node name="WestGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, 4)
@@ -155,7 +248,86 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 24)
 [node name="WallSouth9" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 24)
 
+[node name="BunkerWest" type="StaticBody3D" parent="NavigationRegion3D/BasePerimeter" groups=["structures", "bunkers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 7)
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("19_bunker_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("BoxShape3D_bunker")
+
+[node name="VisualRoot" type="Node3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("BoxMesh_bunker")
+
+[node name="HealthBar3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest" instance=ExtResource("22_health_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
+
+[node name="BunkerEast" type="StaticBody3D" parent="NavigationRegion3D/BasePerimeter" groups=["structures", "bunkers"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 7)
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("19_bunker_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("BoxShape3D_bunker")
+
+[node name="VisualRoot" type="Node3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+mesh = SubResource("BoxMesh_bunker")
+
+[node name="HealthBar3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast" instance=ExtResource("22_health_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
+
 [node name="Allies" type="Node3D" parent="."]
+
+[node name="HeroRaynor" type="CharacterBody3D" parent="Allies" groups=["allies", "heroes"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("11_hero_unit_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Allies/HeroRaynor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+shape = SubResource("CapsuleShape3D_hero")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="Allies/HeroRaynor"]
+path_desired_distance = 0.6
+target_desired_distance = 0.5
+path_max_distance = 4.0
+avoidance_enabled = true
+radius = 0.45
+max_speed = 5.2
+
+[node name="VisualRoot" type="Node3D" parent="Allies/HeroRaynor"]
+
+[node name="BodyMesh" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
+mesh = SubResource("CapsuleMesh_hero")
+
+[node name="RifleMesh" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 1.05, -0.45)
+mesh = SubResource("BoxMesh_rifle")
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot/RifleMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+visible = false
+mesh = SubResource("BoxMesh_flash")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+visible = false
+mesh = SubResource("TorusMesh_hero_ring")
+
+[node name="HealthBar3D" parent="Allies/HeroRaynor" instance=ExtResource("22_health_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
 
 [node name="Marine1" parent="Allies" instance=ExtResource("8_unit_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 9.5)
@@ -183,9 +355,182 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -34)
 [node name="SpawnerNorthEast" type="Marker3D" parent="EnemySpawners"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, -34)
 
-[node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("spawn_points")]
+[node name="SwarmSimulation" type="Node3D" parent="."]
+script = ExtResource("10_swarm_sim_script")
+max_units = 2048
+map_bounds_min = Vector2(-42, -42)
+map_bounds_max = Vector2(42, 42)
+
+[node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("spawn_points", "swarm_simulation")]
 script = ExtResource("9_wave_script")
 spawn_points = [NodePath("../EnemySpawners/SpawnerNorthWest"), NodePath("../EnemySpawners/SpawnerNorthCenter"), NodePath("../EnemySpawners/SpawnerNorthEast")]
+swarm_simulation = NodePath("../SwarmSimulation")
+
+[node name="EconomyManager" type="Node" parent="."]
+script = ExtResource("13_economy_manager_script")
+
+[node name="DifficultyManager" type="Node" parent="."]
+script = ExtResource("14_difficulty_manager_script")
+
+[node name="SpatialEvents" type="Node3D" parent="."]
+
+[node name="SecretBossZone3D" type="Area3D" parent="SpatialEvents" node_paths=PackedStringArray("spawn_marker")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, -10)
+collision_layer = 0
+collision_mask = 6
+script = ExtResource("15_secret_boss_zone_script")
+required_seconds = 120.0
+zone_radius = 6.0
+velocity_threshold = 0.05
+boss_scene = ExtResource("20_omega_boss_scene")
+spawn_marker = NodePath("OmegaSpawnMarker")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/SecretBossZone3D"]
+shape = SubResource("CylinderShape3D_secret_boss")
+
+[node name="OmegaSpawnMarker" type="Marker3D" parent="SpatialEvents/SecretBossZone3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+
+[node name="HellsGateZone3D" type="Area3D" parent="SpatialEvents" node_paths=PackedStringArray("rift_spawn_point")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, -10)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("16_hells_gate_zone_script")
+required_heroes = 6
+channel_duration = 3.0
+nydus_boss_scene = ExtResource("21_nydus_boss_scene")
+rift_spawn_point = NodePath("NydusSpawnMarker")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/HellsGateZone3D"]
+shape = SubResource("CylinderShape3D_hells_gate")
+
+[node name="NydusSpawnMarker" type="Marker3D" parent="SpatialEvents/HellsGateZone3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+
+[node name="PedestalPuzzleManager" type="Node3D" parent="SpatialEvents"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 18)
+script = ExtResource("17_pedestal_puzzle_script")
+ring_radius = 5.0
+
+[node name="Pedestal_0" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_1" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.53553, 0, 3.53553)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_2" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_3" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.53553, 0, 3.53553)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_4" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_5" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.53553, 0, -3.53553)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 5
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_6" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 6
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
+
+[node name="Pedestal_7" type="Area3D" parent="SpatialEvents/PedestalPuzzleManager"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.53553, 0, -3.53553)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("18_pedestal_node_script")
+pedestal_id = 7
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+shape = SubResource("CylinderShape3D_pedestal")
+
+[node name="VisualMesh" type="MeshInstance3D" parent="SpatialEvents/PedestalPuzzleManager/Pedestal_7"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_pedestal")
 
 [node name="RTSCamera3D" parent="." instance=ExtResource("2_camera_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 11)
@@ -228,17 +573,17 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 14
-text = "STARCRAFT II DEFENSE // SPRINT 2"
+text = "STARCRAFT II DEFENSE // SPECIAL FORCES ELITE 5"
 
 [node name="HelpLabel" type="Label" parent="UI/HUDPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 theme_override_font_sizes/font_size = 11
-text = "• Click Izq: Seleccionar / Caja de Selección
+text = "• Click Izq: Seleccionar Héroe / Unidades / Compuertas
 • Click Der: Mover en Formación / Focus Fire en Enemigo
-• Teclas S / H: Detener / Mantener Posición
-• Compuertas: Abre para aliados / Click para alternar
-• WASD / Flechas / Bordes: Mover Cámara | Rueda: Zoom"
+• Teclas Q, W, E, R: Habilidades de Héroe | S / H: Detener
+• Consola SC2: Panel de Estadísticas [+] y Command Card
+• WASD / Bordes: Mover Cámara | Rueda: Zoom"
 
 [node name="WavePanel" type="PanelContainer" parent="UI"]
 anchors_preset = 1
@@ -247,7 +592,7 @@ anchor_right = 1.0
 offset_left = -340.0
 offset_top = 16.0
 offset_right = -16.0
-offset_bottom = 165.0
+offset_bottom = 185.0
 grow_horizontal = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="UI/WavePanel"]
@@ -278,6 +623,12 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 11
 text = "Integridad Command Center: 2000 / 2000"
+
+[node name="MineralsLabel" type="Label" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Minerales: 50"
 
 [node name="StartWaveBtn" type="Button" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
@@ -328,3 +679,6 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_font_sizes/font_size = 13
 text = "REINTENTAR MISIÓN"
+
+[node name="SC2HUDRoot" type="CanvasLayer" parent="."]
+script = ExtResource("12_sc2_hud_root_script")

@@ -5,6 +5,7 @@ extends Node
 
 @export var spawn_points: Array[Marker3D] = []
 @export var spawn_interval: float = 0.6
+@export var swarm_simulation: Node3D # SwarmSimulation reference
 
 var zergling_data: EnemyData = preload("res://data/enemies/zergling_data.tres")
 var roach_data: EnemyData = preload("res://data/enemies/roach_data.tres")
@@ -83,19 +84,38 @@ func _process(delta: float) -> void:
 
 
 func _spawn_enemy(data: EnemyData) -> void:
-	if not enemy_scene or spawn_points.is_empty():
+	if spawn_points.is_empty():
 		return
 
 	var spawner: Marker3D = spawn_points[_current_spawner_index]
 	_current_spawner_index = (_current_spawner_index + 1) % spawn_points.size()
 
-	var enemy: BaseEnemy3D = enemy_scene.instantiate() as BaseEnemy3D
-	enemy.enemy_data = data
-	get_tree().current_scene.add_child(enemy)
-	
 	# Slight positional jitter around spawn marker to avoid exact overlaps
 	var jitter: Vector3 = Vector3(randf_range(-1.2, 1.2), 0.0, randf_range(-1.2, 1.2))
-	enemy.global_position = spawner.global_position + jitter
+	var spawn_pos: Vector3 = spawner.global_position + jitter
+
+	if swarm_simulation != null and swarm_simulation.has_method("spawn_unit"):
+		var arch_id: int = 0
+		if data and data.enemy_name.to_lower().contains("roach"):
+			arch_id = 1
+		swarm_simulation.spawn_unit(arch_id, spawn_pos)
+	elif enemy_scene:
+		var enemy: BaseEnemy3D = enemy_scene.instantiate() as BaseEnemy3D
+		enemy.enemy_data = data
+		get_tree().current_scene.add_child(enemy)
+		enemy.global_position = spawn_pos
+
+
+func on_swarm_unit_died(_reward: int = 5) -> void:
+	if not is_wave_in_progress:
+		return
+
+	enemies_alive = max(0, enemies_alive - 1)
+	SignalBus.wave_enemy_count_changed.emit(enemies_alive)
+
+	if enemies_alive == 0 and _spawn_queue.is_empty():
+		is_wave_in_progress = false
+		SignalBus.wave_completed.emit(current_wave)
 
 
 func _on_enemy_died(_enemy: Node, _reward: int) -> void:

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"penetrating_round"
+skill_name = "Penetrating Round"
+description = "Fires a high-velocity depleted uranium round that pierces all enemies in a linear vector."
+target_type = 4
+energy_cost = 35.0
+cooldown = 8.0
+cast_range = 12.0
+area_radius = 1.2
+base_power = 120.0
+damage_type = 0
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "W"
+icon_path = ""
+max_rank = 4
+current_rank = 1

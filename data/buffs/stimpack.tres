@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SFEBuffDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/combat/sfe_buff_def.gd" id="1_buff_def"]
+
+[resource]
+script = ExtResource("1_buff_def")
+buff_id = &"stimpack"
+display_name = "Stimpack"
+default_duration = 10.0
+default_max_stacks = 2
+is_invulnerable = false
+stat_multipliers = {
+"attack_speed": 1.5,
+"move_speed": 1.3
+}
+flat_modifiers = {}
+custom_data = {}

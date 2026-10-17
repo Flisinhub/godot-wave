@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="HeroData" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://core/heroes/hero_data.gd" id="1_data"]
+[ext_resource type="Resource" path="res://data/skills/nitro_boost.tres" id="2_nitro"]
+[ext_resource type="Resource" path="res://data/skills/cluster_mine.tres" id="3_mine"]
+
+[resource]
+script = ExtResource("1_data")
+archetype_id = &"reaper"
+hero_name = "Reaper Infiltrator"
+role_description = "High-Mobility Jetpack Raider"
+is_secret = false
+icon_path = ""
+base_hp = 460.0
+base_damage = 24.0
+base_cooldown = 0.65
+base_hp_regen = 1.2
+base_energy = 140.0
+base_energy_regen = 1.5
+base_vision = 15.0
+base_shield = 0.0
+base_shield_regen = 0.0
+move_speed = 6.2
+attack_range = 7.0
+flat_armor = 0.5
+strength = 9
+dexterity = 15
+intelligence = 8
+attribute_points = 0
+xp_level = 1
+max_level = 20
+current_xp = 0
+xp_for_next_level = 150
+growth_strength = 1
+growth_dexterity = 3
+growth_intelligence = 1
+skills = [ExtResource("2_nitro"), ExtResource("3_mine")]

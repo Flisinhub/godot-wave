@@ -10,7 +10,7 @@ extends Node
 
 var move_indicator_scene: PackedScene = preload("res://levels/move_indicator.tscn")
 
-var selected_units: Array[BaseUnit3D] = []
+var selected_units: Array[CharacterBody3D] = []
 var is_box_selecting: bool = false
 var box_start_pos: Vector2 = Vector2.ZERO
 
@@ -61,7 +61,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Stop / Hold position hotkeys (S or H)
 		if key_ev.keycode == KEY_S or key_ev.keycode == KEY_H:
 			for unit in selected_units:
-				if is_instance_valid(unit):
+				if is_instance_valid(unit) and unit.has_method("stop_action"):
 					unit.stop_action()
 
 
@@ -75,8 +75,8 @@ func _handle_single_click_selection(screen_pos: Vector2, is_shift_held: bool) ->
 	var collider: Object = ray_res.collider
 	
 	# Check if an allied unit was clicked
-	if collider is BaseUnit3D:
-		var unit: BaseUnit3D = collider as BaseUnit3D
+	if collider is CharacterBody3D and (collider.is_in_group("allies") or collider is BaseUnit3D):
+		var unit: CharacterBody3D = collider as CharacterBody3D
 		if not is_shift_held:
 			clear_selection()
 			select_unit(unit)
@@ -110,8 +110,8 @@ func _handle_box_selection(screen_rect: Rect2, is_shift_held: bool) -> void:
 
 	var ally_nodes: Array[Node] = get_tree().get_nodes_in_group("allies")
 	for node in ally_nodes:
-		if node is BaseUnit3D:
-			var unit: BaseUnit3D = node as BaseUnit3D
+		if node is CharacterBody3D:
+			var unit: CharacterBody3D = node as CharacterBody3D
 			if not is_instance_valid(unit):
 				continue
 			
@@ -134,11 +134,11 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	var ray_res: Dictionary = _raycast_from_screen(screen_pos)
 
 	# 1. Target Focus Fire: Right-click directly on an enemy
-	if not ray_res.is_empty() and ray_res.collider is BaseEnemy3D:
-		var enemy: BaseEnemy3D = ray_res.collider as BaseEnemy3D
+	if not ray_res.is_empty() and (ray_res.collider is BaseEnemy3D or (ray_res.collider is Node3D and ray_res.collider.is_in_group("enemies"))):
+		var enemy: Node3D = ray_res.collider as Node3D
 		_spawn_move_indicator(enemy.global_position, Color(1.0, 0.2, 0.2, 0.95))
 		for unit in selected_units:
-			if is_instance_valid(unit):
+			if is_instance_valid(unit) and unit.has_method("set_attack_target"):
 				unit.set_attack_target(enemy)
 		return
 
@@ -170,8 +170,8 @@ func _handle_right_click_order(screen_pos: Vector2) -> void:
 	var nav_map: RID = get_viewport().world_3d.navigation_map
 	
 	for i in range(selected_units.size()):
-		var unit: BaseUnit3D = selected_units[i]
-		if is_instance_valid(unit):
+		var unit: CharacterBody3D = selected_units[i]
+		if is_instance_valid(unit) and unit.has_method("move_to"):
 			var pos: Vector3 = formation_positions[i]
 			# Validate formation target on navigable mesh
 			if nav_map.is_valid():
@@ -214,30 +214,31 @@ func _calculate_formation_positions(center: Vector3, count: int, spacing: float)
 	return positions
 
 
-func select_unit(unit: BaseUnit3D) -> void:
+func select_unit(unit: CharacterBody3D) -> void:
 	if not selected_units.has(unit):
 		selected_units.append(unit)
-		unit.set_selected(true)
+		if unit.has_method("set_selected"):
+			unit.set_selected(true)
 
 
-func deselect_unit(unit: BaseUnit3D) -> void:
+func deselect_unit(unit: CharacterBody3D) -> void:
 	if selected_units.has(unit):
 		selected_units.erase(unit)
-		if is_instance_valid(unit):
+		if is_instance_valid(unit) and unit.has_method("set_selected"):
 			unit.set_selected(false)
 
 
 func clear_selection() -> void:
 	for unit in selected_units:
-		if is_instance_valid(unit):
+		if is_instance_valid(unit) and unit.has_method("set_selected"):
 			unit.set_selected(false)
 	selected_units.clear()
 	SignalBus.units_deselected.emit()
 
 
 func _on_unit_died(unit: Node) -> void:
-	if unit is BaseUnit3D:
-		selected_units.erase(unit as BaseUnit3D)
+	if unit is CharacterBody3D:
+		selected_units.erase(unit as CharacterBody3D)
 
 
 func _raycast_from_screen(screen_pos: Vector2) -> Dictionary:

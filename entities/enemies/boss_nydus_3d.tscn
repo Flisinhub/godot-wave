@@ -1,0 +1,32 @@
+[gd_scene load_steps=5 format=3 uid="uid://c8nydus002can"]
+
+[ext_resource type="Script" path="res://entities/enemies/boss_nydus_3d.gd" id="1_nydus_script"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_nydus"]
+height = 5.6
+radius = 3.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_maw"]
+top_radius = 2.2
+bottom_radius = 3.0
+height = 5.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_violet"]
+albedo_color = Color(0.2, 0.05, 0.32, 1)
+roughness = 0.8
+
+[node name="BossNydus3D" type="CharacterBody3D" groups=["bosses", "enemies", "nydus_boss"]]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_nydus_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+shape = SubResource("CylinderShape3D_nydus")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="MawMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.75, 0)
+material_override = SubResource("StandardMaterial3D_violet")
+mesh = SubResource("CylinderMesh_maw")

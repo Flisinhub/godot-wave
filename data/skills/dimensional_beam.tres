@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"dimensional_beam"
+skill_name = "Dimensional Beam"
+description = "Focuses an exotic tachyon beam that disintegrates the targeted hostile unit."
+target_type = 2
+energy_cost = 60.0
+cooldown = 8.0
+cast_range = 11.0
+area_radius = 0.0
+base_power = 220.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "Q"
+icon_path = ""
+max_rank = 4
+current_rank = 1

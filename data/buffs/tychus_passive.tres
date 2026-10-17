@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SFEBuffDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/combat/sfe_buff_def.gd" id="1_buff_def"]
+
+[resource]
+script = ExtResource("1_buff_def")
+buff_id = &"tychus_passive"
+display_name = "Tychus Minigun Passive"
+default_duration = 4.0
+default_max_stacks = 20
+is_invulnerable = false
+stat_multipliers = {
+"attack_speed": 1.03
+}
+flat_modifiers = {}
+custom_data = {}

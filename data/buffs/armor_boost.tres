@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SFEBuffDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/combat/sfe_buff_def.gd" id="1_buff_def"]
+
+[resource]
+script = ExtResource("1_buff_def")
+buff_id = &"armor_boost"
+display_name = "Armor Boost"
+default_duration = 12.0
+default_max_stacks = 2
+is_invulnerable = false
+stat_multipliers = {}
+flat_modifiers = {
+"flat_armor": 5.0
+}
+custom_data = {}

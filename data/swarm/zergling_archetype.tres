@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SwarmUnitArchetype" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/swarm/swarm_unit_archetype.gd" id="1_swarm_archetype"]
+
+[resource]
+script = ExtResource("1_swarm_archetype")
+archetype_id = 0
+unit_name = "Zergling"
+base_hp = 35.0
+base_speed = 7.2
+base_damage = 5.0
+attack_range = 1.6
+attack_cooldown = 0.5
+separation_radius = 0.9
+armor_level = 0
+unit_tags = 1
+body_color = Color(0.25, 0.08, 0.35, 1)
+accent_color = Color(0.2, 0.95, 0.2, 1)
+mesh_scale = Vector3(0.8, 0.7, 1.1)

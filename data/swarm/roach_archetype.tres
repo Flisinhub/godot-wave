@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="SwarmUnitArchetype" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/swarm/swarm_unit_archetype.gd" id="1_swarm_archetype"]
+
+[resource]
+script = ExtResource("1_swarm_archetype")
+archetype_id = 1
+unit_name = "Roach"
+base_hp = 110.0
+base_speed = 4.2
+base_damage = 14.0
+attack_range = 3.8
+attack_cooldown = 1.1
+separation_radius = 1.3
+armor_level = 1
+unit_tags = 2
+body_color = Color(0.3, 0.2, 0.12, 1)
+accent_color = Color(0.1, 1, 0.3, 1)
+mesh_scale = Vector3(1.15, 0.95, 1.3)

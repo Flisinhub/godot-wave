@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"cluster_mine"
+skill_name = "Cluster Mine"
+description = "Hurls a cluster of volatile anti-infantry explosives, dealing area of effect physical damage."
+target_type = 3
+energy_cost = 40.0
+cooldown = 12.0
+cast_range = 10.0
+area_radius = 4.0
+base_power = 150.0
+damage_type = 0
+is_passive = false
+buff_id = &""
+buff_duration = 0.0
+hotkey = "W"
+icon_path = ""
+max_rank = 4
+current_rank = 1

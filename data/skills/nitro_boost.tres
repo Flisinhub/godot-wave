@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"nitro_boost"
+skill_name = "Nitro Boost"
+description = "Overcharges jump jet thrusters, giving +50% movement speed for 5 seconds."
+target_type = 1
+energy_cost = 25.0
+cooldown = 10.0
+cast_range = 0.0
+area_radius = 0.0
+base_power = 0.0
+damage_type = 1
+is_passive = false
+buff_id = &"frenzy"
+buff_duration = 5.0
+hotkey = "Q"
+icon_path = ""
+max_rank = 4
+current_rank = 1

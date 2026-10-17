@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"kinetic_foam"
+skill_name = "Kinetic Foam"
+description = "Passive armor reinforcement providing bonus maximum health and increased durability."
+target_type = 5
+energy_cost = 0.0
+cooldown = 0.0
+cast_range = 0.0
+area_radius = 0.0
+base_power = 150.0
+damage_type = 0
+is_passive = true
+buff_id = &""
+buff_duration = 0.0
+hotkey = "E"
+icon_path = ""
+max_rank = 4
+current_rank = 1
