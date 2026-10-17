@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/zerg_swarm.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/albedo_carapace = Color(0.24, 0.1, 0.28, 1)
+shader_parameter/albedo_flesh = Color(0.38, 0.08, 0.12, 1)
+shader_parameter/emission_color = Color(0.25, 1, 0.25, 1)
+shader_parameter/emission_energy = 3.0
+shader_parameter/metallic = 0.1
+shader_parameter/roughness = 0.28
+shader_parameter/clearcoat = 0.85
+shader_parameter/clearcoat_roughness = 0.15
+shader_parameter/scuttle_speed = 20.0
+shader_parameter/leg_stride = 0.09
+shader_parameter/leg_lift = 0.05
+shader_parameter/body_sway = 0.03
+shader_parameter/breathing_rate = 3.5

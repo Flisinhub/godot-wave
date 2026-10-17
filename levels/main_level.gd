@@ -22,6 +22,7 @@ const SC2HUDRoot = preload("res://ui/sc2_hud_root.gd")
 const SecretBossZone3D = preload("res://core/events/secret_boss_zone_3d.gd")
 const HellsGateZone3D = preload("res://core/events/hells_gate_zone_3d.gd")
 const PedestalPuzzleManager = preload("res://core/puzzles/pedestal_puzzle_manager.gd")
+const CombatVFXPool = preload("res://core/vfx/combat_vfx_pool.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -32,6 +33,7 @@ const PedestalPuzzleManager = preload("res://core/puzzles/pedestal_puzzle_manage
 @onready var sc2_hud_root: SC2HUDRoot = get_node_or_null("SC2HUDRoot")
 @onready var economy_manager: SFEEconomyManager = get_node_or_null("EconomyManager")
 @onready var difficulty_manager: SFEDifficultyManager = get_node_or_null("DifficultyManager")
+@onready var combat_vfx_pool: Node3D = get_node_or_null("CombatVFXPool")
 
 # Spatial Events & Puzzles
 @onready var secret_boss_zone: SecretBossZone3D = get_node_or_null("SpatialEvents/SecretBossZone3D")
@@ -395,8 +397,13 @@ func _process_swarm_combat(dt: float) -> void:
 			var candidates = swarm_simulation.spatial_hash.query_radius(center_2d, ally_range, sdata)
 			if candidates.size() > 0:
 				var target_idx: int = candidates[0]
+				var target_pos := Vector3(sdata.pos_x[target_idx], 0.35, sdata.pos_z[target_idx])
+				if combat_vfx_pool:
+					combat_vfx_pool.spawn_tracer(ally.global_position + Vector3(0.0, 1.1, 0.0), target_pos)
 				var killed: bool = swarm_simulation.apply_damage_to_unit(target_idx, ally_dmg)
 				if killed:
+					if combat_vfx_pool:
+						combat_vfx_pool.spawn_acid_burst(target_pos)
 					award_kill_bounty(null, ally, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
 					if wave_manager:
 						wave_manager.on_swarm_unit_died(5)
@@ -436,6 +443,13 @@ func _on_hero_skill_cast(skill: Variant, target: Variant) -> void:
 	for unit_idx in candidates:
 		var killed: bool = swarm_simulation.apply_damage_to_unit(unit_idx, power)
 		if killed:
+			if combat_vfx_pool:
+				var victim_pos := Vector3(
+					swarm_simulation.swarm_data.pos_x[unit_idx],
+					0.35,
+					swarm_simulation.swarm_data.pos_z[unit_idx]
+				)
+				combat_vfx_pool.spawn_acid_burst(victim_pos)
 			award_kill_bounty(null, active_hero, 5, EconomyTypes.Faction.ALLIED, dmg_type)
 			if wave_manager:
 				wave_manager.on_swarm_unit_died(5)
@@ -530,6 +544,8 @@ func _on_enemy_died(enemy: Node, reward: int) -> void:
 			killer_faction = enemy.get_meta("killer_faction")
 		if enemy.has_meta("killer"):
 			killer_node = enemy.get_meta("killer")
+		if enemy is Node3D and combat_vfx_pool:
+			combat_vfx_pool.spawn_acid_burst((enemy as Node3D).global_position)
 
 	award_kill_bounty(enemy, killer_node, reward, killer_faction)
 
@@ -607,4 +623,10 @@ func _log_milestone_6_diagnostics() -> void:
 	print("  [M6 INTEGRATION] Spatial Events & Puzzles: ACTIVE (Events Found: %s, Pedestals: %d)" % [
 		str(events_ok), ped_count
 	])
+
+	if combat_vfx_pool:
+		print("  [M4 INTEGRATION] CombatVFXPool: ACTIVE (Tracers: %d, Acid Bursts: %d)" % [
+			combat_vfx_pool.get_tracer_pool_size(),
+			combat_vfx_pool.get_acid_pool_size()
+		])
 	print("=============================================================\n")

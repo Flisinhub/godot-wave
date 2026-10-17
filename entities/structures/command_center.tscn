@@ -1,42 +1,12 @@
-[gd_scene load_steps=10 format=3 uid="uid://e5f6g7h8i9j0k"]
+[gd_scene load_steps=6 format=3 uid="uid://e5f6g7h8i9j0k"]
 
 [ext_resource type="Script" path="res://entities/structures/command_center.gd" id="1_cc_script"]
 [ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="2_health_scene"]
+[ext_resource type="ArrayMesh" path="res://assets/models/structures/command_center_mesh.tres" id="3_cc_mesh"]
+[ext_resource type="Script" path="res://core/vfx/structure_damage_vfx.gd" id="4_damage_vfx"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_cc"]
 size = Vector3(8, 4, 8)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cc_hull"]
-albedo_color = Color(0.24, 0.28, 0.32, 1)
-metallic = 0.85
-roughness = 0.35
-
-[sub_resource type="BoxMesh" id="BoxMesh_cc_main"]
-material = SubResource("StandardMaterial3D_cc_hull")
-size = Vector3(8, 3.2, 8)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cc_bridge"]
-albedo_color = Color(0.15, 0.45, 0.85, 1)
-metallic = 0.5
-roughness = 0.1
-emission_enabled = true
-emission = Color(0.1, 0.4, 0.9, 1)
-emission_energy_multiplier = 1.8
-
-[sub_resource type="BoxMesh" id="BoxMesh_cc_bridge"]
-material = SubResource("StandardMaterial3D_cc_bridge")
-size = Vector3(4.5, 1.6, 4.5)
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_booster"]
-albedo_color = Color(0.15, 0.16, 0.18, 1)
-metallic = 0.9
-roughness = 0.2
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_antenna"]
-material = SubResource("StandardMaterial3D_booster")
-top_radius = 0.15
-bottom_radius = 0.35
-height = 2.4
 
 [node name="CommandCenter" type="StaticBody3D" groups=["structures"]]
 collision_layer = 1
@@ -49,17 +19,13 @@ shape = SubResource("BoxShape3D_cc")
 
 [node name="VisualRoot" type="Node3D" parent="."]
 
-[node name="BaseHub" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-mesh = SubResource("BoxMesh_cc_main")
+[node name="FortressMesh" type="MeshInstance3D" parent="VisualRoot"]
+mesh = ExtResource("3_cc_mesh")
 
-[node name="Bridge" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
-mesh = SubResource("BoxMesh_cc_bridge")
-
-[node name="AntennaCorner" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2, 4, 3.2)
-mesh = SubResource("CylinderMesh_antenna")
+[node name="DamageVFX" type="Node3D" parent="VisualRoot"]
+script = ExtResource("4_damage_vfx")
+smoke_offset = Vector3(0, 3.5, 0)
+fire_offset = Vector3(0, 2, 0)
 
 [node name="HealthBar3D" parent="." instance=ExtResource("2_health_scene")]
 transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0, 5.2, 0)

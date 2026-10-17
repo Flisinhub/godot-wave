@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://e_chal_m3_test"]
+
+[ext_resource type="Script" path="res://tests/empirical_challenger_m3.gd" id="1_m3_chal_script"]
+
+[node name="EmpiricalChallengerM3" type="Node"]
+script = ExtResource("1_m3_chal_script")

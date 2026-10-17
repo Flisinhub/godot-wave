@@ -1,6 +1,8 @@
-[gd_resource type="Resource" script_class="SwarmUnitArchetype" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SwarmUnitArchetype" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://data/swarm/swarm_unit_archetype.gd" id="1_swarm_archetype"]
+[ext_resource type="ArrayMesh" path="res://assets/models/zergling_mesh.tres" id="2_zerg_mesh"]
+[ext_resource type="Material" path="res://assets/materials/zergling_material.tres" id="3_zerg_mat"]
 
 [resource]
 script = ExtResource("1_swarm_archetype")
@@ -17,3 +19,5 @@ unit_tags = 1
 body_color = Color(0.25, 0.08, 0.35, 1)
 accent_color = Color(0.2, 0.95, 0.2, 1)
 mesh_scale = Vector3(0.8, 0.7, 1.1)
+custom_mesh = ExtResource("2_zerg_mesh")
+custom_material = ExtResource("3_zerg_mat")

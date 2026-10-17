@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3 uid="uid://b1n2k3e4r5s6t"]
+
+[ext_resource type="Script" path="res://levels/bunker_structure.gd" id="1_bunker_script"]
+[ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="2_health_scene"]
+[ext_resource type="ArrayMesh" path="res://assets/models/structures/bunker_structure_mesh.tres" id="3_bunker_mesh"]
+[ext_resource type="Script" path="res://core/vfx/structure_damage_vfx.gd" id="4_damage_vfx"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bunker"]
+size = Vector3(3.5, 2.5, 3.5)
+
+[node name="BunkerStructure" type="StaticBody3D" groups=["bunkers", "structures"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_bunker_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("BoxShape3D_bunker")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="BunkerMesh" type="MeshInstance3D" parent="VisualRoot"]
+mesh = ExtResource("3_bunker_mesh")
+
+[node name="DamageVFX" type="Node3D" parent="VisualRoot"]
+script = ExtResource("4_damage_vfx")
+smoke_offset = Vector3(0, 2.0, 0)
+fire_offset = Vector3(0, 1.0, 0)
+
+[node name="HealthBar3D" parent="." instance=ExtResource("2_health_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)

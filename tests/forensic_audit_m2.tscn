@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://forensic_audit_m2_runner"]
+
+[ext_resource type="Script" path="res://tests/forensic_audit_m2.gd" id="1_audit_script"]
+
+[node name="ForensicAuditM2" type="Node"]
+script = ExtResource("1_audit_script")

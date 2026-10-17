@@ -19,6 +19,17 @@ func _ready() -> void:
 	current_health = max_health
 	if health_bar and health_bar.has_method("setup"):
 		health_bar.setup(current_health, max_health)
+	_setup_visuals()
+
+
+func _setup_visuals() -> void:
+	if visual_root:
+		var default_mesh_inst: MeshInstance3D = visual_root.get_node_or_null("MeshInstance3D") as MeshInstance3D
+		if default_mesh_inst and (default_mesh_inst.mesh == null or default_mesh_inst.mesh is BoxMesh):
+			var upgraded_mesh: Mesh = load("res://assets/models/structures/bunker_structure_mesh.tres") as Mesh
+			if upgraded_mesh:
+				default_mesh_inst.mesh = upgraded_mesh
+				default_mesh_inst.transform = Transform3D.IDENTITY
 
 
 func take_damage(amount: float) -> void:

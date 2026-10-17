@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3 uid="uid://d1e2f3a4b5c6d"]
+[gd_scene load_steps=47 format=3 uid="uid://d1e2f3a4b5c6d"]
 
 [ext_resource type="Script" path="res://levels/main_level.gd" id="1_main_script"]
 [ext_resource type="PackedScene" path="res://levels/rts_camera_3d.tscn" id="2_camera_scene"]
@@ -22,18 +22,42 @@
 [ext_resource type="PackedScene" path="res://entities/enemies/boss_omega_ultralisk_3d.tscn" id="20_omega_boss_scene"]
 [ext_resource type="PackedScene" path="res://entities/enemies/boss_nydus_3d.tscn" id="21_nydus_boss_scene"]
 [ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="22_health_scene"]
+[ext_resource type="ArrayMesh" path="res://assets/models/raynor_body_mesh.tres" id="23_raynor_body_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/models/raynor_rifle_mesh.tres" id="24_raynor_rifle_mesh"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/environment/char_basalt_ground_pbr.tres" id="25_char_ground_mat"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/environment/lava_fissure_material.tres" id="26_lava_mat"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/environment/zerg_creep_material.tres" id="27_creep_mat"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/environment/terran_base_deck_material.tres" id="28_deck_mat"]
+[ext_resource type="StandardMaterial3D" path="res://assets/materials/environment/char_rock_crust.tres" id="29_rock_mat"]
+[ext_resource type="ArrayMesh" path="res://assets/models/environment/lava_fissures_mesh.tres" id="30_lava_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/models/environment/zerg_creep_pools_mesh.tres" id="31_creep_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/models/environment/terran_base_deck_mesh.tres" id="32_deck_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/models/environment/volcanic_boulders_mesh.tres" id="33_boulders_mesh"]
+[ext_resource type="Script" path="res://core/vfx/combat_vfx_pool.gd" id="34_combat_vfx_pool_script"]
 
 [sub_resource type="Environment" id="Environment_volcanic"]
 background_mode = 1
 background_color = Color(0.045, 0.035, 0.04, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.24, 0.12, 0.1, 1)
-ambient_light_energy = 1.1
-tonemap_mode = 2
+ambient_light_color = Color(0.26, 0.11, 0.07, 1)
+ambient_light_energy = 1.15
+tonemap_mode = 3
+tonemap_exposure = 1.05
+tonemap_white = 1.25
+ssao_enabled = true
+ssao_radius = 1.8
+ssao_intensity = 2.4
+ssao_power = 1.5
 glow_enabled = true
-glow_intensity = 0.8
-glow_bloom = 0.2
+glow_intensity = 0.85
+glow_bloom = 0.18
 glow_blend_mode = 0
+glow_hdr_threshold = 1.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.018
+volumetric_fog_albedo = Color(0.14, 0.08, 0.08, 1)
+volumetric_fog_emission = Color(0.25, 0.12, 0.08, 1)
+volumetric_fog_emission_energy = 0.8
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_map"]
 geometry_parsed_geometry_type = 1
@@ -46,13 +70,8 @@ agent_max_climb = 0.5
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(80, 1, 80)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_volcanic_ground"]
-albedo_color = Color(0.12, 0.11, 0.13, 1)
-metallic = 0.15
-roughness = 0.85
-
 [sub_resource type="BoxMesh" id="BoxMesh_ground"]
-material = SubResource("StandardMaterial3D_volcanic_ground")
+material = ExtResource("25_char_ground_mat")
 size = Vector3(80, 1, 80)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bunker"]
@@ -140,10 +159,13 @@ environment = SubResource("Environment_volcanic")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.819152, 0.32899, -0.469846, 0, 0.819152, 0.573576, 0.573576, -0.469846, 0.67101, 0, 30, 0)
-light_color = Color(1, 0.78, 0.62, 1)
-light_energy = 1.35
+light_color = Color(1, 0.88, 0.74, 1)
+light_energy = 1.45
 shadow_enabled = true
-directional_shadow_max_distance = 150.0
+shadow_blur = 1.4
+directional_shadow_mode = 2
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 160.0
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_map")
@@ -286,6 +308,58 @@ mesh = SubResource("BoxMesh_bunker")
 [node name="HealthBar3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast" instance=ExtResource("22_health_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
 
+[node name="EnvironmentDecorations" type="Node3D" parent="."]
+
+[node name="LavaFissures" type="MeshInstance3D" parent="EnvironmentDecorations"]
+mesh = ExtResource("30_lava_mesh")
+
+[node name="CreepPools" type="MeshInstance3D" parent="EnvironmentDecorations"]
+mesh = ExtResource("31_creep_mesh")
+
+[node name="TerranBaseDeck" type="MeshInstance3D" parent="EnvironmentDecorations"]
+mesh = ExtResource("32_deck_mesh")
+
+[node name="VolcanicBoulders" type="MeshInstance3D" parent="EnvironmentDecorations"]
+mesh = ExtResource("33_boulders_mesh")
+
+[node name="LavaLights" type="Node3D" parent="EnvironmentDecorations"]
+
+[node name="OmniLightWest" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 1.2, -20)
+light_color = Color(1, 0.5, 0.15, 1)
+light_energy = 1.8
+omni_range = 12.0
+
+[node name="OmniLightEast" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.5, 1.2, -18)
+light_color = Color(1, 0.48, 0.12, 1)
+light_energy = 1.8
+omni_range = 12.0
+
+[node name="OmniLightNorth" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -21.5)
+light_color = Color(1, 0.55, 0.18, 1)
+light_energy = 1.6
+omni_range = 10.0
+
+[node name="OmniLightWestGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.2, -4)
+light_color = Color(1, 0.45, 0.1, 1)
+light_energy = 1.6
+omni_range = 10.0
+
+[node name="OmniLightEastGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1.2, -4)
+light_color = Color(1, 0.45, 0.1, 1)
+light_energy = 1.6
+omni_range = 10.0
+
+[node name="OmniLightHellsGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 1.5, -10)
+light_color = Color(1, 0.38, 0.08, 1)
+light_energy = 2.0
+omni_range = 14.0
+
 [node name="Allies" type="Node3D" parent="."]
 
 [node name="HeroRaynor" type="CharacterBody3D" parent="Allies" groups=["allies", "heroes"]]
@@ -309,12 +383,11 @@ max_speed = 5.2
 [node name="VisualRoot" type="Node3D" parent="Allies/HeroRaynor"]
 
 [node name="BodyMesh" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.92, 0)
-mesh = SubResource("CapsuleMesh_hero")
+mesh = ExtResource("23_raynor_body_mesh")
 
 [node name="RifleMesh" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 1.05, -0.45)
-mesh = SubResource("BoxMesh_rifle")
+mesh = ExtResource("24_raynor_rifle_mesh")
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="Allies/HeroRaynor/VisualRoot/RifleMesh"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
@@ -682,3 +755,6 @@ text = "REINTENTAR MISIÓN"
 
 [node name="SC2HUDRoot" type="CanvasLayer" parent="."]
 script = ExtResource("12_sc2_hud_root_script")
+
+[node name="CombatVFXPool" type="Node3D" parent="."]
+script = ExtResource("34_combat_vfx_pool_script")

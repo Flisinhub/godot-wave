@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://i4b5c6d7e8f9a"]
+
+[resource]
+resource_name = "terran_catwalk"
+albedo_color = Color(0.18, 0.2, 0.22, 1)
+metallic = 0.85
+roughness = 0.52

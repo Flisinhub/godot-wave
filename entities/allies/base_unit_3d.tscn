@@ -3,29 +3,12 @@
 [ext_resource type="Script" path="res://entities/allies/base_unit_3d.gd" id="1_base_unit"]
 [ext_resource type="Resource" path="res://data/units/marine_data.tres" id="2_unit_data"]
 [ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="3_health_scene"]
+[ext_resource type="ArrayMesh" path="res://assets/models/marine_body_mesh.tres" id="4_marine_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/models/c14_gauss_rifle_mesh.tres" id="5_rifle_mesh"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_unit"]
 radius = 0.4
 height = 1.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marine_blue"]
-albedo_color = Color(0.125, 0.38, 0.78, 1)
-metallic = 0.75
-roughness = 0.28
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-material = SubResource("StandardMaterial3D_marine_blue")
-radius = 0.4
-height = 1.8
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rifle_dark"]
-albedo_color = Color(0.15, 0.16, 0.18, 1)
-metallic = 0.9
-roughness = 0.2
-
-[sub_resource type="BoxMesh" id="BoxMesh_rifle"]
-material = SubResource("StandardMaterial3D_rifle_dark")
-size = Vector3(0.15, 0.2, 0.8)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_flash"]
 shading_mode = 0
@@ -65,12 +48,11 @@ max_speed = 5.0
 [node name="VisualRoot" type="Node3D" parent="."]
 
 [node name="BodyMesh" type="MeshInstance3D" parent="VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-mesh = SubResource("CapsuleMesh_body")
+mesh = ExtResource("4_marine_mesh")
 
 [node name="RifleMesh" type="MeshInstance3D" parent="VisualRoot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1, -0.4)
-mesh = SubResource("BoxMesh_rifle")
+mesh = ExtResource("5_rifle_mesh")
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="VisualRoot/RifleMesh"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.45)

@@ -1,0 +1,16 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/zerg_creep.gdshader" id="1_ih44i"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_ih44i")
+shader_parameter/creep_base = null
+shader_parameter/creep_flesh = null
+shader_parameter/bio_vein_glow = null
+shader_parameter/vein_emission_energy = 2.6
+shader_parameter/gloss_roughness = 0.2
+shader_parameter/clearcoat = 0.85
+shader_parameter/clearcoat_roughness = null
+shader_parameter/pulse_speed = 2.2
+shader_parameter/uv_scale = null

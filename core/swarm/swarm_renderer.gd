@@ -40,7 +40,10 @@ func _load_default_archetypes() -> void:
 func register_archetype(archetype_id: int, archetype: SwarmUnitArchetype) -> void:
 	archetypes[archetype_id] = archetype
 	archetype_scales[archetype_id] = archetype.mesh_scale
-	archetype_y_offsets[archetype_id] = archetype.mesh_scale.y * 0.5
+	if archetype.custom_mesh != null:
+		archetype_y_offsets[archetype_id] = 0.0
+	else:
+		archetype_y_offsets[archetype_id] = archetype.mesh_scale.y * 0.5
 	
 	_create_or_update_multimesh(archetype_id, archetype.custom_mesh, archetype.custom_material, archetype.body_color)
 
@@ -81,7 +84,15 @@ func _create_or_update_multimesh(archetype_id: int, custom_mesh: Mesh, custom_ma
 		std_mat.roughness = 0.5
 		mat = std_mat
 	
-	mesh.material = mat
+	if mesh is PrimitiveMesh:
+		mesh.material = mat
+	elif mesh is ArrayMesh and mat:
+		for s in range(mesh.get_surface_count()):
+			mesh.surface_set_material(s, mat)
+	
+	if mat:
+		mmi.material_override = mat
+		
 	mm.mesh = mesh
 	mmi.multimesh = mm
 	multimeshes[archetype_id] = mm

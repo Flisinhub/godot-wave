@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://e0x1y2z3a4b5c"]
+
+[resource]
+resource_name = "terran_exhaust_glow"
+albedo_color = Color(0.95, 0.4, 0.08, 1)
+roughness = 0.3
+emission_enabled = true
+emission = Color(1, 0.45, 0.08, 1)
+emission_energy_multiplier = 3.5

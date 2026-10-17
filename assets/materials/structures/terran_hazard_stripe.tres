@@ -1,0 +1,9 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://g2z3a4b5c6d7e"]
+
+[resource]
+resource_name = "terran_hazard_stripe"
+albedo_color = Color(0.92, 0.72, 0.1, 1)
+metallic = 0.35
+roughness = 0.4
+clearcoat_enabled = true
+clearcoat = 0.3

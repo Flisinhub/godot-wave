@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c_adv_m2_test"]
+
+[ext_resource type="Script" path="res://tests/test_adversarial_m2.gd" id="1_test_script"]
+
+[node name="AdversarialM2TestRunner" type="Node"]
+script = ExtResource("1_test_script")
