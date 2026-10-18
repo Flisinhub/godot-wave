@@ -1,6 +1,6 @@
-[gd_resource type="ArrayMesh" format=4]
+[gd_resource type="ArrayMesh" format=4 uid="uid://cgegh0p3w7w3k"]
 
-[ext_resource type="Shader" path="res://assets/shaders/terran_base_deck.gdshader" id="1_xnqg4"]
+[ext_resource type="Shader" uid="uid://c82fc31ned0ff" path="res://assets/shaders/terran_base_deck.gdshader" id="1_xnqg4"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_pnktx"]
 render_priority = 0

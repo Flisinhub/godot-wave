@@ -36,6 +36,7 @@ var is_goals_dirty: bool = true
 
 # Obstacle Registry: key -> { "min": Vector2, "max": Vector2, "blocking": bool }
 var registered_obstacles: Dictionary = {}
+var has_impassable_obstacles: bool = false
 
 # Internal Min-Heap for Dijkstra
 var _heap_cost: PackedInt32Array = PackedInt32Array()
@@ -87,6 +88,7 @@ func setup(
 	
 	is_cost_field_dirty = true
 	is_goals_dirty = true
+	has_impassable_obstacles = false
 
 
 # -----------------------------------------------------------------------------
@@ -187,10 +189,19 @@ func unregister_obstacle(id: Variant) -> void:
 
 func rebuild_cost_field() -> void:
 	cost_field = base_cost_field.duplicate()
+	var any_blocking: bool = false
 	for obs in registered_obstacles.values():
 		if obs["blocking"]:
 			var obstacle_cost: int = obs.get("cost", COST_IMPASSABLE)
+			if obstacle_cost >= 15:
+				any_blocking = true
 			_stamp_cost_runtime(obs["min"], obs["max"], obstacle_cost)
+	if not any_blocking:
+		for b in base_cost_field:
+			if b >= 15:
+				any_blocking = true
+				break
+	has_impassable_obstacles = any_blocking
 
 
 # -----------------------------------------------------------------------------
@@ -444,27 +455,44 @@ func sample_flow_bilinear_coords(world_x: float, world_z: float) -> Vector2:
 	var x1: int = x0 + 1
 	var z1: int = z0 + 1
 	
-	var u: float = clampf(gx - float(x0), 0.0, 1.0)
-	var v: float = clampf(gz - float(z0), 0.0, 1.0)
+	var u: float = gx - float(x0)
+	var v: float = gz - float(z0)
 	var one_minus_u: float = 1.0 - u
 	var one_minus_v: float = 1.0 - v
 	
-	var cx0: int = clampi(x0, 0, width - 1)
-	var cx1: int = clampi(x1, 0, width - 1)
-	var cz0: int = clampi(z0, 0, height - 1)
-	var cz1: int = clampi(z1, 0, height - 1)
+	var w: int = width
+	var h: int = height
+	var idx00: int
+	var idx10: int
+	var idx01: int
+	var idx11: int
 	
-	var row0: int = cz0 * width
-	var row1: int = cz1 * width
-	var idx00: int = row0 + cx0
-	var idx10: int = row0 + cx1
-	var idx01: int = row1 + cx0
-	var idx11: int = row1 + cx1
+	if x0 >= 0 and x1 < w and z0 >= 0 and z1 < h:
+		var row0: int = z0 * w
+		var row1: int = z1 * w
+		idx00 = row0 + x0
+		idx10 = row0 + x1
+		idx01 = row1 + x0
+		idx11 = row1 + x1
+	else:
+		var cx0: int = clampi(x0, 0, w - 1)
+		var cx1: int = clampi(x1, 0, w - 1)
+		var cz0: int = clampi(z0, 0, h - 1)
+		var cz1: int = clampi(z1, 0, h - 1)
+		var row0: int = cz0 * w
+		var row1: int = cz1 * w
+		idx00 = row0 + cx0
+		idx10 = row0 + cx1
+		idx01 = row1 + cx0
+		idx11 = row1 + cx1
 	
-	var top_x: float = one_minus_u * flow_x[idx00] + u * flow_x[idx10]
-	var top_z: float = one_minus_u * flow_z[idx00] + u * flow_z[idx10]
-	var bot_x: float = one_minus_u * flow_x[idx01] + u * flow_x[idx11]
-	var bot_z: float = one_minus_u * flow_z[idx01] + u * flow_z[idx11]
+	var fx_arr := flow_x
+	var fz_arr := flow_z
+	
+	var top_x: float = one_minus_u * fx_arr[idx00] + u * fx_arr[idx10]
+	var top_z: float = one_minus_u * fz_arr[idx00] + u * fz_arr[idx10]
+	var bot_x: float = one_minus_u * fx_arr[idx01] + u * fx_arr[idx11]
+	var bot_z: float = one_minus_u * fz_arr[idx01] + u * fz_arr[idx11]
 	
 	var fx: float = one_minus_v * top_x + v * bot_x
 	var fz: float = one_minus_v * top_z + v * bot_z

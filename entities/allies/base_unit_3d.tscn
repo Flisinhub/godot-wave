@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://df2m3n5o1p0q1"]
+[gd_scene load_steps=19 format=3 uid="uid://df2m3n5o1p0q1"]
 
 [ext_resource type="Script" path="res://entities/allies/base_unit_3d.gd" id="1_base_unit"]
 [ext_resource type="Resource" path="res://data/units/marine_data.tres" id="2_unit_data"]
@@ -26,6 +26,100 @@ albedo_color = Color(0.1, 1, 0.3, 1)
 material = SubResource("StandardMaterial3D_ring")
 inner_radius = 0.65
 outer_radius = 0.75
+
+[sub_resource type="Animation" id="Animation_idle"]
+length = 1.2
+loop_mode = 1
+tracks/0/type = "position_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 0.6, 1, 0, 0.03, 0, 1.2, 1, 0, 0, 0)
+tracks/1/type = "position_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("RifleMesh:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0.3, 1, -0.4, 0.6, 1, 0.3, 1.025, -0.4, 1.2, 1, 0.3, 1, -0.4)
+
+[sub_resource type="Animation" id="Animation_run"]
+length = 0.8
+loop_mode = 1
+tracks/0/type = "position_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 0.2, 1, 0.04, 0.04, 0, 0.4, 1, 0, 0, 0, 0.6, 1, -0.04, 0.04, 0, 0.8, 1, 0, 0, 0)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("BodyMesh:quaternion")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 0.2, 1, 0, 0.025, 0, 0.999, 0.4, 1, 0, 0, 0, 1, 0.6, 1, 0, -0.025, 0, 0.999, 0.8, 1, 0, 0, 0, 1)
+tracks/2/type = "position_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("RifleMesh:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, 0.3, 1, -0.4, 0.2, 1, 0.32, 1.04, -0.38, 0.4, 1, 0.3, 1, -0.4, 0.6, 1, 0.28, 1.04, -0.38, 0.8, 1, 0.3, 1, -0.4)
+
+[sub_resource type="Animation" id="Animation_shoot"]
+length = 0.4
+tracks/0/type = "position_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("RifleMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0.3, 1, -0.4, 0.08, 1, 0.3, 1.02, -0.32, 0.4, 1, 0.3, 1, -0.4)
+tracks/1/type = "position_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("BodyMesh:position")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 0.08, 1, 0, 0, 0.02, 0.4, 1, 0, 0, 0)
+
+[sub_resource type="Animation" id="Animation_death"]
+length = 1.0
+tracks/0/type = "position_3d"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0, 1, 0, 0, 0, 0.5, 1, 0, -0.25, 0.3, 1, 1, 0, -0.5, 0.6)
+tracks/1/type = "rotation_3d"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("BodyMesh:quaternion")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = PackedFloat32Array(0, 1, 0, 0, 0, 1, 0.5, 1, 0.389, 0, 0, 0.921, 1, 1, 0.707, 0, 0, 0.707)
+tracks/2/type = "position_3d"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("RifleMesh:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = PackedFloat32Array(0, 1, 0.3, 1, -0.4, 0.5, 1, 0.45, 0.4, -0.2, 1, 1, 0.55, 0.05, 0.1)
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_marine"]
+_data = {
+&"attack": SubResource("Animation_shoot"),
+&"death": SubResource("Animation_death"),
+&"idle": SubResource("Animation_idle"),
+&"run": SubResource("Animation_run"),
+&"shoot": SubResource("Animation_shoot"),
+&"walk": SubResource("Animation_run")
+}
 
 [node name="BaseUnit3D" type="CharacterBody3D" groups=["allies"]]
 collision_layer = 2
@@ -63,6 +157,11 @@ mesh = SubResource("BoxMesh_flash")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 visible = false
 mesh = SubResource("TorusMesh_ring")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="VisualRoot"]
+libraries = {
+&"": SubResource("AnimationLibrary_marine")
+}
 
 [node name="HealthBar3D" parent="." instance=ExtResource("3_health_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)

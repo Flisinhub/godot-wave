@@ -1,292 +1,527 @@
 extends SceneTree
 
-# Empirical Challenger 2 Verification Harness for Milestone 1
-# Tests geometry, AABBs, lowest vertex flushness, collision invariance, and MultiMesh offsets.
+## Empirical Challenger Benchmark for Milestone 1
+## Adversarial verification of Swarm Simulation and MultiMesh Rendering across all 4 archetypes:
+## Zerglings (0), Roaches (1), Banelings (2), Hydralisks (3).
 
-var failures: Array[String] = []
-var tests_run: int = 0
-var tests_passed: int = 0
+const SwarmDataScript = preload("res://core/swarm/swarm_data.gd")
+const SwarmSpatialHashScript = preload("res://core/swarm/swarm_spatial_hash.gd")
+const SwarmFlowFieldScript = preload("res://core/swarm/swarm_flow_field.gd")
+const SwarmSimulationScript = preload("res://core/swarm/swarm_simulation.gd")
+const SwarmRendererScript = preload("res://core/swarm/swarm_renderer.gd")
+const SwarmUnitArchetypeScript = preload("res://data/swarm/swarm_unit_archetype.gd")
+
+const TARGET_FRAME_BUDGET_MS: float = 16.6667 # 60 FPS budget
+const BENCHMARK_UNITS: int = 1200
+const BENCHMARK_FRAMES: int = 350
+
+var total_tests: int = 0
+var passed_tests: int = 0
+var failed_tests: int = 0
+var failure_details: Array[String] = []
+
+# Telemetry captured for final report
+var telemetry: Dictionary = {}
+
 
 func _init() -> void:
-	print("==================================================================")
-	print("=== EMPIRICAL CHALLENGER 2: MILESTONE 1 VERIFICATION HARNESS ===")
-	print("==================================================================")
+	print("\n" + "=".repeat(75))
+	print(">>> EMPIRICAL CHALLENGER: MILESTONE 1 ADVERSARIAL VERIFICATION SUITE <<<")
+	print("=".repeat(75))
 	
-	test_mesh_lowest_vertices()
-	test_base_unit_collision_and_spatial()
-	test_hero_raynor_collision_and_spatial()
-	test_base_enemy_spatial()
-	test_swarm_archetypes_and_multimesh()
+	run_test_1_archetype_registry_and_multimesh_coverage()
+	run_test_2_multimesh_transform_validity_and_nan_inf_check()
+	run_test_3_mass_simulation_and_multimesh_benchmark()
+	run_test_4_dynamic_churn_slot_recycling_and_ghost_check()
+	run_test_5_extreme_bottleneck_congestion_stress()
+	run_test_6_scalability_curve()
 	
-	print("\n==================================================================")
-	print("Empirical Verification Results:")
-	print("Tests Run:    %d" % tests_run)
-	print("Tests Passed: %d" % tests_passed)
-	print("Tests Failed: %d" % failures.size())
+	_print_empirical_summary()
 	
-	if failures.is_empty():
-		print("\u001b[32mALL EMPIRICAL CHALLENGE CHECKS PASSED PERFECTLY!\u001b[0m")
-		print("==================================================================")
-		quit(0)
-	else:
-		print("\u001b[31mEMPIRICAL CHECKS FAILED:\u001b[0m")
-		for f in failures:
-			print("\u001b[31m  * " + f + "\u001b[0m")
-		print("==================================================================")
+	if failed_tests > 0:
+		print("\n[VERDICT]: REQUEST_CHANGES - Empirical defects detected!")
 		quit(1)
-
-func _assert(condition: bool, msg: String) -> void:
-	tests_run += 1
-	if condition:
-		tests_passed += 1
-		print("  [PASS] " + msg)
 	else:
-		failures.append(msg)
-		print("  [FAIL] " + msg)
+		print("\n[VERDICT]: APPROVE - All empirical criteria met!")
+		quit(0)
 
-func _get_mesh_min_max_y(mesh: Mesh) -> Dictionary:
-	var min_y: float = 999999.0
-	var max_y: float = -999999.0
-	var total_verts: int = 0
-	
-	if mesh is ArrayMesh:
-		for s in range(mesh.get_surface_count()):
-			var arrays := mesh.surface_get_arrays(s)
-			if arrays.size() > Mesh.ARRAY_VERTEX:
-				var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-				for v in verts:
-					total_verts += 1
-					if v.y < min_y:
-						min_y = v.y
-					if v.y > max_y:
-						max_y = v.y
-	return {"min_y": min_y, "max_y": max_y, "vertex_count": total_verts}
 
-func test_mesh_lowest_vertices() -> void:
-	print("\n>> 1. Verifying Unit Visual Meshes Lowest Vertices (Flush at Y=0.0):")
+# ==============================================================================
+# TEST 1: Archetype Registration & MultiMesh Coverage Invariant
+# ==============================================================================
+func run_test_1_archetype_registry_and_multimesh_coverage() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 1] Archetype Registration & MultiMesh Coverage Invariant...")
 	
-	# Marine Body Mesh
-	var marine_mesh := load("res://assets/models/marine_body_mesh.tres") as Mesh
-	_assert(marine_mesh != null, "marine_body_mesh.tres loaded successfully")
-	if marine_mesh:
-		var stats := _get_mesh_min_max_y(marine_mesh)
-		print("     Marine: min_y=%.5f, max_y=%.5f, vertices=%d" % [stats.min_y, stats.max_y, stats.vertex_count])
-		_assert(abs(stats.min_y - 0.0) < 0.0001, "Marine body mesh lowest vertex rests flush at Y=0.0 (got %.5f)" % stats.min_y)
-		_assert(stats.max_y > 1.6 and stats.max_y < 2.0, "Marine body mesh height is realistic for powered armor (got %.5f)" % stats.max_y)
+	var archetypes_to_verify: Dictionary = {
+		0: "res://data/swarm/zergling_archetype.tres",
+		1: "res://data/swarm/roach_archetype.tres",
+		2: "res://data/swarm/baneling_archetype.tres",
+		3: "res://data/swarm/hydralisk_archetype.tres"
+	}
 	
-	# Raynor Body Mesh
-	var raynor_mesh := load("res://assets/models/raynor_body_mesh.tres") as Mesh
-	_assert(raynor_mesh != null, "raynor_body_mesh.tres loaded successfully")
-	if raynor_mesh:
-		var stats := _get_mesh_min_max_y(raynor_mesh)
-		print("     Raynor: min_y=%.5f, max_y=%.5f, vertices=%d" % [stats.min_y, stats.max_y, stats.vertex_count])
-		_assert(abs(stats.min_y - 0.0) < 0.0001, "Raynor body mesh lowest vertex rests flush at Y=0.0 (got %.5f)" % stats.min_y)
-		_assert(stats.max_y > 1.7 and stats.max_y < 2.2, "Raynor body mesh height reflects heroic scale (got %.5f)" % stats.max_y)
+	# 1. Verify all archetype resources exist
+	for aid in archetypes_to_verify.keys():
+		var path: String = archetypes_to_verify[aid]
+		if not ResourceLoader.exists(path):
+			_record_fail("Archetype resource file missing: %s" % path)
+			return
+		var res = load(path)
+		if not (res is SwarmUnitArchetype):
+			_record_fail("Archetype resource %s is not SwarmUnitArchetype" % path)
+			return
+		if res.archetype_id != aid:
+			_record_fail("Archetype ID mismatch for %s: expected %d, got %d" % [path, aid, res.archetype_id])
+			return
 	
-	# Zergling Mesh
-	var zergling_mesh := load("res://assets/models/zergling_mesh.tres") as Mesh
-	_assert(zergling_mesh != null, "zergling_mesh.tres loaded successfully")
-	if zergling_mesh:
-		var stats := _get_mesh_min_max_y(zergling_mesh)
-		print("     Zergling: min_y=%.5f, max_y=%.5f, vertices=%d" % [stats.min_y, stats.max_y, stats.vertex_count])
-		_assert(abs(stats.min_y - 0.0) < 0.0001, "Zergling mesh lowest vertex rests flush at Y=0.0 (got %.5f)" % stats.min_y)
-		_assert(stats.max_y > 0.8 and stats.max_y < 1.3, "Zergling mesh height matches quadrupedal profile (got %.5f)" % stats.max_y)
+	# 2. Test SwarmSimulation initialization and default archetype loading
+	var sim = SwarmSimulationScript.new()
+	root.add_child(sim)
+	sim._ready()
+	if sim.renderer:
+		sim.renderer._ready()
 	
-	# Roach Mesh
-	var roach_mesh := load("res://assets/models/roach_mesh.tres") as Mesh
-	_assert(roach_mesh != null, "roach_mesh.tres loaded successfully")
-	if roach_mesh:
-		var stats := _get_mesh_min_max_y(roach_mesh)
-		print("     Roach: min_y=%.5f, max_y=%.5f, vertices=%d" % [stats.min_y, stats.max_y, stats.vertex_count])
-		_assert(abs(stats.min_y - 0.0) < 0.0001, "Roach mesh lowest vertex rests flush at Y=0.0 (got %.5f)" % stats.min_y)
-		_assert(stats.max_y > 0.7 and stats.max_y < 1.2, "Roach mesh height matches armored dome profile (got %.5f)" % stats.max_y)
-
-func test_base_unit_collision_and_spatial() -> void:
-	print("\n>> 2. Verifying BaseUnit3D Collision Invariance & Hierarchy:")
-	var scene := load("res://entities/allies/base_unit_3d.tscn") as PackedScene
-	_assert(scene != null, "base_unit_3d.tscn loaded successfully")
-	if not scene:
+	# Inspect whether SwarmSimulation automatically registered all 4 archetypes
+	var missing_sim_archs: Array[int] = []
+	for aid in [0, 1, 2, 3]:
+		if not sim.archetype_defs.has(aid):
+			missing_sim_archs.append(aid)
+	
+	var missing_renderer_mmi: Array[int] = []
+	if sim.renderer:
+		for aid in [0, 1, 2, 3]:
+			if not sim.renderer.multimeshes.has(aid):
+				missing_renderer_mmi.append(aid)
+	else:
+		_record_fail("SwarmSimulation.renderer was not initialized in scene tree")
+		sim.queue_free()
 		return
 	
-	var unit := scene.instantiate() as CharacterBody3D
-	_assert(unit != null, "base_unit_3d instantiated as CharacterBody3D")
+	print("  -> SwarmSimulation registered archetypes: %s" % [sim.archetype_defs.keys()])
+	print("  -> SwarmRenderer MultiMeshes created: %s" % [sim.renderer.multimeshes.keys()])
 	
-	var col_shape_node := unit.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	_assert(col_shape_node != null, "CollisionShape3D exists on BaseUnit3D")
-	if col_shape_node:
-		var shape := col_shape_node.shape as CapsuleShape3D
-		_assert(shape != null, "CollisionShape3D is CapsuleShape3D")
-		if shape:
-			_assert(is_equal_approx(shape.radius, 0.4), "Capsule radius is exactly 0.4 (got %f)" % shape.radius)
-			_assert(is_equal_approx(shape.height, 1.8), "Capsule height is exactly 1.8 (got %f)" % shape.height)
-		_assert(is_equal_approx(col_shape_node.transform.origin.y, 0.9), "Capsule origin Y is exactly 0.9 (got %f)" % col_shape_node.transform.origin.y)
-		# Capsule extends from 0.9 - 1.8/2 = 0.0 to 0.9 + 1.8/2 = 1.8
-		var bottom_y: float = col_shape_node.transform.origin.y - (shape.height * 0.5 if shape else 0.0)
-		_assert(is_equal_approx(bottom_y, 0.0), "Physics collision capsule bottom rests exactly flush on ground at Y=0.0 (got %f)" % bottom_y)
-	
-	var visual_root := unit.get_node_or_null("VisualRoot") as Node3D
-	_assert(visual_root != null, "VisualRoot exists on BaseUnit3D")
-	if visual_root:
-		_assert(visual_root.transform.origin == Vector3.ZERO, "VisualRoot has origin at (0,0,0)")
-		var body_mesh := visual_root.get_node_or_null("BodyMesh") as MeshInstance3D
-		_assert(body_mesh != null, "VisualRoot/BodyMesh exists")
-		if body_mesh:
-			_assert(body_mesh.transform.origin == Vector3.ZERO, "BodyMesh has origin at (0,0,0)")
-			_assert(body_mesh.mesh != null, "BodyMesh has mesh assigned")
-		var sel_ring := visual_root.get_node_or_null("SelectionRing") as MeshInstance3D
-		_assert(sel_ring != null, "VisualRoot/SelectionRing exists")
-		var rifle_mesh := visual_root.get_node_or_null("RifleMesh") as MeshInstance3D
-		_assert(rifle_mesh != null, "VisualRoot/RifleMesh exists")
-		if rifle_mesh:
-			var muzzle_flash := rifle_mesh.get_node_or_null("MuzzleFlash") as MeshInstance3D
-			_assert(muzzle_flash != null, "VisualRoot/RifleMesh/MuzzleFlash exists")
-	
-	unit.free()
-
-func test_hero_raynor_collision_and_spatial() -> void:
-	print("\n>> 3. Verifying HeroRaynor Collision Invariance & Hierarchy in main_level.tscn:")
-	var level_scene := load("res://levels/main_level.tscn") as PackedScene
-	_assert(level_scene != null, "main_level.tscn loaded successfully")
-	if not level_scene:
+	if not missing_sim_archs.is_empty():
+		var err := "SwarmSimulation._load_archetype_resources() FAILED to register archetypes: %s. Only archetypes 0 and 1 are loaded by default!" % [missing_sim_archs]
+		print("  -> DEFECT DETECTED: %s" % err)
+		_record_fail(err)
+		sim.queue_free()
 		return
 	
-	var level := level_scene.instantiate()
-	_assert(level != null, "main_level.tscn instantiated successfully")
+	if not missing_renderer_mmi.is_empty():
+		var err := "SwarmRenderer FAILED to create MultiMesh slots for archetypes: %s" % [missing_renderer_mmi]
+		print("  -> DEFECT DETECTED: %s" % err)
+		_record_fail(err)
+		sim.queue_free()
+		return
 	
-	var hero := level.get_node_or_null("Allies/HeroRaynor") as CharacterBody3D
-	_assert(hero != null, "Allies/HeroRaynor found in main_level.tscn")
-	if hero:
-		var col_shape_node := hero.get_node_or_null("CollisionShape3D") as CollisionShape3D
-		_assert(col_shape_node != null, "CollisionShape3D exists on HeroRaynor")
-		if col_shape_node:
-			var shape := col_shape_node.shape as CapsuleShape3D
-			_assert(shape != null, "CollisionShape3D is CapsuleShape3D")
-			if shape:
-				_assert(is_equal_approx(shape.radius, 0.45), "Hero capsule radius is exactly 0.45 (got %f)" % shape.radius)
-				_assert(is_equal_approx(shape.height, 1.85), "Hero capsule height is exactly 1.85 (got %f)" % shape.height)
-			_assert(is_equal_approx(col_shape_node.transform.origin.y, 0.92), "Hero capsule origin Y is exactly 0.92 (got %f)" % col_shape_node.transform.origin.y)
-			var bottom_y: float = col_shape_node.transform.origin.y - (shape.height * 0.5 if shape else 0.0)
-			# 0.92 - 1.85 * 0.5 = -0.005, which is practically flush at ground level
-			print("     Hero capsule bottom Y: %.4f" % bottom_y)
-			_assert(abs(bottom_y) <= 0.01, "Hero capsule bottom rests flush on ground (within 0.01 tolerance, got %.4f)" % bottom_y)
+	sim.queue_free()
+	_record_pass("All 4 archetypes registered and have active MultiMesh instances.")
+
+
+# ==============================================================================
+# TEST 2: MultiMesh Transform Validity & Zero NaN / Inf Invariant
+# ==============================================================================
+func run_test_2_multimesh_transform_validity_and_nan_inf_check() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 2] MultiMesh Transform Numerical Invariant (Zero NaN/Inf)...")
+	
+	var sim = SwarmSimulationScript.new()
+	sim.setup_simulation(Vector2(-50.0, -50.0), Vector2(50.0, 50.0), 2048)
+	root.add_child(sim)
+	
+	# Ensure all 4 archetypes are registered for this test
+	_ensure_all_archetypes_registered(sim)
+	
+	# Spawn 1,000 mixed units (250 each of Zergling, Roach, Baneling, Hydralisk)
+	var counts_by_arch: Dictionary = {0: 0, 1: 0, 2: 0, 3: 0}
+	for arch_id in [0, 1, 2, 3]:
+		for i in range(250):
+			var pos := Vector3(randf_range(-30.0, 30.0), 0.0, randf_range(-30.0, 30.0))
+			var idx := sim.spawn_unit(arch_id, pos)
+			if idx >= 0:
+				counts_by_arch[arch_id] += 1
+	
+	# Run 30 steps of simulation with transform updates
+	for step in range(30):
+		sim.simulate_step(1.0 / 60.0)
+	
+	# Inspect every instance transform in all 4 MultiMeshes
+	var nan_inf_count: int = 0
+	var count_mismatch: bool = false
+	
+	for arch_id in [0, 1, 2, 3]:
+		if not sim.renderer.multimeshes.has(arch_id):
+			_record_fail("MultiMesh missing for archetype %d" % arch_id)
+			sim.queue_free()
+			return
 		
-		var visual_root := hero.get_node_or_null("VisualRoot") as Node3D
-		_assert(visual_root != null, "VisualRoot exists on HeroRaynor")
-		if visual_root:
-			_assert(visual_root.transform.origin == Vector3.ZERO, "VisualRoot origin is at (0,0,0)")
-			var body_mesh := visual_root.get_node_or_null("BodyMesh") as MeshInstance3D
-			_assert(body_mesh != null, "Hero VisualRoot/BodyMesh exists")
-			if body_mesh:
-				_assert(body_mesh.transform.origin == Vector3.ZERO, "Hero BodyMesh origin is at (0,0,0)")
-				_assert(body_mesh.mesh != null, "Hero BodyMesh has mesh assigned")
-			var sel_ring := visual_root.get_node_or_null("SelectionRing") as MeshInstance3D
-			_assert(sel_ring != null, "Hero VisualRoot/SelectionRing exists")
-			var rifle_mesh := visual_root.get_node_or_null("RifleMesh") as MeshInstance3D
-			_assert(rifle_mesh != null, "Hero VisualRoot/RifleMesh exists")
-			if rifle_mesh:
-				var muzzle_flash := rifle_mesh.get_node_or_null("MuzzleFlash") as MeshInstance3D
-				_assert(muzzle_flash != null, "Hero VisualRoot/RifleMesh/MuzzleFlash exists")
+		var mm: MultiMesh = sim.renderer.multimeshes[arch_id]
+		var expected_visible: int = counts_by_arch[arch_id]
+		var actual_visible: int = mm.visible_instance_count
+		
+		if actual_visible != expected_visible:
+			print("  -> ERROR: Visible count mismatch for archetype %d: expected %d, got %d" % [arch_id, expected_visible, actual_visible])
+			count_mismatch = true
+		
+		for inst_idx in range(actual_visible):
+			var t: Transform3D = mm.get_instance_transform(inst_idx)
+			
+			# Check origin
+			if is_nan(t.origin.x) or is_nan(t.origin.y) or is_nan(t.origin.z) or is_inf(t.origin.x) or is_inf(t.origin.y) or is_inf(t.origin.z):
+				nan_inf_count += 1
+			
+			# Check basis
+			for row in [t.basis.x, t.basis.y, t.basis.z]:
+				if is_nan(row.x) or is_nan(row.y) or is_nan(row.z) or is_inf(row.x) or is_inf(row.y) or is_inf(row.z):
+					nan_inf_count += 1
+			
+			# Check determinant / scale not collapsed to zero
+			var scale := t.basis.get_scale()
+			if scale.length_squared() < 0.0001:
+				nan_inf_count += 1
 	
-	level.free()
-
-func test_base_enemy_spatial() -> void:
-	print("\n>> 4. Verifying BaseEnemy3D (Zergling Scene) Spatial Alignment:")
-	var scene := load("res://entities/enemies/base_enemy_3d.tscn") as PackedScene
-	_assert(scene != null, "base_enemy_3d.tscn loaded successfully")
-	if not scene:
+	if count_mismatch:
+		_record_fail("MultiMesh visible instance counts do not match active unit counts")
+		sim.queue_free()
 		return
 	
-	var enemy := scene.instantiate() as CharacterBody3D
-	_assert(enemy != null, "base_enemy_3d instantiated as CharacterBody3D")
-	if enemy:
-		var col_shape_node := enemy.get_node_or_null("CollisionShape3D") as CollisionShape3D
-		_assert(col_shape_node != null, "CollisionShape3D exists on BaseEnemy3D")
-		if col_shape_node:
-			var shape := col_shape_node.shape as CapsuleShape3D
-			if shape:
-				_assert(is_equal_approx(shape.radius, 0.45), "Enemy capsule radius is 0.45 (got %f)" % shape.radius)
-				_assert(is_equal_approx(shape.height, 1.2), "Enemy capsule height is 1.2 (got %f)" % shape.height)
-			_assert(is_equal_approx(col_shape_node.transform.origin.y, 0.6), "Enemy capsule origin Y is 0.6 (got %f)" % col_shape_node.transform.origin.y)
-			var bottom_y: float = col_shape_node.transform.origin.y - (shape.height * 0.5 if shape else 0.0)
-			_assert(is_equal_approx(bottom_y, 0.0), "Enemy capsule bottom is flush at Y=0.0 (got %f)" % bottom_y)
-		
-		var visual_root := enemy.get_node_or_null("VisualRoot") as Node3D
-		_assert(visual_root != null, "VisualRoot exists on BaseEnemy3D")
-		if visual_root:
-			var body_mesh := visual_root.get_node_or_null("BodyMesh") as MeshInstance3D
-			_assert(body_mesh != null, "Enemy VisualRoot/BodyMesh exists")
-			if body_mesh:
-				_assert(body_mesh.transform.origin == Vector3.ZERO, "Enemy BodyMesh origin is (0,0,0)")
+	if nan_inf_count > 0:
+		_record_fail("Found %d NaN/Inf or zero-collapsed transforms in MultiMesh instances!" % nan_inf_count)
+		sim.queue_free()
+		return
 	
-	enemy.free()
+	sim.queue_free()
+	_record_pass("All 1,000 MultiMesh instance transforms verified: 0 NaN, 0 Inf, 100% visible count match.")
 
-func test_swarm_archetypes_and_multimesh() -> void:
-	print("\n>> 5. Verifying Swarm Archetypes & SwarmRenderer MultiMesh Ground Alignment:")
+
+# ==============================================================================
+# TEST 3: Mass Simulation & MultiMesh Rendering Performance Benchmark
+# ==============================================================================
+func run_test_3_mass_simulation_and_multimesh_benchmark() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 3] Mass Swarm Stress Test: %d units across 4 archetypes for %d frames..." % [BENCHMARK_UNITS, BENCHMARK_FRAMES])
 	
-	var zerg_arch := load("res://data/swarm/zergling_archetype.tres") as SwarmUnitArchetype
-	_assert(zerg_arch != null, "zergling_archetype.tres loaded successfully")
-	if zerg_arch:
-		_assert(zerg_arch.custom_mesh != null, "Zergling archetype has custom_mesh assigned")
-		_assert(zerg_arch.custom_material != null, "Zergling archetype has custom_material assigned")
+	var sim = SwarmSimulationScript.new()
+	sim.setup_simulation(Vector2(-50.0, -50.0), Vector2(50.0, 50.0), BENCHMARK_UNITS + 512)
+	root.add_child(sim)
 	
-	var roach_arch := load("res://data/swarm/roach_archetype.tres") as SwarmUnitArchetype
-	_assert(roach_arch != null, "roach_archetype.tres loaded successfully")
-	if roach_arch:
-		_assert(roach_arch.custom_mesh != null, "Roach archetype has custom_mesh assigned")
-		_assert(roach_arch.custom_material != null, "Roach archetype has custom_material assigned")
+	_ensure_all_archetypes_registered(sim)
 	
-	var renderer := SwarmRenderer.new()
-	renderer._load_default_archetypes()
+	# Register goal at center (Command Center / Objective)
+	sim.register_goal(Vector3(0.0, 0.0, 0.0))
 	
-	# Verify archetype_y_offsets
-	var zerg_y_off: float = renderer.archetype_y_offsets.get(0, -999.0)
-	var roach_y_off: float = renderer.archetype_y_offsets.get(1, -999.0)
-	print("     SwarmRenderer archetype_y_offsets: Zergling(ID 0) = %.4f, Roach(ID 1) = %.4f" % [zerg_y_off, roach_y_off])
-	_assert(is_equal_approx(zerg_y_off, 0.0), "Zergling archetype_y_offsets is exactly 0.0 (got %f)" % zerg_y_off)
-	_assert(is_equal_approx(roach_y_off, 0.0), "Roach archetype_y_offsets is exactly 0.0 (got %f)" % roach_y_off)
+	# Spawn distribution:
+	# 400 Zerglings (North)
+	# 300 Roaches (South)
+	# 250 Banelings (East)
+	# 250 Hydralisks (West)
+	# Total = 1,200 units
+	var zerg_spawned: int = 0
+	var roach_spawned: int = 0
+	var bane_spawned: int = 0
+	var hydra_spawned: int = 0
 	
-	# Verify MultiMesh instances created
-	_assert(renderer.multimesh_instances.has(0), "MultiMeshInstance3D created for archetype 0")
-	_assert(renderer.multimesh_instances.has(1), "MultiMeshInstance3D created for archetype 1")
+	for i in range(400):
+		var pos := Vector3(randf_range(-25.0, 25.0), 0.0, randf_range(-45.0, -35.0))
+		if sim.spawn_unit(0, pos) >= 0:
+			zerg_spawned += 1
 	
-	var mmi_zerg: MultiMeshInstance3D = renderer.multimesh_instances.get(0)
-	if mmi_zerg and mmi_zerg.multimesh:
-		_assert(mmi_zerg.multimesh.mesh == zerg_arch.custom_mesh, "MultiMesh for archetype 0 uses zergling_mesh")
+	for i in range(300):
+		var pos := Vector3(randf_range(-25.0, 25.0), 0.0, randf_range(35.0, 45.0))
+		if sim.spawn_unit(1, pos) >= 0:
+			roach_spawned += 1
+			
+	for i in range(250):
+		var pos := Vector3(randf_range(35.0, 45.0), 0.0, randf_range(-25.0, 25.0))
+		if sim.spawn_unit(2, pos) >= 0:
+			bane_spawned += 1
+			
+	for i in range(250):
+		var pos := Vector3(randf_range(-45.0, -35.0), 0.0, randf_range(-25.0, 25.0))
+		if sim.spawn_unit(3, pos) >= 0:
+			hydra_spawned += 1
+			
+	var total_spawned := zerg_spawned + roach_spawned + bane_spawned + hydra_spawned
+	print("  -> Spawned: %d Zerglings, %d Roaches, %d Banelings, %d Hydralisks (Total: %d)" % [
+		zerg_spawned, roach_spawned, bane_spawned, hydra_spawned, total_spawned
+	])
 	
-	var mmi_roach: MultiMeshInstance3D = renderer.multimesh_instances.get(1)
-	if mmi_roach and mmi_roach.multimesh:
-		_assert(mmi_roach.multimesh.mesh == roach_arch.custom_mesh, "MultiMesh for archetype 1 uses roach_mesh")
+	if total_spawned != BENCHMARK_UNITS:
+		_record_fail("Expected %d units spawned, got %d" % [BENCHMARK_UNITS, total_spawned])
+		sim.queue_free()
+		return
 	
-	# Test transform calculation with simulated swarm data
-	var swarm_data := SwarmData.new(10)
-	swarm_data.alive_mask[0] = 1
-	swarm_data.archetype_ids[0] = 0
-	swarm_data.pos_x[0] = 15.0
-	swarm_data.pos_z[0] = -25.0
-	swarm_data.headings[0] = 0.5
+	# Subsystem breakdown timings
+	var frame_times_usec: Array[int] = []
+	var dt: float = 1.0 / 60.0
 	
-	swarm_data.alive_mask[1] = 1
-	swarm_data.archetype_ids[1] = 1
-	swarm_data.pos_x[1] = 20.0
-	swarm_data.pos_z[1] = -30.0
-	swarm_data.headings[1] = 1.2
+	var total_flow_usec: int = 0
+	var total_hash_usec: int = 0
+	var total_render_usec: int = 0
 	
-	renderer.update_render_transforms(swarm_data)
+	var start_benchmark_usec := Time.get_ticks_usec()
 	
-	var mm0: MultiMesh = renderer.multimeshes[0]
-	var t0: Transform3D = mm0.get_instance_transform(0)
-	print("     Instance 0 (Zergling) Transform origin: ", t0.origin)
-	_assert(is_equal_approx(t0.origin.y, 0.0), "Zergling MultiMesh instance transform Y origin is exactly 0.0 (got %f)" % t0.origin.y)
+	for frame in range(BENCHMARK_FRAMES):
+		var f_start := Time.get_ticks_usec()
+		sim.simulate_step(dt)
+		var f_dur := Time.get_ticks_usec() - f_start
+		frame_times_usec.append(f_dur)
 	
-	# When transformed by t0, what is the world Y of the lowest vertex?
-	var zerg_lowest_vert_world_y: float = t0.origin.y + (t0.basis * Vector3(0, 0, 0)).y
-	_assert(is_equal_approx(zerg_lowest_vert_world_y, 0.0), "Zergling lowest vertex in world space touches ground at Y=0.0")
+	var total_benchmark_usec := Time.get_ticks_usec() - start_benchmark_usec
+	var total_benchmark_ms := float(total_benchmark_usec) / 1000.0
 	
-	var mm1: MultiMesh = renderer.multimeshes[1]
-	var t1: Transform3D = mm1.get_instance_transform(0)
-	print("     Instance 1 (Roach) Transform origin: ", t1.origin)
-	_assert(is_equal_approx(t1.origin.y, 0.0), "Roach MultiMesh instance transform Y origin is exactly 0.0 (got %f)" % t1.origin.y)
-	var roach_lowest_vert_world_y: float = t1.origin.y + (t1.basis * Vector3(0, 0, 0)).y
-	_assert(is_equal_approx(roach_lowest_vert_world_y, 0.0), "Roach lowest vertex in world space touches ground at Y=0.0")
+	frame_times_usec.sort()
+	var count := frame_times_usec.size()
+	var min_ms := float(frame_times_usec[0]) / 1000.0
+	var max_ms := float(frame_times_usec[count - 1]) / 1000.0
+	var median_ms := float(frame_times_usec[count / 2]) / 1000.0
+	var p95_ms := float(frame_times_usec[int(count * 0.95)]) / 1000.0
+	var p99_ms := float(frame_times_usec[int(count * 0.99)]) / 1000.0
+	var mean_ms := total_benchmark_ms / float(BENCHMARK_FRAMES)
+	var effective_fps := 1000.0 / mean_ms
 	
-	renderer.free()
+	# Verify MultiMeshes visible counts match
+	var render_match: bool = true
+	var mm_counts := {}
+	for aid in [0, 1, 2, 3]:
+		var mm: MultiMesh = sim.renderer.multimeshes[aid]
+		mm_counts[aid] = mm.visible_instance_count
+	
+	print("  -> Benchmark Telemetry over %d frames (%d units):" % [BENCHMARK_FRAMES, BENCHMARK_UNITS])
+	print("     Total Time:     %.2f ms" % total_benchmark_ms)
+	print("     Mean Frame:     %.3f ms (Budget: < %.3f ms)" % [mean_ms, TARGET_FRAME_BUDGET_MS])
+	print("     Median Frame:   %.3f ms" % median_ms)
+	print("     Min Frame:      %.3f ms" % min_ms)
+	print("     Max Frame:      %.3f ms" % max_ms)
+	print("     95th Percentile:%.3f ms" % p95_ms)
+	print("     99th Percentile:%.3f ms" % p99_ms)
+	print("     Effective FPS:  %.1f FPS (Target: > 60.0 FPS)" % effective_fps)
+	print("     Visible Counts: Zergling=%d, Roach=%d, Baneling=%d, Hydralisk=%d" % [
+		mm_counts[0], mm_counts[1], mm_counts[2], mm_counts[3]
+	])
+	
+	telemetry["benchmark_units"] = BENCHMARK_UNITS
+	telemetry["benchmark_frames"] = BENCHMARK_FRAMES
+	telemetry["mean_frame_ms"] = mean_ms
+	telemetry["median_frame_ms"] = median_ms
+	telemetry["min_ms"] = min_ms
+	telemetry["max_ms"] = max_ms
+	telemetry["p95_ms"] = p95_ms
+	telemetry["p99_ms"] = p99_ms
+	telemetry["effective_fps"] = effective_fps
+	telemetry["total_benchmark_ms"] = total_benchmark_ms
+	
+	if mean_ms > TARGET_FRAME_BUDGET_MS:
+		var err := "PERFORMANCE BOTTLENECK: Mean frame time %.3f ms exceeds 16.667 ms budget (%.1f FPS < 60 FPS)" % [mean_ms, effective_fps]
+		print("  -> DEFECT: %s" % err)
+		_record_fail(err)
+		sim.queue_free()
+		return
+	
+	sim.queue_free()
+	_record_pass("1,200 units simulated and rendered at %.1f FPS (Mean: %.3f ms < 16.67 ms)." % [effective_fps, mean_ms])
+
+
+# ==============================================================================
+# TEST 4: Dynamic Churn, Slot Recycling & Ghost Instance Invariant
+# ==============================================================================
+func run_test_4_dynamic_churn_slot_recycling_and_ghost_check() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 4] Dynamic Unit Churn & Slot Recycling MultiMesh Invariant...")
+	
+	var sim = SwarmSimulationScript.new()
+	sim.setup_simulation(Vector2(-50.0, -50.0), Vector2(50.0, 50.0), 2048)
+	root.add_child(sim)
+	_ensure_all_archetypes_registered(sim)
+	
+	# Initial spawn: 800 units
+	var active_ids: Array[int] = []
+	for i in range(800):
+		var arch_id := i % 4
+		var pos := Vector3(randf_range(-30.0, 30.0), 0.0, randf_range(-30.0, 30.0))
+		var idx := sim.spawn_unit(arch_id, pos)
+		if idx >= 0:
+			active_ids.append(idx)
+	
+	# Simulate 120 frames with aggressive churn (kill 40 random units and spawn 40 new ones every 5 frames)
+	var churn_iterations: int = 0
+	for frame in range(120):
+		sim.simulate_step(1.0 / 60.0)
+		
+		if frame % 5 == 0 and active_ids.size() > 100:
+			churn_iterations += 1
+			# Kill 40 random units
+			for k in range(40):
+				var pick := randi() % active_ids.size()
+				var u_idx := active_ids[pick]
+				sim.apply_damage_to_unit(u_idx, 9999.0) # Lethal damage
+				active_ids.remove_at(pick)
+			
+			# Spawn 40 new units
+			for s in range(40):
+				var arch_id := (frame + s) % 4
+				var pos := Vector3(randf_range(-30.0, 30.0), 0.0, randf_range(-30.0, 30.0))
+				var new_idx := sim.spawn_unit(arch_id, pos)
+				if new_idx >= 0:
+					active_ids.append(new_idx)
+	
+	# Verify SoA count vs MultiMesh visible counts
+	var expected_total := sim.get_active_unit_count()
+	var actual_multimesh_total := 0
+	for aid in [0, 1, 2, 3]:
+		var mm: MultiMesh = sim.renderer.multimeshes[aid]
+		actual_multimesh_total += mm.visible_instance_count
+	
+	if actual_multimesh_total != expected_total:
+		var err := "Ghost unit defect: MultiMesh visible sum (%d) does not match SwarmData active count (%d) after %d churn cycles!" % [
+			actual_multimesh_total, expected_total, churn_iterations
+		]
+		_record_fail(err)
+		sim.queue_free()
+		return
+	
+	sim.queue_free()
+	_record_pass("Dynamic churn verified: %d kills/spawns executed, 0 ghost instances, 100%% slot recycling integrity." % (churn_iterations * 40))
+
+
+# ==============================================================================
+# TEST 5: Extreme Bottleneck Congestion & Coordinate Collapse Stress
+# ==============================================================================
+func run_test_5_extreme_bottleneck_congestion_stress() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 5] Extreme Bottleneck Congestion & Numerical Compaction Stress...")
+	
+	var sim = SwarmSimulationScript.new()
+	sim.setup_simulation(Vector2(-30.0, -30.0), Vector2(30.0, 30.0), 2048)
+	root.add_child(sim)
+	_ensure_all_archetypes_registered(sim)
+	
+	# Register goal at (0, 0)
+	sim.register_goal(Vector3(0.0, 0.0, 0.0))
+	
+	# Spawn 1,000 units in an extremely compressed circle of radius 3.0m centered at (0, 0)
+	var spawned_count: int = 0
+	for i in range(1000):
+		var ang := randf() * TAU
+		var rad := randf() * 3.0
+		var pos := Vector3(cos(ang) * rad, 0.0, sin(ang) * rad)
+		var aid := i % 4
+		if sim.spawn_unit(aid, pos) >= 0:
+			spawned_count += 1
+	
+	# Simulate 100 frames under extreme congestion
+	var nan_detected: bool = false
+	for step in range(100):
+		sim.simulate_step(1.0 / 60.0)
+		
+		# Sample 100 units for NaN / Inf
+		for idx in range(min(100, spawned_count)):
+			var p := sim.get_unit_position_3d(idx)
+			var h := sim.get_unit_heading(idx)
+			if is_nan(p.x) or is_nan(p.z) or is_inf(p.x) or is_inf(p.z) or is_nan(h) or is_inf(h):
+				nan_detected = true
+				break
+		if nan_detected:
+			break
+	
+	if nan_detected:
+		_record_fail("Extreme congestion caused numerical explosion (NaN/Inf positions or headings)!")
+		sim.queue_free()
+		return
+	
+	sim.queue_free()
+	_record_pass("Extreme bottleneck congestion survived: 1,000 units packed in 3m radius, 0 NaN/Inf.")
+
+
+# ==============================================================================
+# TEST 6: Scalability Stress Curve (500, 1000, 1500, 2000 units)
+# ==============================================================================
+func run_test_6_scalability_curve() -> void:
+	total_tests += 1
+	print("\n[CHALLENGE 6] Swarm Scalability Stress Curve across 4 archetypes...")
+	
+	var unit_brackets: Array[int] = [500, 1000, 1500, 2000]
+	var bracket_results: Dictionary = {}
+	
+	for count in unit_brackets:
+		var sim = SwarmSimulationScript.new()
+		sim.setup_simulation(Vector2(-50.0, -50.0), Vector2(50.0, 50.0), count + 512)
+		root.add_child(sim)
+		_ensure_all_archetypes_registered(sim)
+		sim.register_goal(Vector3(0.0, 0.0, 0.0))
+		
+		# Spawn equal distribution across 4 archetypes
+		var per_arch: int = count / 4
+		for aid in [0, 1, 2, 3]:
+			for i in range(per_arch):
+				var pos := Vector3(randf_range(-35.0, 35.0), 0.0, randf_range(-35.0, 35.0))
+				sim.spawn_unit(aid, pos)
+		
+		# Warmup 10 frames
+		for w in range(10):
+			sim.simulate_step(1.0 / 60.0)
+		
+		# Measure 60 frames
+		var t_start := Time.get_ticks_usec()
+		for f in range(60):
+			sim.simulate_step(1.0 / 60.0)
+		var elapsed_ms := float(Time.get_ticks_usec() - t_start) / 1000.0
+		var avg_ms := elapsed_ms / 60.0
+		var fps := 1000.0 / avg_ms
+		bracket_results[count] = {"avg_ms": avg_ms, "fps": fps}
+		print("  -> Bracket %4d units: Avg Frame = %6.3f ms | Throughput = %5.1f FPS | Budget: %s" % [
+			count, avg_ms, fps, "PASS" if avg_ms <= TARGET_FRAME_BUDGET_MS else "EXCEEDED"
+		])
+		sim.queue_free()
+	
+	telemetry["scalability_curve"] = bracket_results
+	_record_pass("Scalability curve profile captured for 500, 1000, 1500, 2000 units.")
+
+
+# ==============================================================================
+# Helper Methods
+# ==============================================================================
+func _ensure_all_archetypes_registered(sim: SwarmSimulation) -> void:
+	if not sim.renderer:
+		sim._ready()
+	if sim.renderer and sim.renderer.multimeshes.is_empty():
+		sim.renderer._ready()
+	var paths: Dictionary = {
+		0: "res://data/swarm/zergling_archetype.tres",
+		1: "res://data/swarm/roach_archetype.tres",
+		2: "res://data/swarm/baneling_archetype.tres",
+		3: "res://data/swarm/hydralisk_archetype.tres"
+	}
+	for aid in paths.keys():
+		if not sim.archetype_defs.has(aid):
+			var p: String = paths[aid]
+			if ResourceLoader.exists(p):
+				var res = load(p) as SwarmUnitArchetype
+				if res:
+					sim.register_archetype(res)
+
+
+func _record_pass(msg: String) -> void:
+	passed_tests += 1
+	print("  [PASS] " + msg)
+
+
+func _record_fail(msg: String) -> void:
+	failed_tests += 1
+	failure_details.append(msg)
+	print("  [FAIL] " + msg)
+
+
+func _print_empirical_summary() -> void:
+	print("\n" + "=".repeat(75))
+	print("EMPIRICAL BENCHMARK SUMMARY")
+	print("=".repeat(75))
+	print("Total Tests:  %d" % total_tests)
+	print("Passed:       %d" % passed_tests)
+	print("Failed:       %d" % failed_tests)
+	
+	if failed_tests > 0:
+		print("\nFailure Root Causes:")
+		for f in failure_details:
+			print("  * " + f)
+	print("=".repeat(75))

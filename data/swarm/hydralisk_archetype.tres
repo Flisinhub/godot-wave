@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="SwarmUnitArchetype" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://data/swarm/swarm_unit_archetype.gd" id="1_swarm_archetype"]
+[ext_resource type="ArrayMesh" path="res://assets/models/hydralisk_mesh.tres" id="2_hydra_mesh"]
+[ext_resource type="Material" path="res://assets/materials/hydralisk_material.tres" id="3_hydra_mat"]
+
+[resource]
+script = ExtResource("1_swarm_archetype")
+archetype_id = 3
+unit_name = "Hydralisk"
+base_hp = 80.0
+base_speed = 4.8
+base_damage = 16.0
+attack_range = 9.0
+attack_cooldown = 0.85
+separation_radius = 1.4
+armor_level = 0
+unit_tags = 1
+body_color = Color(0.35, 0.15, 0.38, 1)
+accent_color = Color(0.1, 1.0, 0.2, 1)
+mesh_scale = Vector3(1.0, 1.3, 1.5)
+custom_mesh = ExtResource("2_hydra_mesh")
+custom_material = ExtResource("3_hydra_mat")

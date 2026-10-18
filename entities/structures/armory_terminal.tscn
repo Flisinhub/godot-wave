@@ -1,0 +1,63 @@
+[gd_scene load_steps=8 format=3 uid="uid://arm0ry7erm1na1"]
+
+[ext_resource type="Script" path="res://entities/structures/armory_terminal.gd" id="1_armory_script"]
+[ext_resource type="Material" path="res://assets/materials/structures/terran_hull_pbr.tres" id="2_hull_mat"]
+[ext_resource type="Material" path="res://assets/materials/structures/terran_blue_glow.tres" id="3_glow_mat"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_terminal"]
+size = Vector3(2.8, 2.2, 2.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_base"]
+material = ExtResource("2_hull_mat")
+size = Vector3(2.4, 2.0, 2.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_console"]
+material = ExtResource("3_glow_mat")
+size = Vector3(1.6, 0.4, 0.8)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_zone"]
+height = 2.5
+radius = 4.0
+
+[node name="ArmoryTerminal" type="StaticBody3D" groups=["armory", "interactables", "structures"]]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_armory_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+shape = SubResource("BoxShape3D_terminal")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="TerminalBaseMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("BoxMesh_base")
+
+[node name="ConsoleMesh" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0.6)
+mesh = SubResource("BoxMesh_console")
+
+[node name="TerminalLight" type="OmniLight3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
+light_color = Color(0.2, 0.8, 1, 1)
+light_energy = 1.2
+omni_range = 4.5
+
+[node name="InteractionZone" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractionZone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("CylinderShape3D_zone")
+
+[node name="PromptRoot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 0)
+visible = false
+
+[node name="PromptLabel3D" type="Label3D" parent="PromptRoot"]
+billboard = 1
+text = "[E] Access Armory"
+font_size = 28
+outline_size = 6

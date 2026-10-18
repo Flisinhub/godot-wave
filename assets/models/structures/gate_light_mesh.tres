@@ -1,6 +1,6 @@
-[gd_resource type="ArrayMesh" format=4]
+[gd_resource type="ArrayMesh" format=4 uid="uid://25ik3a0k1wkg"]
 
-[ext_resource type="Material" path="res://assets/materials/structures/terran_dark_steel.tres" id="1_m63jn"]
+[ext_resource type="Material" uid="uid://c8waw0x1y203a" path="res://assets/materials/structures/terran_dark_steel.tres" id="1_m63jn"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_38und"]
 albedo_color = Color(1, 0.1, 0.1, 1)

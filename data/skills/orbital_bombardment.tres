@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HeroSkillData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/skills/hero_skill_data.gd" id="1_skill"]
+
+[resource]
+script = ExtResource("1_skill")
+skill_id = &"orbital_bombardment"
+skill_name = "Hyperion Orbital Bombardment"
+description = "Calls down 5 concentrated orbital laser strikes from the Battlecruiser Hyperion, dealing 350 spell damage over 2.5 seconds."
+target_type = 3
+energy_cost = 75.0
+cooldown = 45.0
+cast_range = 25.0
+area_radius = 8.0
+base_power = 350.0
+damage_type = 1
+is_passive = false
+buff_id = &""
+buff_duration = 2.5
+hotkey = "R"
+icon_path = ""
+max_rank = 1
+current_rank = 1

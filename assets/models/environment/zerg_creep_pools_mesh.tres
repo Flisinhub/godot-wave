@@ -1,6 +1,6 @@
-[gd_resource type="ArrayMesh" format=4]
+[gd_resource type="ArrayMesh" format=4 uid="uid://d23p5imqfyjr6"]
 
-[ext_resource type="Shader" path="res://assets/shaders/zerg_creep.gdshader" id="1_u3q61"]
+[ext_resource type="Shader" uid="uid://dhrpmf6g67lpj" path="res://assets/shaders/zerg_creep.gdshader" id="1_u3q61"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ita15"]
 render_priority = 0

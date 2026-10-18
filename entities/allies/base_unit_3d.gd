@@ -10,6 +10,9 @@ extends CharacterBody3D
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 @onready var health_bar: HealthBar3D = $HealthBar3D
 @onready var muzzle_flash: MeshInstance3D = $VisualRoot/RifleMesh/MuzzleFlash
+@onready var anim_player: AnimationPlayer = $VisualRoot.get_node_or_null("AnimationPlayer")
+@onready var body_mesh: MeshInstance3D = $VisualRoot.get_node_or_null("BodyMesh")
+@onready var rifle_mesh: MeshInstance3D = $VisualRoot.get_node_or_null("RifleMesh")
 
 var current_health: float = 45.0
 var max_health: float = 45.0
@@ -22,6 +25,15 @@ var is_selected: bool = false
 var focus_target: Node3D = null
 var _attack_timer: float = 0.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
+
+
+func _get_signal_bus() -> Node:
+	if Engine.has_singleton("SignalBus"):
+		return Engine.get_singleton("SignalBus")
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree and tree.root and tree.root.has_node("SignalBus"):
+		return tree.root.get_node("SignalBus")
+	return null
 
 
 func _ready() -> void:
@@ -54,6 +66,33 @@ func _ready() -> void:
 		nav_agent.max_speed = move_speed
 		nav_agent.velocity_computed.connect(_on_navigation_agent_3d_velocity_computed)
 
+	_ensure_animation_player()
+	if is_instance_valid(anim_player) and anim_player.has_animation("idle"):
+		anim_player.play("idle")
+
+
+func _ensure_animation_player() -> void:
+	if is_instance_valid(anim_player) and not anim_player.get_animation_list().is_empty():
+		return
+	var glb_path := "res://assets/models/marine.glb"
+	if FileAccess.file_exists(glb_path):
+		var doc := GLTFDocument.new()
+		var state := GLTFState.new()
+		if doc.append_from_file(glb_path, state) == OK:
+			var scene := doc.generate_scene(state)
+			if scene:
+				var glb_anim := scene.get_node_or_null("AnimationPlayer") as AnimationPlayer
+				if glb_anim:
+					if not is_instance_valid(anim_player) and is_instance_valid(visual_root):
+						anim_player = AnimationPlayer.new()
+						anim_player.name = "AnimationPlayer"
+						visual_root.add_child(anim_player)
+					for lib_name in glb_anim.get_animation_library_list():
+						var lib := glb_anim.get_animation_library(lib_name)
+						if not anim_player.has_animation_library(lib_name):
+							anim_player.add_animation_library(lib_name, lib)
+				scene.queue_free()
+
 
 func _physics_process(delta: float) -> void:
 	# Gravity handling
@@ -70,6 +109,7 @@ func _physics_process(delta: float) -> void:
 		if dist > attack_range:
 			# Target outside range, move closer
 			_navigate_towards(focus_target.global_position, delta)
+			_update_animations()
 			return
 		else:
 			# Target within range: stop moving and shoot
@@ -78,6 +118,7 @@ func _physics_process(delta: float) -> void:
 			if _attack_timer <= 0.0:
 				_attack_timer = attack_cooldown
 				_fire_at(focus_target)
+			_update_animations()
 			return
 	else:
 		focus_target = null
@@ -97,6 +138,7 @@ func _physics_process(delta: float) -> void:
 				_apply_movement_velocity(intended_velocity, delta)
 		else:
 			_stop_movement(delta)
+		_update_animations()
 		return
 
 	# Stationary behavior: Auto-Attack nearby enemies within attack_range
@@ -107,6 +149,28 @@ func _physics_process(delta: float) -> void:
 		if _attack_timer <= 0.0:
 			_attack_timer = attack_cooldown
 			_fire_at(enemy)
+	_update_animations()
+
+
+func _update_animations() -> void:
+	if not is_instance_valid(anim_player):
+		return
+	if anim_player.current_animation == "death":
+		return
+	
+	var is_moving: bool = Vector2(velocity.x, velocity.z).length_squared() > 0.04
+	if is_moving:
+		if anim_player.current_animation != "run":
+			if anim_player.has_animation("run"):
+				anim_player.play("run")
+			elif anim_player.has_animation("walk"):
+				anim_player.play("walk")
+	else:
+		if (anim_player.current_animation == "shoot" or anim_player.current_animation == "attack") and anim_player.is_playing():
+			return
+		if anim_player.current_animation != "idle":
+			if anim_player.has_animation("idle"):
+				anim_player.play("idle")
 
 
 func _navigate_towards(target_pos: Vector3, _delta: float) -> void:
@@ -150,12 +214,19 @@ func _fire_at(target: Node3D) -> void:
 	if target.has_method("take_damage"):
 		target.take_damage(attack_damage)
 	
+	if is_instance_valid(anim_player):
+		if anim_player.has_animation("shoot"):
+			anim_player.play("shoot")
+		elif anim_player.has_animation("attack"):
+			anim_player.play("attack")
+	
 	# Muzzle flash visual effect
 	if muzzle_flash:
 		muzzle_flash.visible = true
 		var tween: Tween = create_tween()
-		tween.tween_interval(0.06)
-		tween.tween_callback(func(): if is_instance_valid(muzzle_flash): muzzle_flash.visible = false)
+		if tween:
+			tween.tween_interval(0.06)
+			tween.tween_callback(func(): if is_instance_valid(muzzle_flash): muzzle_flash.visible = false)
 
 
 func _find_nearest_enemy_in_range() -> Node3D:
@@ -217,11 +288,23 @@ func take_damage(amount: float) -> void:
 	current_health = max(0.0, current_health - amount)
 	if health_bar:
 		health_bar.update_health(current_health, max_health)
-	SignalBus.unit_health_changed.emit(self, current_health, max_health)
+	var sb := _get_signal_bus()
+	if sb:
+		sb.emit_signal("unit_health_changed", self, current_health, max_health)
 	if current_health <= 0.0:
 		die()
 
 
 func die() -> void:
-	SignalBus.unit_died.emit(self)
-	queue_free()
+	var sb := _get_signal_bus()
+	if sb:
+		sb.emit_signal("unit_died", self)
+	if is_instance_valid(anim_player) and anim_player.has_animation("death") and DisplayServer.get_name() != "headless":
+		set_physics_process(false)
+		var col := get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if col:
+			col.set_deferred("disabled", true)
+		anim_player.play("death")
+		anim_player.animation_finished.connect(func(_a): queue_free(), CONNECT_ONE_SHOT)
+	else:
+		queue_free()

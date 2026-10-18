@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "auto_turret_material"
+albedo_color = Color(0.24, 0.27, 0.32, 1)
+metallic = 0.85
+roughness = 0.35
+clearcoat_enabled = true
+clearcoat = 0.5
+clearcoat_roughness = 0.3
