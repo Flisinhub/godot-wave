@@ -825,8 +825,10 @@ func _add_pos_track(anim: Animation, path: String, times: Array, values: Array) 
 func _add_rot_track(anim: Animation, path: String, times: Array, quats: Array) -> void:
 	var idx := anim.add_track(Animation.TYPE_ROTATION_3D)
 	anim.track_set_path(idx, path)
+	anim.track_set_interpolation_type(idx, Animation.INTERPOLATION_LINEAR)
 	for i in range(times.size()):
-		anim.track_insert_key(idx, float(times[i]), quats[i])
+		var q: Quaternion = quats[i]
+		anim.track_insert_key(idx, float(times[i]), q.normalized())
 
 
 func _add_scale_track(anim: Animation, path: String, times: Array, scales: Array) -> void:

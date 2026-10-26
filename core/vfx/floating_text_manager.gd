@@ -33,7 +33,7 @@ static func spawn_text(parent: Node, world_pos: Vector3, text: String, color: Co
 	label.no_depth_test = true
 	label.font_size = 22
 	label.outline_size = 6
-	label.outline_color = Color(0.02, 0.04, 0.06, 0.95)
+	label.outline_modulate = Color(0.02, 0.04, 0.06, 0.95)
 	label.modulate = color
 	label.pixel_size = 0.007
 	parent.add_child(label)

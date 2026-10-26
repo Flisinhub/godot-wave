@@ -1,3 +1,4 @@
+@warning_ignore("unused_signal")
 extends Node
 
 ## SignalBus - Central Event Bus for RTS Architecture
