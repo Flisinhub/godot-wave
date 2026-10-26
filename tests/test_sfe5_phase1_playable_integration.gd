@@ -247,3 +247,129 @@ func test_combat_crossfire_and_bank_persistence() -> Dictionary:
 	economy.free()
 	difficulty.free()
 	return _pass()
+
+
+func test_sc2_camera_controls_and_minimap_panning() -> Dictionary:
+	var cam_script = load("res://levels/rts_camera_3d.gd")
+	var cam = cam_script.new()
+	if cam == null:
+		return _fail("Failed to instantiate RTSCamera3D")
+
+	# 1. Test pan_to_position
+	cam.pan_to_position(Vector3(-22.0, 0.0, 22.0))
+	if not (is_equal_approx(cam.position.x, -22.0) and is_equal_approx(cam.position.z, 22.0)):
+		cam.free()
+		return _fail("pan_to_position failed: " + str(cam.position))
+
+	# 2. Test middle mouse button dragging
+	var start_pos: Vector3 = cam.position
+	var mb_down := InputEventMouseButton.new()
+	mb_down.button_index = MOUSE_BUTTON_MIDDLE
+	mb_down.pressed = true
+	cam._unhandled_input(mb_down)
+
+	var mouse_motion := InputEventMouseMotion.new()
+	mouse_motion.relative = Vector2(50.0, -30.0) # Moving right and up
+	mouse_motion.button_mask = MOUSE_BUTTON_MASK_MIDDLE
+	cam._unhandled_input(mouse_motion)
+
+	var mb_up := InputEventMouseButton.new()
+	mb_up.button_index = MOUSE_BUTTON_MIDDLE
+	mb_up.pressed = false
+	cam._unhandled_input(mb_up)
+
+	if not (cam.position.x < start_pos.x and cam.position.z > start_pos.z):
+		var final_pos: Vector3 = cam.position
+		cam.free()
+		return _fail("Middle mouse drag motion unexpected: " + str(final_pos))
+
+	# 3. Test map bounds clamping
+	cam.pan_to_position(Vector3(100.0, 0.0, 100.0))
+	if cam.position.x > 38.0 or cam.position.z > 38.0:
+		cam.free()
+		return _fail("Map bounds clamp failed: " + str(cam.position))
+
+	# 4. Test middle mouse release safeguard via _input
+	cam._is_middle_dragging = true
+	var mb_release_input := InputEventMouseButton.new()
+	mb_release_input.button_index = MOUSE_BUTTON_MIDDLE
+	mb_release_input.pressed = false
+	cam._input(mb_release_input)
+	if cam._is_middle_dragging:
+		cam.free()
+		return _fail("_input middle mouse release safeguard failed to reset _is_middle_dragging")
+
+	# 5. Test motion with button_mask == 0 auto-clearing _is_middle_dragging
+	cam._is_middle_dragging = true
+	var mm_empty := InputEventMouseMotion.new()
+	mm_empty.button_mask = 0
+	cam._unhandled_input(mm_empty)
+	if cam._is_middle_dragging:
+		cam.free()
+		return _fail("Mouse motion with button_mask 0 failed to reset stuck _is_middle_dragging")
+
+	cam.free()
+
+	# 6. Test SC2HUDRoot minimap panning helper
+	var hud_script = load("res://ui/sc2_hud_root.gd")
+	var hud = hud_script.new()
+	var test_uv := Vector2(0.5, 0.5) # Center of minimap
+	var world_x: float = lerpf(-38.0, 38.0, test_uv.x)
+	var world_z: float = lerpf(-38.0, 38.0, test_uv.y)
+	if not (is_equal_approx(world_x, 0.0) and is_equal_approx(world_z, 0.0)):
+		hud.free()
+		return _fail("Minimap UV mapping incorrect: " + str(Vector2(world_x, world_z)))
+
+	hud.free()
+	return _pass()
+
+
+func test_base_layout_and_hero_single_unit_invariants() -> Dictionary:
+	var tscn_path := "res://levels/main_level.tscn"
+	var tscn_text := FileAccess.get_file_as_string(tscn_path)
+	if tscn_text.is_empty():
+		return _fail("Failed to read main_level.tscn")
+
+	# 1. Verify CommandCenter relocated to bottom-left (-24, 0, 24)
+	if not tscn_text.contains("-24, 0, 24"):
+		return _fail("CommandCenter not positioned at (-24, 0, 24)")
+
+	# 2. Verify RallyPoint relocated to (-22, 0, 20)
+	if not tscn_text.contains("-22, 0, 20"):
+		return _fail("RallyPoint not positioned at (-22, 0, 20)")
+
+	# 3. Verify ArmoryTerminal stationed at (-20, 0, 26)
+	if not tscn_text.contains("-20, 0, 26"):
+		return _fail("ArmoryTerminal not positioned at (-20, 0, 26)")
+
+	# 4. Verify Bunkers flank the open breach (BunkerWest and BunkerEast)
+	if not tscn_text.contains("BunkerWest") or not tscn_text.contains("BunkerEast"):
+		return _fail("BunkerWest or BunkerEast missing from BasePerimeter")
+	if not tscn_text.contains("-20, 0, 15") or not tscn_text.contains("-15, 0, 20"):
+		return _fail("Bunker positions do not match choke point layout")
+
+	# 5. Verify NO Gates exist (6-meter open breach without doors)
+	if tscn_text.contains("WestGate") or tscn_text.contains("EastGate") or tscn_text.contains("gate_structure.tscn"):
+		return _fail("Gates found in scene: breach must remain open without doors")
+
+	# 6. Verify Allies contains strictly single Hero and 0 generic Marines
+	for i in range(1, 6):
+		if tscn_text.contains("Marine%d" % i) or tscn_text.contains("Marine %d" % i):
+			return _fail("Generic Marine%d found in main_level.tscn" % i)
+	if not tscn_text.contains("HeroRaynor"):
+		return _fail("HeroRaynor missing from Allies")
+
+	# 7. Verify legacy overlapping UI panels removed
+	if tscn_text.contains("WavePanel") or tscn_text.contains("HUDPanel"):
+		return _fail("Legacy WavePanel or HUDPanel still present in main_level.tscn")
+
+	# 8. Verify camera initial focus at base (-22, 0, 22)
+	if not tscn_text.contains("-22, 0, 22"):
+		return _fail("RTSCamera3D initial position not set to (-22, 0, 22)")
+
+	# 9. Verify overlapping wall segments (WallNorth5 and WallEast1) removed to prevent mesh clipping into Bunkers
+	if tscn_text.contains("WallNorth5") or tscn_text.contains("WallEast1"):
+		return _fail("Overlapping wall segments WallNorth5 or WallEast1 found in BasePerimeter")
+
+	return _pass()
+

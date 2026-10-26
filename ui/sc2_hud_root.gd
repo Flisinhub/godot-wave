@@ -103,11 +103,13 @@ func _build_hud_layout() -> void:
 	minimap_style.content_margin_top = 8.0
 	minimap_style.content_margin_bottom = 8.0
 	minimap_box.add_theme_stylebox_override("panel", minimap_style)
+	minimap_box.gui_input.connect(_on_minimap_gui_input)
 
 	var minimap_label := Label.new()
 	minimap_label.text = "[ TACTICAL RADAR ]"
 	minimap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	minimap_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	minimap_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	minimap_label.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0, 0.9))
 	minimap_label.add_theme_font_size_override("font_size", 13)
 	minimap_box.add_child(minimap_label)
@@ -286,3 +288,40 @@ func update_command_center_hp(curr_hp: float, max_hp: float) -> void:
 func update_veterancy(vet_level: int) -> void:
 	if top_vet_label:
 		top_vet_label.text = "⭐ VET LVL %d" % vet_level
+
+
+func _on_minimap_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.is_pressed():
+			_pan_camera_to_minimap_pos(mb.position)
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if mm.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			_pan_camera_to_minimap_pos(mm.position)
+
+
+func _pan_camera_to_minimap_pos(local_pos: Vector2) -> void:
+	if not minimap_box:
+		return
+	var size: Vector2 = minimap_box.size
+	if size.x <= 0.0 or size.y <= 0.0:
+		return
+	var nx: float = clampf(local_pos.x / size.x, 0.0, 1.0)
+	var ny: float = clampf(local_pos.y / size.y, 0.0, 1.0)
+	var cam_rig = get_tree().get_first_node_in_group("rts_camera") if get_tree() else null
+	if not cam_rig and get_tree() and get_tree().current_scene:
+		cam_rig = get_tree().current_scene.get_node_or_null("RTSCamera3D")
+
+	var bounds: Rect2 = Rect2(-38.0, -38.0, 76.0, 76.0)
+	if cam_rig and "map_bounds" in cam_rig:
+		bounds = cam_rig.map_bounds
+	var world_x: float = bounds.position.x + nx * bounds.size.x
+	var world_z: float = bounds.position.y + ny * bounds.size.y
+
+	if cam_rig:
+		if cam_rig.has_method("pan_to_position"):
+			cam_rig.pan_to_position(Vector3(world_x, 0.0, world_z))
+		else:
+			cam_rig.global_position.x = world_x
+			cam_rig.global_position.z = world_z

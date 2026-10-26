@@ -1,6 +1,6 @@
-[gd_resource type="ArrayMesh" format=4 uid="uid://h6atyjx71bk1"]
+[gd_resource type="ArrayMesh" format=4]
 
-[ext_resource type="Shader" uid="uid://bxbvesh3gvyfs" path="res://assets/shaders/lava_fissure.gdshader" id="1_bj7w8"]
+[ext_resource type="Shader" path="res://assets/shaders/lava_fissure.gdshader" id="1_bj7w8"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ix37t"]
 render_priority = 0

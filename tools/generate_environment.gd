@@ -98,6 +98,9 @@ func _create_and_save_materials() -> void:
 	mat_deck.set_shader_parameter("hazard_black", Color(0.10, 0.10, 0.10, 1.0))
 	mat_deck.set_shader_parameter("conduit_blue", Color(0.15, 0.55, 1.0, 1.0))
 	mat_deck.set_shader_parameter("conduit_emission_energy", 2.5)
+	mat_deck.set_shader_parameter("deck_min", Vector2(-37.0, 14.5))
+	mat_deck.set_shader_parameter("deck_max", Vector2(-14.5, 37.0))
+	mat_deck.set_shader_parameter("cc_pos", Vector2(-24.0, 24.0))
 	ResourceSaver.save(mat_deck, DECK_MAT_PATH)
 	print("[EnvironmentGenerator] Saved Base Deck Material: ", DECK_MAT_PATH)
 	
@@ -324,15 +327,15 @@ func _build_terran_base_deck_mesh() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
-	# Base Enclave interior bounds: X in [-17.5, 17.5], Z in [4.5, 23.5]
-	var min_x := -17.5
-	var max_x := 17.5
-	var min_z := 4.5
-	var max_z := 23.5
+	# Base Enclave interior bounds: X in [-37.0, -14.5], Z in [14.5, 37.0]
+	var min_x := -37.0
+	var max_x := -14.5
+	var min_z := 14.5
+	var max_z := 37.0
 	var y_pos := 0.006
 	
 	var steps_x := 8
-	var steps_z := 5
+	var steps_z := 8
 	var dx := (max_x - min_x) / float(steps_x)
 	var dz := (max_z - min_z) / float(steps_z)
 	
@@ -394,7 +397,7 @@ func _build_volcanic_boulders_mesh() -> void:
 		Vector3(-32.0, 0.0, -28.0),
 		Vector3(-35.0, 0.0, -18.0),
 		Vector3(-34.0, 0.0, 0.0),
-		Vector3(-32.0, 0.0, 15.0),
+		Vector3(-37.0, 0.0, 10.0),
 		# East edge crags
 		Vector3(32.0, 0.0, -28.0),
 		Vector3(35.0, 0.0, -18.0),

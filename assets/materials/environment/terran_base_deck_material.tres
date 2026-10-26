@@ -11,3 +11,6 @@ shader_parameter/hazard_yellow = Color(0.95, 0.75, 0.1, 1)
 shader_parameter/hazard_black = Color(0.1, 0.1, 0.1, 1)
 shader_parameter/conduit_blue = Color(0.15, 0.55, 1, 1)
 shader_parameter/conduit_emission_energy = 2.5
+shader_parameter/deck_min = Vector2(-37, 14.5)
+shader_parameter/deck_max = Vector2(-14.5, 37)
+shader_parameter/cc_pos = Vector2(-24, 24)

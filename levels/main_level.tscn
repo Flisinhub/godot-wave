@@ -5,7 +5,6 @@
 [ext_resource type="Script" path="res://core/rts_controller.gd" id="3_controller_script"]
 [ext_resource type="Script" path="res://ui/selection_box_ui.gd" id="4_box_ui_script"]
 [ext_resource type="PackedScene" path="res://entities/structures/command_center.tscn" id="5_cc_scene"]
-[ext_resource type="PackedScene" path="res://entities/structures/gate_structure.tscn" id="6_gate_scene"]
 [ext_resource type="PackedScene" path="res://entities/structures/wall_segment.tscn" id="7_wall_scene"]
 [ext_resource type="PackedScene" path="res://entities/allies/base_unit_3d.tscn" id="8_unit_scene"]
 [ext_resource type="Script" path="res://core/wave_manager.gd" id="9_wave_script"]
@@ -18,10 +17,11 @@
 [ext_resource type="Script" path="res://core/events/hells_gate_zone_3d.gd" id="16_hells_gate_zone_script"]
 [ext_resource type="Script" path="res://core/puzzles/pedestal_puzzle_manager.gd" id="17_pedestal_puzzle_script"]
 [ext_resource type="Script" path="res://levels/pedestal_node.gd" id="18_pedestal_node_script"]
-[ext_resource type="Script" path="res://levels/bunker_structure.gd" id="19_bunker_script"]
+[ext_resource type="PackedScene" path="res://entities/structures/bunker_structure.tscn" id="19_bunker_scene"]
 [ext_resource type="PackedScene" path="res://entities/enemies/boss_omega_ultralisk_3d.tscn" id="20_omega_boss_scene"]
 [ext_resource type="PackedScene" path="res://entities/enemies/boss_nydus_3d.tscn" id="21_nydus_boss_scene"]
 [ext_resource type="PackedScene" path="res://ui/health_bar_3d.tscn" id="22_health_scene"]
+[ext_resource type="PackedScene" path="res://entities/structures/armory_terminal.tscn" id="35_armory_scene"]
 [ext_resource type="ArrayMesh" path="res://assets/models/raynor_body_mesh.tres" id="23_raynor_body_mesh"]
 [ext_resource type="ArrayMesh" path="res://assets/models/raynor_rifle_mesh.tres" id="24_raynor_rifle_mesh"]
 [ext_resource type="ShaderMaterial" path="res://assets/materials/environment/char_basalt_ground_pbr.tres" id="25_char_ground_mat"]
@@ -278,129 +278,43 @@ mesh = SubResource("BoxMesh_ground")
 [node name="BasePerimeter" type="Node3D" parent="NavigationRegion3D"]
 
 [node name="CommandCenter" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("5_cc_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 24)
 
 [node name="RallyPoint" type="Marker3D" parent="NavigationRegion3D/BasePerimeter"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 20)
 
-[node name="WestGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, 4)
+[node name="ArmoryTerminal" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("35_armory_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 26)
 
-[node name="EastGate" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("6_gate_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 4)
+[node name="WallNorth1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -35, 0, 14)
 
-[node name="WallCenter1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 4)
+[node name="WallNorth2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31, 0, 14)
 
-[node name="WallCenter2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 4)
+[node name="WallNorth3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, 0, 14)
 
-[node name="WallNorthWest1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 4)
-
-[node name="WallNorthWest2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 4)
-
-[node name="WallNorthEast1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 4)
-
-[node name="WallNorthEast2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 4)
-
-[node name="WallWest1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 6)
-
-[node name="WallWest2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 10)
-
-[node name="WallWest3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 14)
-
-[node name="WallWest4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 18)
-
-[node name="WallWest5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -18, 0, 22)
-
-[node name="WallEast1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 6)
+[node name="WallNorth4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 0, 14)
 
 [node name="WallEast2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 10)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -14, 0, 23)
 
 [node name="WallEast3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 14)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -14, 0, 27)
 
 [node name="WallEast4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 18)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -14, 0, 31)
 
 [node name="WallEast5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 18, 0, 22)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -14, 0, 35)
 
-[node name="WallSouth1" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 24)
+[node name="BunkerWest" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("19_bunker_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 15)
 
-[node name="WallSouth2" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 24)
-
-[node name="WallSouth3" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 24)
-
-[node name="WallSouth4" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 24)
-
-[node name="WallSouth5" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
-
-[node name="WallSouth6" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 24)
-
-[node name="WallSouth7" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 24)
-
-[node name="WallSouth8" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 24)
-
-[node name="WallSouth9" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("7_wall_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 24)
-
-[node name="BunkerWest" type="StaticBody3D" parent="NavigationRegion3D/BasePerimeter" groups=["structures", "bunkers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, 7)
-collision_layer = 1
-collision_mask = 0
-script = ExtResource("19_bunker_script")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
-shape = SubResource("BoxShape3D_bunker")
-
-[node name="VisualRoot" type="Node3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest"]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest/VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
-mesh = SubResource("BoxMesh_bunker")
-
-[node name="HealthBar3D" parent="NavigationRegion3D/BasePerimeter/BunkerWest" instance=ExtResource("22_health_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
-
-[node name="BunkerEast" type="StaticBody3D" parent="NavigationRegion3D/BasePerimeter" groups=["structures", "bunkers"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 7)
-collision_layer = 1
-collision_mask = 0
-script = ExtResource("19_bunker_script")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
-shape = SubResource("BoxShape3D_bunker")
-
-[node name="VisualRoot" type="Node3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast"]
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast/VisualRoot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
-mesh = SubResource("BoxMesh_bunker")
-
-[node name="HealthBar3D" parent="NavigationRegion3D/BasePerimeter/BunkerEast" instance=ExtResource("22_health_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.7, 0)
+[node name="BunkerEast" parent="NavigationRegion3D/BasePerimeter" instance=ExtResource("19_bunker_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, 20)
 
 [node name="EnvironmentDecorations" type="Node3D" parent="."]
 
@@ -436,17 +350,17 @@ light_color = Color(1, 0.55, 0.18, 1)
 light_energy = 1.6
 omni_range = 10.0
 
-[node name="OmniLightWestGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.2, -4)
-light_color = Color(1, 0.45, 0.1, 1)
-light_energy = 1.6
-omni_range = 10.0
+[node name="OmniLightChokePoint" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 2, 15.5)
+light_color = Color(1, 0.65, 0.2, 1)
+light_energy = 2.0
+omni_range = 14.0
 
-[node name="OmniLightEastGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1.2, -4)
-light_color = Color(1, 0.45, 0.1, 1)
-light_energy = 1.6
-omni_range = 10.0
+[node name="OmniLightBase" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 2.5, 24)
+light_color = Color(0.3, 0.75, 1, 1)
+light_energy = 2.2
+omni_range = 16.0
 
 [node name="OmniLightHellsGate" type="OmniLight3D" parent="EnvironmentDecorations/LavaLights"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 1.5, -10)
@@ -457,7 +371,7 @@ omni_range = 14.0
 [node name="Allies" type="Node3D" parent="."]
 
 [node name="HeroRaynor" type="CharacterBody3D" parent="Allies" groups=["allies", "heroes"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 20)
 collision_layer = 2
 collision_mask = 3
 script = ExtResource("11_hero_unit_script")
@@ -501,31 +415,19 @@ libraries = {
 [node name="HealthBar3D" parent="Allies/HeroRaynor" instance=ExtResource("22_health_scene")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
 
-[node name="Marine1" parent="Allies" instance=ExtResource("8_unit_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 9.5)
-
-[node name="Marine2" parent="Allies" instance=ExtResource("8_unit_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 8.5)
-
-[node name="Marine3" parent="Allies" instance=ExtResource("8_unit_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
-
-[node name="Marine4" parent="Allies" instance=ExtResource("8_unit_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 8.5)
-
-[node name="Marine5" parent="Allies" instance=ExtResource("8_unit_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 9.5)
-
 [node name="EnemySpawners" type="Node3D" parent="."]
 
 [node name="SpawnerNorthWest" type="Marker3D" parent="EnemySpawners"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, -34)
 
 [node name="SpawnerNorthCenter" type="Marker3D" parent="EnemySpawners"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -34)
 
 [node name="SpawnerNorthEast" type="Marker3D" parent="EnemySpawners"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -34)
+
+[node name="SpawnerEast" type="Marker3D" parent="EnemySpawners"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 0, 0)
 
 [node name="SwarmSimulation" type="Node3D" parent="."]
 script = ExtResource("10_swarm_sim_script")
@@ -535,7 +437,7 @@ map_bounds_max = Vector2(42, 42)
 
 [node name="WaveManager" type="Node" parent="." node_paths=PackedStringArray("spawn_points", "swarm_simulation")]
 script = ExtResource("9_wave_script")
-spawn_points = [NodePath("../EnemySpawners/SpawnerNorthWest"), NodePath("../EnemySpawners/SpawnerNorthCenter"), NodePath("../EnemySpawners/SpawnerNorthEast")]
+spawn_points = [NodePath("../EnemySpawners/SpawnerNorthWest"), NodePath("../EnemySpawners/SpawnerNorthCenter"), NodePath("../EnemySpawners/SpawnerNorthEast"), NodePath("../EnemySpawners/SpawnerEast")]
 swarm_simulation = NodePath("../SwarmSimulation")
 
 [node name="EconomyManager" type="Node" parent="."]
@@ -580,7 +482,7 @@ shape = SubResource("CylinderShape3D_hells_gate")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
 
 [node name="PedestalPuzzleManager" type="Node3D" parent="SpatialEvents"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0, 18)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0, 24)
 script = ExtResource("17_pedestal_puzzle_script")
 ring_radius = 5.0
 
@@ -705,7 +607,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
 mesh = SubResource("CylinderMesh_pedestal")
 
 [node name="RTSCamera3D" parent="." instance=ExtResource("2_camera_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 11)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0, 22)
 
 [node name="RTSController" type="Node" parent="." node_paths=PackedStringArray("camera_rig", "selection_box_ui")]
 script = ExtResource("3_controller_script")
@@ -723,90 +625,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("4_box_ui_script")
-
-[node name="HUDPanel" type="PanelContainer" parent="UI"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 410.0
-offset_bottom = 135.0
-mouse_filter = 2
-
-[node name="MarginContainer" type="MarginContainer" parent="UI/HUDPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 10
-
-[node name="VBoxContainer" type="VBoxContainer" parent="UI/HUDPanel/MarginContainer"]
-layout_mode = 2
-
-[node name="TitleLabel" type="Label" parent="UI/HUDPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "STARCRAFT II DEFENSE // SPECIAL FORCES ELITE 5"
-
-[node name="HelpLabel" type="Label" parent="UI/HUDPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
-theme_override_font_sizes/font_size = 11
-text = "• Click Izq: Seleccionar Héroe / Unidades / Compuertas
-• Click Der: Mover en Formación / Focus Fire en Enemigo
-• Teclas Q, W, E, R: Habilidades de Héroe | S / H: Detener
-• Consola SC2: Panel de Estadísticas [+] y Command Card
-• WASD / Bordes: Mover Cámara | Rueda: Zoom"
-
-[node name="WavePanel" type="PanelContainer" parent="UI"]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -340.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 185.0
-grow_horizontal = 0
-
-[node name="MarginContainer" type="MarginContainer" parent="UI/WavePanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 12
-
-[node name="VBoxContainer" type="VBoxContainer" parent="UI/WavePanel/MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 6
-
-[node name="RoundLabel" type="Label" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
-theme_override_font_sizes/font_size = 15
-text = "Ronda Actual: 1"
-
-[node name="StateLabel" type="Label" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.95, 0.4, 1)
-theme_override_font_sizes/font_size = 12
-text = "Estado: FASE TÁCTICA"
-
-[node name="CCHealthLabel" type="Label" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 11
-text = "Integridad Command Center: 2000 / 2000"
-
-[node name="MineralsLabel" type="Label" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "Minerales: 50"
-
-[node name="StartWaveBtn" type="Button" parent="UI/WavePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 13
-text = "▶ INICIAR OLEADA"
 
 [node name="GameOverPanel" type="PanelContainer" parent="UI"]
 visible = false

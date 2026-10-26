@@ -113,6 +113,22 @@ func _setup_start_modal() -> void:
 	start_modal.deployment_confirmed.connect(_on_deployment_confirmed)
 
 
+func _get_signal_bus() -> Node:
+	if Engine.has_singleton("SignalBus"):
+		return Engine.get_singleton("SignalBus")
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree and tree.root and tree.root.has_node("SignalBus"):
+		return tree.root.get_node("SignalBus")
+	return null
+
+
+func _get_tree_safe() -> SceneTree:
+	var t := get_tree()
+	if t:
+		return t
+	return Engine.get_main_loop() as SceneTree
+
+
 func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random: bool) -> void:
 	# 1. Apply difficulty scaling
 	if difficulty_manager:
@@ -132,19 +148,37 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 		if rts_controller:
 			rts_controller.clear_selection()
 			rts_controller.select_unit(active_hero)
-			SignalBus.units_selected.emit([active_hero])
+			var bus := _get_signal_bus()
+			if bus and bus.has_signal("units_selected"):
+				bus.units_selected.emit([active_hero])
 
 	# 4. Update SC2 Top Bar
 	if sc2_hud_root:
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
 		if economy_manager:
 			sc2_hud_root.update_minerals(economy_manager.current_minerals)
+		sc2_hud_root.top_wave_label.text = "¡OLEADA ENTRANTE EN 5s!"
+		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 
 	start_modal = null
 
+	# Auto-start Wave 1 after 5 second tactical preparation countdown
+	var t := _get_tree_safe()
+	if t:
+		for s in range(5, 0, -1):
+			if not is_inside_tree() or (wave_manager and wave_manager.is_wave_in_progress):
+				return
+			if sc2_hud_root and is_instance_valid(sc2_hud_root) and sc2_hud_root.top_wave_label:
+				sc2_hud_root.top_wave_label.text = "¡OLEADA ENTRANTE EN %ds!" % s
+				sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+			await t.create_timer(1.0).timeout
+		if wave_manager and not wave_manager.is_wave_in_progress:
+			wave_manager.start_next_wave()
+
 
 func _prepare_navigation_and_gates() -> void:
-	var gates: Array[Node] = get_tree().get_nodes_in_group("gates")
+	var t := _get_tree_safe()
+	var gates: Array[Node] = t.get_nodes_in_group("gates") if t else []
 	for node in gates:
 		if node is GateStructure:
 			var gate: GateStructure = node as GateStructure
@@ -206,7 +240,7 @@ func _setup_swarm_simulation() -> void:
 		wave_manager.swarm_simulation = swarm_simulation
 
 	# Register Command Center as primary goal in SwarmSimulation
-	var cc_pos := Vector3(0.0, 0.0, 14.0)
+	var cc_pos := Vector3(-24.0, 0.0, 24.0)
 	if command_center:
 		cc_pos = command_center.global_position
 	elif not get_tree().get_nodes_in_group("command_centers").is_empty():
@@ -216,7 +250,7 @@ func _setup_swarm_simulation() -> void:
 	
 	swarm_simulation.register_goal(cc_pos)
 
-	# Register perimeter structures (WallSegment, GateStructure, Bunkers) as dynamic obstacles
+	# Register perimeter structures (WallSegment, GateStructure, Bunkers, Armory) as dynamic obstacles
 	_register_all_perimeter_obstacles()
 
 
@@ -236,9 +270,7 @@ func _register_all_perimeter_obstacles() -> void:
 			var world_half_x: float = absf(basis.x.x * local_half.x) + absf(basis.z.x * local_half.z)
 			var world_half_z: float = absf(basis.x.z * local_half.x) + absf(basis.z.z * local_half.z)
 			var half_size := Vector3(world_half_x + 0.15, 1.6, world_half_z + 0.15)
-			var is_front_wall: bool = (s.global_position.z <= 5.0)
-			var wall_cost: int = 60 if is_front_wall else 255
-			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, wall_cost)
+			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, 180)
 		elif s is GateStructure:
 			var gate: GateStructure = s as GateStructure
 			var half_size: Vector3 = Vector3(3.1, 1.6, 0.8)
@@ -249,8 +281,11 @@ func _register_all_perimeter_obstacles() -> void:
 			var half_size: Vector3 = Vector3(4.0, 2.0, 4.0)
 			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true)
 		elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
-			var half_size: Vector3 = Vector3(2.5, 1.5, 2.5)
+			var half_size: Vector3 = Vector3(1.75, 1.25, 1.75)
 			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, 80)
+		elif s.name.to_lower().contains("armory") or s.is_in_group("armory"):
+			var half_size: Vector3 = Vector3(1.5, 1.2, 1.5)
+			swarm_simulation.register_obstacle_aabb(s, s.global_position - half_size, s.global_position + half_size, true, 90)
 
 
 func _setup_hero_and_controls() -> void:
@@ -297,7 +332,9 @@ func _setup_hero_and_controls() -> void:
 	if rts_controller and is_instance_valid(active_hero):
 		rts_controller.clear_selection()
 		rts_controller.select_unit(active_hero)
-		SignalBus.units_selected.emit([active_hero])
+		var bus := _get_signal_bus()
+		if bus and bus.has_signal("units_selected"):
+			bus.units_selected.emit([active_hero])
 
 
 func _setup_spatial_events_and_puzzles() -> void:
@@ -315,22 +352,24 @@ func _setup_spatial_events_and_puzzles() -> void:
 
 
 func _setup_event_listeners() -> void:
-	if not SignalBus.structure_destroyed.is_connected(_on_structure_destroyed):
-		SignalBus.structure_destroyed.connect(_on_structure_destroyed)
-	if not SignalBus.structure_damaged.is_connected(_on_structure_damaged):
-		SignalBus.structure_damaged.connect(_on_structure_damaged)
-	if not SignalBus.gate_state_changed.is_connected(_on_gate_state_changed):
-		SignalBus.gate_state_changed.connect(_on_gate_state_changed)
-	if not SignalBus.wave_started.is_connected(_on_wave_started):
-		SignalBus.wave_started.connect(_on_wave_started)
-	if not SignalBus.wave_completed.is_connected(_on_wave_completed):
-		SignalBus.wave_completed.connect(_on_wave_completed)
-	if not SignalBus.wave_enemy_count_changed.is_connected(_on_wave_enemy_count_changed):
-		SignalBus.wave_enemy_count_changed.connect(_on_wave_enemy_count_changed)
-	if not SignalBus.enemy_died.is_connected(_on_enemy_died):
-		SignalBus.enemy_died.connect(_on_enemy_died)
-	if not SignalBus.base_destroyed.is_connected(_on_base_destroyed):
-		SignalBus.base_destroyed.connect(_on_base_destroyed)
+	var bus := _get_signal_bus()
+	if bus:
+		if bus.has_signal("structure_destroyed") and not bus.structure_destroyed.is_connected(_on_structure_destroyed):
+			bus.structure_destroyed.connect(_on_structure_destroyed)
+		if bus.has_signal("structure_damaged") and not bus.structure_damaged.is_connected(_on_structure_damaged):
+			bus.structure_damaged.connect(_on_structure_damaged)
+		if bus.has_signal("gate_state_changed") and not bus.gate_state_changed.is_connected(_on_gate_state_changed):
+			bus.gate_state_changed.connect(_on_gate_state_changed)
+		if bus.has_signal("wave_started") and not bus.wave_started.is_connected(_on_wave_started):
+			bus.wave_started.connect(_on_wave_started)
+		if bus.has_signal("wave_completed") and not bus.wave_completed.is_connected(_on_wave_completed):
+			bus.wave_completed.connect(_on_wave_completed)
+		if bus.has_signal("wave_enemy_count_changed") and not bus.wave_enemy_count_changed.is_connected(_on_wave_enemy_count_changed):
+			bus.wave_enemy_count_changed.connect(_on_wave_enemy_count_changed)
+		if bus.has_signal("enemy_died") and not bus.enemy_died.is_connected(_on_enemy_died):
+			bus.enemy_died.connect(_on_enemy_died)
+		if bus.has_signal("base_destroyed") and not bus.base_destroyed.is_connected(_on_base_destroyed):
+			bus.base_destroyed.connect(_on_base_destroyed)
 
 	if start_wave_btn and not start_wave_btn.pressed.is_connected(_on_start_wave_pressed):
 		start_wave_btn.pressed.connect(_on_start_wave_pressed)
@@ -582,7 +621,9 @@ func _on_gate_state_changed(gate: Node, is_open: bool) -> void:
 
 func _on_structure_destroyed(structure: Node) -> void:
 	if structure is CommandCenter:
-		SignalBus.base_destroyed.emit()
+		var bus := _get_signal_bus()
+		if bus and bus.has_signal("base_destroyed"):
+			bus.base_destroyed.emit()
 		return
 
 	if swarm_simulation and is_instance_valid(structure):
@@ -637,6 +678,19 @@ func _on_wave_completed(wave_number: int) -> void:
 	if sc2_hud_root:
 		sc2_hud_root.update_wave_status(wave_number, 0, false)
 	_save_bank_progress(false)
+
+	# Auto-start subsequent waves automatically after 8-second tactical preparation
+	var t := _get_tree_safe()
+	if t:
+		for s in range(8, 0, -1):
+			if not is_inside_tree() or (wave_manager and wave_manager.is_wave_in_progress):
+				return
+			if sc2_hud_root and is_instance_valid(sc2_hud_root) and sc2_hud_root.top_wave_label:
+				sc2_hud_root.top_wave_label.text = "FASE TÁCTICA  |  ¡SIGUIENTE OLEADA EN %ds!" % s
+				sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+			await t.create_timer(1.0).timeout
+		if wave_manager and not wave_manager.is_wave_in_progress:
+			wave_manager.start_next_wave()
 
 
 func _on_enemy_died(enemy: Node, reward: int) -> void:
