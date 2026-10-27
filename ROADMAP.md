@@ -465,14 +465,14 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 **HJ:** compro Veteranía para un marine y se convierte en unidad élite que acumula stacks al matar.
 
 ### Tareas
-- [ ] **6.1** Compra de **Veteranía**: convierte cualquier unidad normal en `Élite`. `M`
-- [ ] **6.2** Stacks de élite por baja: hasta **+125 de daño plano** y **×1.6667 de velocidad de ataque**. `M`
-- [ ] **6.3** Reclutamiento de unidades base (marine, zealot, zergling…) con coste y suministro. `M`
-- [ ] **6.4** Control de suministro: bloqueo de reclutamiento al llegar al límite. `S`
-- [ ] **6.5** **Unidades de visión:** Blimp, Observer, Overseer. Con Ace → invulnerables. Bufo *Optical Lens* de exploración. `M`
+- [x] **6.1** Compra de **Veteranía**: convierte cualquier unidad normal en `Élite`. `M`
+- [x] **6.2** Stacks de élite por baja: hasta **+125 de daño plano** y **×1.6667 de velocidad de ataque**. `M`
+- [x] **6.3** Reclutamiento de unidades base (marine, zealot, zergling…) con coste y suministro. `M`
+- [x] **6.4** Control de suministro: bloqueo de reclutamiento al llegar al límite. `S`
+- [x] **6.5** **Unidades de visión:** Blimp, Observer, Overseer. Con Ace → invulnerables. Bufo *Optical Lens* de exploración. `M`
 - [ ] **6.6** **Transporte:** Medivac, Warp Prism, Overlord (transporte aéreo seguro). `M`
 - [ ] **6.7** **Teletransporte racial:** Einstein-Rosen Bridge, Recall Station, Remote Nydus Network. `L`
-- [ ] **6.8** Iconografía de categoría (anillos de color: verde/amarillo/naranja/rojo). `S`
+- [x] **6.8** Iconografía de categoría (anillos de color: verde/amarillo/naranja/rojo). `S`
 
 ### CdH
 - Una unidad élite acumula stacks visibles y su DPS sube según la fórmula.

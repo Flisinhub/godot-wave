@@ -3,6 +3,9 @@ extends CharacterBody3D
 
 ## BaseUnit3D - Standard RTS Unit with Navigation, Auto-Attack, Focus Fire & Micromanagement Support
 
+const EliteComponent = preload("res://core/components/elite_component.gd")
+const CategoryRingStyler = preload("res://core/vfx/category_ring_styler.gd")
+
 @export var unit_data: UnitData
 
 @onready var visual_root: Node3D = $VisualRoot
@@ -25,6 +28,7 @@ var is_selected: bool = false
 var focus_target: Node3D = null
 var _attack_timer: float = 0.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
+var elite_component: EliteComponent = null
 
 
 func _get_signal_bus() -> Node:
@@ -36,8 +40,19 @@ func _get_signal_bus() -> Node:
 	return null
 
 
+func _ensure_elite_component() -> EliteComponent:
+	if not elite_component:
+		elite_component = get_node_or_null("EliteComponent") as EliteComponent
+		if not elite_component:
+			elite_component = EliteComponent.new()
+			elite_component.name = "EliteComponent"
+			add_child(elite_component)
+	return elite_component
+
+
 func _ready() -> void:
 	add_to_group("allies")
+	_ensure_elite_component()
 	
 	if unit_data:
 		max_health = unit_data.max_health
@@ -211,8 +226,10 @@ func _fire_at(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
 		
+	var bonus_dmg: float = elite_component.get_bonus_damage() if elite_component else 0.0
+	var final_damage: float = attack_damage + bonus_dmg
 	if target.has_method("take_damage"):
-		target.take_damage(attack_damage)
+		target.take_damage(final_damage)
 	
 	if is_instance_valid(anim_player):
 		if anim_player.has_animation("shoot"):
@@ -282,6 +299,13 @@ func set_selected(selected: bool) -> void:
 	is_selected = selected
 	if selection_ring:
 		selection_ring.visible = selected
+		if selected:
+			var cat: String = "elite" if (elite_component and elite_component.is_elite) else (unit_data.category if unit_data else "normal")
+			CategoryRingStyler.apply_ring_style(selection_ring, cat)
+
+
+func promote_to_elite() -> void:
+	_ensure_elite_component().promote_to_elite()
 
 
 func take_damage(amount: float) -> void:
