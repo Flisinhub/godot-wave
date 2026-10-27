@@ -16,6 +16,9 @@ var killer_faction: int = 1 # Default HOSTILE
 ## The nominal mineral bounty awarded if eliminated by allied units
 var base_bounty: int = 0
 
+## Optional IncomeParams for SFE5 Master Income Formula
+var income_params: RefCounted = null
+
 ## The type of lethal damage dealt (0 = Physical, 1 = Spell)
 var lethal_damage_type: int = 0
 
@@ -27,13 +30,15 @@ func _init(
 	p_killer: Object = null,
 	p_killer_faction: int = 1,
 	p_base_bounty: int = 0,
-	p_lethal_damage_type: int = 0
+	p_lethal_damage_type: int = 0,
+	p_income_params: RefCounted = null
 ) -> void:
 	victim = p_victim
 	killer = p_killer
 	killer_faction = p_killer_faction
 	base_bounty = p_base_bounty
 	lethal_damage_type = p_lethal_damage_type
+	income_params = p_income_params
 	timestamp_ms = Time.get_ticks_msec()
 
 ## Returns true if the killer was confirmed to be on the Allied side (Player hero / allied unit / defensive structure)

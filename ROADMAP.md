@@ -184,18 +184,18 @@ Clasificación de lo que ya existe en el repositorio:
 **HJ:** abro el proyecto, pulso F5, juego igual que antes, pero el repo es legible y todos los tests pasan.
 
 ### Tareas
-- [ ] **0.1** Renombrar el proyecto en `project.godot` (`config/name="SFE5 — Godot"`). `S`
+- [x] **0.1** Renombrar el proyecto en `project.godot` (`config/name="SFE5 — Godot"`). `S`
 - [x] **0.2** Crear `docs/archive/` y mover `PROJECT.md`, `PROJECT_HANDOFF.md`, `TEST_INFRA.md`, `TEST_READY.md`. Dejar `README.md` corto + este `ROADMAP.md`. `S`
-- [ ] **0.3** Reescribir `README.md`: qué es, cómo ejecutar, controles, enlace al roadmap. Quitar métricas no verificadas o fecharlas. `S`
-- [ ] **0.4** Mover tests de auditoría/adversariales/empíricos a `tests/legacy/`; el runner principal solo carga `tests/unit/` y `tests/integration/`. `M`
-- [ ] **0.5** Ejecutar la batería actual y anotar el resultado real (nº de tests, tiempo, fallos). `S`
-- [ ] **0.6** Registrar autoloads reales: `SignalBus`, `GameSession`, `GameConfig` (vacíos al principio). `S`
-- [ ] **0.7** Añadir `.gitignore` completo (`.godot/`, `*.import` según criterio, `export_presets.cfg` local). `S`
-- [ ] **0.8** Crear estructura de carpetas objetivo (ver Apéndice B). `S`
-- [ ] **0.9** Configuración de GitHub Actions: ejecutar tests headless en cada push (imagen `barichello/godot-ci` o similar). `M`
-- [ ] **0.10** Plantilla de commits (`feat|fix|refactor|test|docs(fase-N): mensaje`). `S`
-- [ ] **0.11** Crear etiqueta `v0.0-base` con el estado actual. `S`
-- [ ] **0.12** Documento `docs/DESIGN_NOTES.md` con enlace al informe de la wiki y decisiones de diseño. `S`
+- [x] **0.3** Reescribir `README.md`: qué es, cómo ejecutar, controles, enlace al roadmap. Quitar métricas no verificadas o fecharlas. `S`
+- [x] **0.4** Mover tests de auditoría/adversariales/empíricos a `tests/legacy/`; el runner principal solo carga `tests/unit/` y `tests/integration/`. `M`
+- [x] **0.5** Ejecutar la batería actual y anotar el resultado real (nº de tests, tiempo, fallos). `S`
+- [x] **0.6** Registrar autoloads reales: `SignalBus`, `GameSession`, `GameConfig` (vacíos al principio). `S`
+- [x] **0.7** Añadir `.gitignore` completo (`.godot/`, `*.import` según criterio, `export_presets.cfg` local). `S`
+- [x] **0.8** Crear estructura de carpetas objetivo (ver Apéndice B). `S`
+- [x] **0.9** Configuración de GitHub Actions: ejecutar tests headless en cada push (imagen `barichello/godot-ci` o similar). `M`
+- [x] **0.10** Plantilla de commits (`feat|fix|refactor|test|docs(fase-N): mensaje`). `S`
+- [x] **0.11** Crear etiqueta `v0.0-base` con el estado actual. `S`
+- [x] **0.12** Documento `docs/DESIGN_NOTES.md` con enlace al informe de la wiki y decisiones de diseño. `S`
 
 ### CdH
 - `git clone` + abrir en Godot + F5 = nivel jugable, sin errores rojos.
@@ -236,18 +236,19 @@ mínimo garantizado: 1
 > ⚠ Contrastar con la calculadora `/income` de sfe5.wiki: guardar 20+ casos de referencia como tests. Las divergencias se documentan en `docs/DESIGN_NOTES.md`.
 
 ### Tareas
-- [ ] **1.1** `IncomeFormula.compute(params: IncomeParams) -> int` con todas las ramas (armada/desarmada/energía/overflow/split/compartido). `M`
-- [ ] **1.2** `IncomeParams` (Resource/RefCounted): vida, escudo, daño, periodo, energía, categoría, nº jugadores, split, handicap, bono pedestal, multiplicadores de dificultad. `S`
-- [ ] **1.3** Tabla de casos de referencia `tests/unit/income_reference_cases.json` (mínimo 20: zergling, roach, hydra, ultralisk, estructura, héroe, élite, jefe invocado, jefe principal, desarmada, con energía, overflow >500k, split, 1 vs 6 jugadores). `M`
-- [ ] **1.4** Test que recorre los casos y compara con tolerancia ±1. `S`
-- [ ] **1.5** Reemplazar `base_bounty` en `SFEEconomyManager.process_kill` por la fórmula. Mantener la **regla de Crossfire Nullification** solo si se confirma que existe en SFE5 (ver ADR-03). `M`
-- [ ] **1.6** Minerales iniciales = `12000 / nº jugadores`; bono Random Hero = `15000 / nº jugadores`. `S`
-- [ ] **1.7** Suministro: 80 en solitario; −10 por jugador extra; mínimo 30; recalcular al abandonar. Bono +10 del secreto *Outhouse* (stub). `S`
-- [ ] **1.8** Multiplicador de ingreso por dificultad (Casual ×1.15 … Impossible ×0.30). `S`
-- [ ] **1.9** Distribución del botín: compartido entre jugadores vs `Split Income` (el asesino se lo lleva todo con handicap 0.9). `M`
-- [ ] **1.10** Texto flotante `+N` con color por categoría (verde estructura, amarillo heroica, naranja élite, rojo jefe). `S`
-- [ ] **1.11** Panel de depuración (F3): última baja, parámetros, `s` intermedio, resultado. `S`
-- [ ] **1.12** Estadísticas de partida: minerales totales ganados, por fuente, por minuto. `S`
+- [x] **1.1** `IncomeFormula.compute(params: IncomeParams) -> int` con todas las ramas (armada/desarmada/energía/overflow/split/compartido). `M`
+- [x] **1.2** `IncomeParams` (Resource/RefCounted): vida, escudo, daño, periodo, energía, categoría, nº jugadores, split, handicap, bono pedestal, multiplicadores de dificultad. `S`
+- [x] **1.3** Tabla de casos de referencia `tests/unit/income_reference_cases.json` (mínimo 20: zergling, roach, hydra, ultralisk, estructura, héroe, élite, jefe invocado, jefe principal, desarmada, con energía, overflow >500k, split, 1 vs 6 jugadores). `M`
+- [x] **1.4** Test que recorre los casos y compara con tolerancia ±1. `S`
+- [x] **1.5** Reemplazar `base_bounty` en `SFEEconomyManager.process_kill` por la fórmula. Mantener la **regla de Crossfire Nullification** solo si se confirma que existe en SFE5 (ver ADR-03). `M`
+- [x] **1.6** Minerales iniciales = `12000 / nº jugadores`; bono Random Hero = `15000 / nº jugadores`. `S`
+- [x] **1.7** Suministro: 80 en solitario; −10 por jugador extra; mínimo 30; recalcular al abandonar. Bono +10 del secreto *Outhouse* (stub). `S`
+- [x] **1.8** Multiplicador de ingreso por dificultad (Casual ×1.15 … Impossible ×0.30). `S`
+- [x] **1.9** Distribución del botín: compartido entre jugadores vs `Split Income` (el asesino se lo lleva todo con handicap 0.9). `M`
+- [x] **1.10** Texto flotante `+N` con color por categoría (verde estructura, amarillo heroica, naranja élite, rojo jefe). `S`
+- [x] **1.11** Panel de depuración (F3): última baja, parámetros, `s` intermedio, resultado. `S`
+- [x] **1.12** Estadísticas de partida: minerales totales ganados, por fuente, por minuto. `S`
+- [x] **1.13** Etiqueta `v0.1-economia` tras validar que todo lo anterior pasa en tests y en juego real. `S`
 
 ### CdH
 - 20+ casos de referencia pasando.

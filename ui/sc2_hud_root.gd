@@ -25,6 +25,7 @@ var top_hive_label: Label
 var top_wave_label: Label
 var top_cc_hp_label: Label
 var top_minerals_label: Label
+var top_supply_label: Label
 var top_vet_label: Label
 
 func _init() -> void:
@@ -191,12 +192,18 @@ func _build_hud_layout() -> void:
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_hbox.add_child(spacer2)
 
-	# Right: Minerals Wallet & Operator Veterancy
+	# Right: Minerals Wallet, Supply & Operator Veterancy
 	top_minerals_label = Label.new()
 	top_minerals_label.text = "💎 50 MINERALS"
 	top_minerals_label.add_theme_color_override("font_color", Color(0.2, 0.95, 1.0))
 	top_minerals_label.add_theme_font_size_override("font_size", 13)
 	top_hbox.add_child(top_minerals_label)
+
+	top_supply_label = Label.new()
+	top_supply_label.text = "⚡ 1 / 80"
+	top_supply_label.add_theme_color_override("font_color", Color(0.4, 0.9, 0.5))
+	top_supply_label.add_theme_font_size_override("font_size", 12)
+	top_hbox.add_child(top_supply_label)
 
 	top_vet_label = Label.new()
 	top_vet_label.text = "⭐ VET LVL 1"
@@ -322,6 +329,11 @@ func _on_units_deselected() -> void:
 func update_minerals(amount: int) -> void:
 	if top_minerals_label:
 		top_minerals_label.text = "💎 %d MINERALS" % amount
+
+
+func update_supply(current: int, max_sup: int) -> void:
+	if top_supply_label:
+		top_supply_label.text = "⚡ %d / %d" % [current, max_sup]
 
 
 func update_difficulty(diff_name: String, diff_tier: int = 1) -> void:

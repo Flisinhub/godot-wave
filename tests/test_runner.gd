@@ -52,6 +52,8 @@ func _run_all_suites() -> void:
 	_run_suite("Phase 3: Wave Progression, Strains & Bosses", preload("res://tests/test_p3_waves_strains_and_bosses.gd").new())
 	_run_suite("Phase 3: Armory Terminal & Auto-Turrets Runtime", preload("res://tests/test_p3_armory_and_turrets_runtime.gd").new())
 	_run_suite("Phase 3: SFXManager & 7-Bus Audio Layout Runtime", preload("res://tests/test_p3_sfx_and_audio_bus_runtime.gd").new())
+	_run_suite("SFE5 Wiki: Income Formula Specification", preload("res://tests/unit/test_income_formula.gd").new())
+	_run_suite("SFE5 Economy Integration & Telemetry", preload("res://tests/unit/test_sfe5_economy_integration.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

@@ -1,0 +1,21 @@
+name: SFE5 Godot CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Headless Test Suite
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3.0
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Master Test Suite
+        run: |
+          godot --headless -s tests/test_runner.gd

@@ -27,6 +27,8 @@ const SFEStartModal = preload("res://ui/sfe_start_modal.gd")
 const BankManager = preload("res://core/persistence/bank_manager.gd")
 const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 const BossHealthBarUI = preload("res://ui/boss_health_bar_ui.gd")
+const IncomeParams = preload("res://core/economy/income_params.gd")
+const IncomeFormula = preload("res://core/economy/income_formula.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -65,6 +67,10 @@ var session_kills: int = 0
 # Swarm Combat Throttle
 var _swarm_combat_accumulator: float = 0.0
 
+# SFE5 F3 Debug Telemetry Overlay
+var debug_telemetry_panel: PanelContainer = null
+var debug_telemetry_label: Label = null
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -101,21 +107,49 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
+	if debug_telemetry_panel and debug_telemetry_panel.visible:
+		_update_debug_telemetry()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F3:
+			_toggle_debug_telemetry()
 
 
 func _setup_start_modal() -> void:
 	# Initial Top Bar Sync from Bank
 	var bank: Dictionary = BankManager.load_bank()
+	var sess := _get_game_session()
+	var initial_minerals: int = 12000
+	var max_sup: int = 80
+	if sess:
+		initial_minerals = sess.get_initial_minerals(false)
+		max_sup = sess.get_max_supply()
+
+	if economy_manager:
+		economy_manager.reset(initial_minerals)
+
 	if sc2_hud_root:
 		sc2_hud_root.update_veterancy(bank.get("veterancy_level", 1))
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), SFEDifficultyManager.get_difficulty())
 		if economy_manager:
 			sc2_hud_root.update_minerals(economy_manager.current_minerals)
+		sc2_hud_root.update_supply(1, max_sup)
 
 	start_modal = SFEStartModal.new()
 	start_modal.name = "SFEStartModal"
 	add_child(start_modal)
 	start_modal.deployment_confirmed.connect(_on_deployment_confirmed)
+
+
+func _get_game_session() -> Node:
+	if Engine.has_singleton("GameSession"):
+		return Engine.get_singleton("GameSession")
+	var tree := _get_tree_safe()
+	if tree and tree.root and tree.root.has_node("GameSession"):
+		return tree.root.get_node("GameSession")
+	return null
 
 
 func _get_signal_bus() -> Node:
@@ -141,9 +175,19 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	elif SFEDifficultyManager.instance:
 		SFEDifficultyManager.set_difficulty(diff_tier)
 
-	# 2. Apply Random Hero Bonus (+50 minerals)
-	if is_random and economy_manager:
-		economy_manager.add_minerals(50, "Random Hero Deployment Bonus")
+	# 2. Start GameSession and calculate initial minerals per SFE5 wiki rules
+	var sess := _get_game_session()
+	var initial_mins: int = 12000
+	var max_sup: int = 80
+	if sess:
+		sess.start_new_session(diff_tier, 1)
+		initial_mins = sess.get_initial_minerals(is_random)
+		max_sup = sess.get_max_supply()
+	else:
+		initial_mins = 15000 if is_random else 12000
+
+	if economy_manager:
+		economy_manager.reset(initial_mins)
 
 	# 3. Bind Selected Hero Data & Visuals
 	if selected_hero and active_hero:
@@ -162,6 +206,7 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
 		if economy_manager:
 			sc2_hud_root.update_minerals(economy_manager.current_minerals)
+		sc2_hud_root.update_supply(1, max_sup)
 		sc2_hud_root.top_wave_label.text = "¡OLEADA ENTRANTE EN 5s!"
 		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 
@@ -862,8 +907,10 @@ func _on_swarm_unit_killed(unit_idx: int, killer: Node, pos: Vector3, bounty_val
 	if arch_id == 2:
 		_execute_baneling_premature_pop(pos)
 
-	var bounty: int = award_kill_bounty(null, killer, bounty_val, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
-	FloatingTextManager.spawn_text(self, pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+	var inc_params: IncomeParams = _create_swarm_income_params(arch_id)
+	var bounty: int = award_kill_bounty(null, killer, bounty_val, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL, inc_params)
+	var cat_color: Color = get_category_color(inc_params.category)
+	FloatingTextManager.spawn_text(self, pos, "+%d Minerals" % bounty, cat_color)
 	if active_hero:
 		active_hero.gain_experience(15)
 	session_kills += 1
@@ -871,18 +918,96 @@ func _on_swarm_unit_killed(unit_idx: int, killer: Node, pos: Vector3, bounty_val
 		wave_manager.on_swarm_unit_died(bounty_val)
 
 
-## Awards mineral kill bounty honoring the strict Crossfire Nullification Rule (Requirement R3).
+## Awards mineral kill bounty honoring the strict Crossfire Nullification Rule (Requirement R3) and SFE5 Master Income Formula.
 func award_kill_bounty(
 	victim: Object,
 	killer: Object,
 	base_bounty: int,
 	killer_faction: int = EconomyTypes.Faction.ALLIED,
-	lethal_damage_type: int = 0
+	lethal_damage_type: int = 0,
+	p_income_params: RefCounted = null
 ) -> int:
-	var ctx := KillContext.new(victim, killer, killer_faction, base_bounty, lethal_damage_type)
+	var ctx := KillContext.new(victim, killer, killer_faction, base_bounty, lethal_damage_type, p_income_params)
 	if economy_manager:
 		return economy_manager.process_kill(ctx)
 	return 0
+
+
+func _create_swarm_income_params(arch_id: int) -> IncomeParams:
+	var p := IncomeParams.new()
+	match arch_id:
+		0: # Zergling
+			p.base_health = 35.0
+			p.weapon_damage = 5.0
+			p.attack_period = 0.7
+			p.category = "normal"
+		1: # Roach
+			p.base_health = 145.0
+			p.weapon_damage = 16.0
+			p.attack_period = 2.0
+			p.category = "normal"
+		2: # Baneling
+			p.base_health = 30.0
+			p.weapon_damage = 20.0
+			p.attack_period = 0.8
+			p.category = "normal"
+		3: # Hydralisk
+			p.base_health = 80.0
+			p.weapon_damage = 12.0
+			p.attack_period = 0.83
+			p.category = "normal"
+		_:
+			p.base_health = 35.0
+			p.weapon_damage = 5.0
+			p.attack_period = 0.7
+			p.category = "normal"
+	p.category_multiplier = 1.0
+	return p
+
+
+func _create_enemy_income_params(enemy: Node) -> IncomeParams:
+	var p := IncomeParams.new()
+	if enemy.is_in_group("bosses") or enemy.is_in_group("secret_boss"):
+		p.base_health = enemy.get("max_health") if "max_health" in enemy else 5000.0
+		p.weapon_damage = enemy.get("attack_damage") if "attack_damage" in enemy else 65.0
+		p.attack_period = enemy.get("attack_cooldown") if "attack_cooldown" in enemy else 1.2
+		p.category = "map_boss"
+		p.category_multiplier = 6.0
+	elif enemy.is_in_group("structures"):
+		p.base_health = enemy.get("max_health") if "max_health" in enemy else 1500.0
+		p.weapon_damage = 0.0
+		p.has_weapon = false
+		p.category = "structure"
+		p.category_multiplier = 8.0
+	elif enemy.is_in_group("heroic"):
+		p.base_health = enemy.get("max_health") if "max_health" in enemy else 250.0
+		p.weapon_damage = enemy.get("attack_damage") if "attack_damage" in enemy else 20.0
+		p.attack_period = enemy.get("attack_cooldown") if "attack_cooldown" in enemy else 1.0
+		p.category = "heroic"
+		p.category_multiplier = 4.0
+	elif "max_health" in enemy:
+		p.base_health = enemy.max_health
+		p.weapon_damage = enemy.get("attack_damage") if "attack_damage" in enemy else 5.0
+		p.attack_period = enemy.get("attack_cooldown") if "attack_cooldown" in enemy else 0.5
+		p.category = "normal"
+		p.category_multiplier = 1.0
+	else:
+		return null
+	return p
+
+
+func get_category_color(category: String) -> Color:
+	match category.to_lower():
+		"structure":
+			return Color(0.2, 1.0, 0.3) # Verde estructura
+		"heroic":
+			return Color(1.0, 0.9, 0.2) # Amarillo heroica
+		"elite", "map_boss":
+			return Color(1.0, 0.55, 0.1) # Naranja élite
+		"boss", "summoned_boss", "pinnacle_boss":
+			return Color(1.0, 0.25, 0.25) # Rojo jefe
+		_:
+			return Color(0.2, 0.95, 1.0) # Cyan normal
 
 
 func _on_hero_skill_cast(skill: Variant, target: Variant) -> void:
@@ -1024,6 +1149,9 @@ func _on_enemy_died(enemy: Node, reward: int) -> void:
 	var killer_faction: int = EconomyTypes.Faction.ALLIED
 	var killer_node: Object = active_hero
 	var enemy_pos := Vector3.ZERO
+	var category: String = "normal"
+	var inc_params: IncomeParams = null
+
 	if is_instance_valid(enemy):
 		if enemy.has_meta("killer_faction"):
 			killer_faction = enemy.get_meta("killer_faction")
@@ -1034,12 +1162,104 @@ func _on_enemy_died(enemy: Node, reward: int) -> void:
 			if combat_vfx_pool:
 				combat_vfx_pool.spawn_acid_burst(enemy_pos)
 
-	var bounty: int = award_kill_bounty(enemy, killer_node, reward, killer_faction)
+		inc_params = _create_enemy_income_params(enemy)
+		if inc_params:
+			category = inc_params.category
+
+	var bounty: int = award_kill_bounty(enemy, killer_node, reward, killer_faction, 0, inc_params)
 	if bounty > 0 and enemy_pos != Vector3.ZERO:
-		FloatingTextManager.spawn_text(self, enemy_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+		FloatingTextManager.spawn_text(self, enemy_pos, "+%d Minerals" % bounty, get_category_color(category))
 	if active_hero:
 		active_hero.gain_experience(reward * 3)
 	session_kills += 1
+
+
+func _toggle_debug_telemetry() -> void:
+	if debug_telemetry_panel == null:
+		_create_debug_telemetry_panel()
+	debug_telemetry_panel.visible = not debug_telemetry_panel.visible
+	if debug_telemetry_panel.visible:
+		_update_debug_telemetry()
+
+
+func _create_debug_telemetry_panel() -> void:
+	debug_telemetry_panel = PanelContainer.new()
+	debug_telemetry_panel.name = "SFE5DebugTelemetryPanel"
+	debug_telemetry_panel.anchor_left = 1.0
+	debug_telemetry_panel.anchor_right = 1.0
+	debug_telemetry_panel.anchor_top = 0.0
+	debug_telemetry_panel.anchor_bottom = 0.0
+	debug_telemetry_panel.offset_left = -420.0
+	debug_telemetry_panel.offset_right = -15.0
+	debug_telemetry_panel.offset_top = 45.0
+	debug_telemetry_panel.offset_bottom = 265.0
+	debug_telemetry_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.10, 0.90)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.2, 0.85, 1.0, 0.8)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	debug_telemetry_panel.add_theme_stylebox_override("panel", style)
+
+	debug_telemetry_label = Label.new()
+	debug_telemetry_label.name = "TelemetryLabel"
+	debug_telemetry_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	debug_telemetry_label.add_theme_font_size_override("font_size", 11)
+	debug_telemetry_label.add_theme_color_override("font_color", Color(0.9, 0.95, 1.0))
+	debug_telemetry_panel.add_child(debug_telemetry_label)
+
+	if sc2_hud_root:
+		sc2_hud_root.add_child(debug_telemetry_panel)
+	else:
+		add_child(debug_telemetry_panel)
+
+
+func _update_debug_telemetry() -> void:
+	if not debug_telemetry_label or not economy_manager:
+		return
+	var stats = economy_manager.get_economy_stats()
+	var last = stats.get("last_kill", {})
+	var lines: Array[String] = []
+	lines.append("=== SFE5 ECONOMY TELEMETRY (F3) ===")
+	lines.append("Wallet: %d | Total Ganado: %d | Gastado: %d" % [
+		stats.get("current_minerals", 0),
+		stats.get("total_earned", 0),
+		stats.get("total_spent", 0)
+	])
+	lines.append("Tasa: %.1f Min/min | Kills: %d, Initial: %d, Puzzles: %d" % [
+		stats.get("minerals_per_minute", 0.0),
+		stats.get("by_source", {}).get("kill", 0),
+		stats.get("by_source", {}).get("initial", 0),
+		stats.get("by_source", {}).get("puzzle", 0)
+	])
+	lines.append("--------------------------------------------------")
+	if last.is_empty():
+		lines.append("Última Baja: [Ninguna registrada]")
+	else:
+		lines.append("Última Baja: %s [%s]" % [last.get("victim_name", "N/A"), last.get("category", "normal").to_upper()])
+		lines.append("HP: %.0f | Escudo: %.0f | Daño: %.1f | Periodo: %.2fs" % [
+			last.get("hp", 0.0), last.get("shield", 0.0), last.get("damage", 0.0), last.get("period", 1.0)
+		])
+		lines.append("Mult Dificultad: x%.2f | Jugadores: %d | Split: %s" % [
+			last.get("difficulty_mult", 1.0), last.get("player_count", 1), str(last.get("split_income", false))
+		])
+		lines.append("Mult Categoría: x%.1f | Bono Pedestal: +%.0f" % [
+			last.get("category_mult", 1.0), last.get("pedestal_bonus", 0.0)
+		])
+		lines.append("Botín Otorgado: +%d Minerales" % last.get("bounty", 0))
+	lines.append("==================================================")
+	debug_telemetry_label.text = "\n".join(lines)
 
 
 func _on_minerals_changed(new_amount: int, _delta: int, _reason: String) -> void:
