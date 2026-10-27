@@ -646,16 +646,16 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 - Recompensa de jefe: +300.
 
 ### Tareas
-- [ ] **12.1** `RankSystem`: puntos ↔ rango/subnivel (función pura + tests con la calculadora de la wiki). `M`
-- [ ] **12.2** Cálculo de puntos por partida (victoria/derrota/abandono/expulsión/jefes). `M`
-- [ ] **12.3** `AchievementSystem`: motor de logros con condiciones declarativas (`AchievementData`). `L`
-- [ ] **12.4** Catálogo inicial de 30 logros → ampliar hasta ~373 (8.040 puntos totales en la wiki). `XL`
-- [ ] **12.5** Persistencia local: `user://sfe5_bank.json` (versionado, con checksum anti-corrupción). `M`
-- [ ] **12.6** `Settings`: zoom de cámara, volumen, controles, consola (archivo separado editable). `S`
+- [x] **12.1** `RankSystem`: puntos ↔ rango/subnivel (función pura + tests con la calculadora de la wiki). `M`
+- [x] **12.2** Cálculo de puntos por partida (victoria/derrota/abandono/expulsión/jefes). `M`
+- [x] **12.3** `AchievementSystem`: motor de logros con condiciones declarativas (`AchievementData`). `L`
+- [x] **12.4** Catálogo inicial de 30 logros → ampliar hasta ~373 (8.040 puntos totales en la wiki). `XL`
+- [x] **12.5** Persistencia local: `user://sfe5_bank.json` (versionado, con checksum anti-corrupción). `M`
+- [x] **12.6** `Settings`: zoom de cámara, volumen, controles, consola (archivo separado editable). `S`
 - [ ] **12.7** Cosméticos (no afectan al balance): auras/halos, iconos de minimapa, marcos de rango (Bronce 15 % → Arcoíris 100 %). `L`
-- [ ] **12.8** Condición de desbloqueo de Torment por victorias en Brutal. `S`
-- [ ] **12.9** Héroes secretos: requisito ≥ 3.000 puntos de logro y dificultad < Torment (preparar, ver Fase 16). `S`
-- [ ] **12.10** Pantalla de estadísticas de por vida. `M`
+- [x] **12.8** Condición de desbloqueo de Torment por victorias en Brutal. `S`
+- [x] **12.9** Héroes secretos: requisito ≥ 3.000 puntos de logro y dificultad < Torment (preparar, ver Fase 16). `S`
+- [x] **12.10** Pantalla de estadísticas de por vida. `M`
 
 ### CdH
 - Cierro y abro el juego y conservo rango, logros y ajustes.
