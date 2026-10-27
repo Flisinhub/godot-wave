@@ -60,7 +60,8 @@ static func calculate_damage(
 	is_invulnerable: bool = false,
 	shield_hp: float = 0.0,
 	current_hp: float = -1.0,
-	target_tags: int = 0
+	target_tags: int = 0,
+	ignores_armor: bool = false
 ) -> CombatResult:
 	# 1. Invulnerability Check
 	if is_invulnerable:
@@ -89,10 +90,14 @@ static func calculate_damage(
 
 	var effective_dmg: float = raw_damage
 
-	# 2. Damage Type Branching: Physical vs Spell
+	# 2. Damage Type Branching: Physical vs Spell & Armor Piercing (Task 3.8)
 	if damage_type == DamageType.PHYSICAL:
-		# Physical attacks are mitigated by flat armor with a minimum floor of 1.0 damage
-		effective_dmg = maxf(1.0, effective_dmg - flat_armor)
+		if ignores_armor:
+			# Armor piercing: ignores target flat armor completely
+			effective_dmg = raw_damage
+		else:
+			# Physical attacks are mitigated by flat armor with a minimum floor of 1.0 damage
+			effective_dmg = maxf(1.0, effective_dmg - flat_armor)
 	else:
 		# Spell attacks completely bypass flat armor (0 reduction)
 		effective_dmg = raw_damage
@@ -149,7 +154,8 @@ func calculate(
 	is_invulnerable: bool = false,
 	shield_hp: float = 0.0,
 	current_hp: float = -1.0,
-	target_tags: int = 0
+	target_tags: int = 0,
+	ignores_armor: bool = false
 ) -> CombatResult:
 	if is_invulnerable:
 		return CombatResult.new(0.0, true, 0.0, 0.0, damage_type, raw_damage, raw_damage)
@@ -169,7 +175,10 @@ func calculate(
 	var effective_dmg: float = raw_damage
 
 	if damage_type == DamageType.PHYSICAL:
-		effective_dmg = maxf(1.0, effective_dmg - flat_armor)
+		if ignores_armor:
+			effective_dmg = raw_damage
+		else:
+			effective_dmg = maxf(1.0, effective_dmg - flat_armor)
 
 	if upgrade_level > 0:
 		var prog_ratio: float = minf(progressive_cap, float(upgrade_level) * progressive_rate)
@@ -219,5 +228,6 @@ static func calculate_from_dict(params: Dictionary) -> CombatResult:
 		params.get("is_invulnerable", false),
 		params.get("shield_hp", 0.0),
 		params.get("current_hp", -1.0),
-		params.get("target_tags", 0)
+		params.get("target_tags", 0),
+		params.get("ignores_armor", false)
 	)

@@ -305,35 +305,35 @@ mínimo garantizado: 1
 - Generación procedural: **mezcla de familias** de engendradores y defensas por partida.
 
 ### 3.2 Tareas — Núcleo
-- [ ] **3.1** `SpawnerNode` con temporizador de ciclo, estado (bloqueado/activo/destruido) y señales. `M`
-- [ ] **3.2** `SpawnerChain`: grafo de dependencias (qué engendrador libera cuál). `M`
-- [ ] **3.3** Invulnerabilidad condicional + indicador visual (escudo/ícono de candado) y tooltip. `S`
-- [ ] **3.4** `EnemyBudgetManager`: contador global de vivos; pausa de producción al superar 300 (valor configurable en `GameConfig`). `S`
-- [ ] **3.5** Integración con `SwarmSimulation`: los engendradores inyectan unidades en la simulación masiva (no instancias de nodo individuales). `L`
-- [ ] **3.6** Sistema de "clase de enemigo" (zerglings, roaches, hydras…) como entidad lógica con su lista de bufos. `M`
-- [ ] **3.7** **Enemigos coloreados:** al destruir el engendrador de una clase, sortear bufos permanentes, aplicar color por shader (parámetro por instancia en MultiMesh) y ajustar estadísticas. `L`
-- [ ] **3.8** Flag `ignora_armadura` en `UnitData` y respeto en `SFECombatEngine`. `S`
-- [ ] **3.9** Retirar `WaveManager` por rondas del flujo por defecto (dejarlo tras `ModeData.rondas`). `M`
+- [x] **3.1** `SpawnerNode` con temporizador de ciclo, estado (bloqueado/activo/destruido) y señales. `M`
+- [x] **3.2** `SpawnerChain`: grafo de dependencias (qué engendrador libera cuál). `M`
+- [x] **3.3** Invulnerabilidad condicional + indicador visual (escudo/ícono de candado) y tooltip. `S`
+- [x] **3.4** `EnemyBudgetManager`: contador global de vivos; pausa de producción al superar 300 (valor configurable en `GameConfig`). `S`
+- [x] **3.5** Integración con `SwarmSimulation`: los engendradores inyectan unidades en la simulación masiva (no instancias de nodo individuales). `L`
+- [x] **3.6** Sistema de "clase de enemigo" (zerglings, roaches, hydras…) como entidad lógica con su lista de bufos. `M`
+- [x] **3.7** **Enemigos coloreados:** al destruir el engendrador de una clase, sortear bufos permanentes, aplicar color por shader (parámetro por instancia en MultiMesh) y ajustar estadísticas. `L`
+- [x] **3.8** Flag `ignora_armadura` en `UnitData` y respeto en `SFECombatEngine`. `S`
+- [x] **3.9** Retirar `WaveManager` por rondas del flujo por defecto (dejarlo tras `ModeData.rondas`). `M`
 
 ### 3.3 Tareas — Generación procedural
-- [ ] **3.10** `MapSeed`: semilla única de partida (mostrada en UI y copiable). `S`
-- [ ] **3.11** `SpawnerFamily` (Resource): familia de engendradores (p. ej. "Zergling Nest", "Roach Warren", "Hydra Den") con niveles. `M`
-- [ ] **3.12** `MapGenerator`: elige familias, las coloca en puntos de interés del nivel, construye la cadena. Determinista por seed. `L`
-- [ ] **3.13** Colocación de defensas enemigas (cañones, torres, spores) por familia. `M`
-- [ ] **3.14** Puntos de aparición fijos en el nivel (`Marker3D`) y reglas de separación mínima. `S`
-- [ ] **3.15** Nivel de prueba reducido (arena pequeña) para validar la cadena sin cargar el mapa completo. `M`
-- [ ] **3.16** Minimapa: iconos de engendradores (bloqueado/activo/destruido). `S`
+- [x] **3.10** `MapSeed`: semilla única de partida (mostrada en UI y copiable). `S`
+- [x] **3.11** `SpawnerFamily` (Resource): familia de engendradores (p. ej. "Zergling Nest", "Roach Warren", "Hydra Den") con niveles. `M`
+- [x] **3.12** `MapGenerator`: elige familias, las coloca en puntos de interés del nivel, construye la cadena. Determinista por seed. `L`
+- [x] **3.13** Colocación de defensas enemigas (cañones, torres, spores) por familia. `M`
+- [x] **3.14** Puntos de aparición fijos en el nivel (`Marker3D`) y reglas de separación mínima. `S`
+- [x] **3.15** Nivel de prueba reducido (arena pequeña) para validar la cadena sin cargar el mapa completo. `M`
+- [x] **3.16** Minimapa: iconos de engendradores (bloqueado/activo/destruido). `S`
 
 ### 3.4 Tareas — Bucle de victoria/derrota
-- [ ] **3.17** Fortaleza Planetaria (`PlanetaryFortress`): vida, mejoras, derrota inmediata al caer. (Hoy: `CommandCenter`.) `M`
-- [ ] **3.18** Objetivo de victoria: erradicar todas las estructuras enemigas, nidos, oleadas y jefes. `M`
-- [ ] **3.19** Pantalla de fin de partida con estadísticas (tiempo, bajas, minerales, spawners destruidos). `M`
+- [x] **3.17** Fortaleza Planetaria (`PlanetaryFortress`): vida, mejoras, derrota inmediata al caer. (Hoy: `CommandCenter`.) `M`
+- [x] **3.18** Objetivo de victoria: erradicar todas las estructuras enemigas, nidos, oleadas y jefes. `M`
+- [x] **3.19** Pantalla de fin de partida con estadísticas (tiempo, bajas, minerales, spawners destruidos). `M`
 
 ### 3.5 Tests
-- [ ] **3.T1** Un engendrador bloqueado no recibe daño; al caer el anterior, sí.
-- [ ] **3.T2** Con 300 vivos no se genera ningún enemigo más; baja a 299 y se reanuda.
-- [ ] **3.T3** Misma seed → misma cadena y colocación (hash de la configuración).
-- [ ] **3.T4** Clase con bufos coloreados: estadísticas cambian tras destruir su engendrador.
+- [x] **3.T1** Un engendrador bloqueado no recibe daño; al caer el anterior, sí.
+- [x] **3.T2** Con 300 vivos no se genera ningún enemigo más; baja a 299 y se reanuda.
+- [x] **3.T3** Misma seed → misma cadena y colocación (hash de la configuración).
+- [x] **3.T4** Clase con bufos coloreados: estadísticas cambian tras destruir su engendrador.
 
 ### CdH
 - Partida de principio a fin con 3 engendradores encadenados + victoria y derrota funcionales.

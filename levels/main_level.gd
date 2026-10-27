@@ -29,6 +29,13 @@ const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 const BossHealthBarUI = preload("res://ui/boss_health_bar_ui.gd")
 const IncomeParams = preload("res://core/economy/income_params.gd")
 const IncomeFormula = preload("res://core/economy/income_formula.gd")
+const SpawnerNode = preload("res://core/spawners/spawner_node.gd")
+const SpawnerChain = preload("res://core/spawners/spawner_chain.gd")
+const EnemyBudgetManager = preload("res://core/spawners/enemy_budget_manager.gd")
+const MapSeed = preload("res://core/map/map_seed.gd")
+const MapGenerator = preload("res://core/map/map_generator.gd")
+const SFEGameOverModal = preload("res://ui/sfe_game_over_modal.gd")
+const PlanetaryFortress = preload("res://entities/structures/planetary_fortress.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -71,6 +78,14 @@ var _swarm_combat_accumulator: float = 0.0
 var debug_telemetry_panel: PanelContainer = null
 var debug_telemetry_label: Label = null
 
+# SFE5 Spawner Chain & Procedural Map (Fase 3)
+var budget_manager: EnemyBudgetManager = null
+var map_generator: MapGenerator = null
+var spawner_chain: SpawnerChain = null
+var match_timer: float = 0.0
+var spawners_destroyed_count: int = 0
+var is_game_over: bool = false
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -81,6 +96,9 @@ func _ready() -> void:
 
 	# 3. Swarm Simulation & Flow Field Goal/Obstacle Registration
 	_setup_swarm_simulation()
+
+	# 3b. SFE5 Spawner Chain & Procedural Map (Task 3.12)
+	_setup_spawner_network()
 
 	# 4. Hero Spawn & RTS Controller / SC2 HUD Binding
 	_setup_hero_and_controls()
@@ -104,7 +122,9 @@ func _ready() -> void:
 	_setup_start_modal()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if not is_game_over:
+		match_timer += delta
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
 	if debug_telemetry_panel and debug_telemetry_panel.visible:
@@ -212,18 +232,41 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 
 	start_modal = null
 
-	# Auto-start Wave 1 after 5 second tactical preparation countdown
+	# SFE5 Gameplay Loop Activation (Task 3.9)
+	var is_waves_mode: bool = false
+	if sess and "active_mode" in sess and sess.active_mode and "use_waves_mode" in sess.active_mode:
+		is_waves_mode = sess.active_mode.use_waves_mode
+
 	var t := _get_tree_safe()
-	if t:
-		for s in range(5, 0, -1):
-			if not is_inside_tree() or (wave_manager and wave_manager.is_wave_in_progress):
-				return
-			if sc2_hud_root and is_instance_valid(sc2_hud_root) and sc2_hud_root.top_wave_label:
-				sc2_hud_root.top_wave_label.text = "¡OLEADA ENTRANTE EN %ds!" % s
-				sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-			await t.create_timer(1.0).timeout
-		if wave_manager and not wave_manager.is_wave_in_progress:
-			wave_manager.start_next_wave()
+	if is_waves_mode:
+		# Legacy wave progression mode
+		if t:
+			for s in range(5, 0, -1):
+				if not is_inside_tree() or (wave_manager and wave_manager.is_wave_in_progress):
+					return
+				if sc2_hud_root and is_instance_valid(sc2_hud_root) and sc2_hud_root.top_wave_label:
+					sc2_hud_root.top_wave_label.text = "¡OLEADA ENTRANTE EN %ds!" % s
+					sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+				await t.create_timer(1.0).timeout
+			if wave_manager and not wave_manager.is_wave_in_progress:
+				wave_manager.start_next_wave()
+	else:
+		# Standard SFE5 Procedural Spawner Chain
+		if t:
+			for s in range(5, 0, -1):
+				if not is_inside_tree():
+					return
+				if sc2_hud_root and is_instance_valid(sc2_hud_root) and sc2_hud_root.top_wave_label:
+					sc2_hud_root.top_wave_label.text = "¡ENGENDRADORES ACTIVÁNDOSE EN %ds!" % s
+					sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+				await t.create_timer(1.0).timeout
+			if spawner_chain:
+				var first_spawner = spawner_chain.get_spawner(&"spawner_01")
+				if first_spawner:
+					first_spawner.unlock()
+				if sc2_hud_root and sc2_hud_root.top_wave_label:
+					sc2_hud_root.top_wave_label.text = "¡CADENA DE ENGENDRADORES ACTIVA! Quedan %d nidos." % spawner_chain.get_remaining_spawner_count()
+					sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
 
 
 func _prepare_navigation_and_gates() -> void:
@@ -302,6 +345,61 @@ func _setup_swarm_simulation() -> void:
 
 	# Register perimeter structures (WallSegment, GateStructure, Bunkers, Armory) as dynamic obstacles
 	_register_all_perimeter_obstacles()
+
+
+func _setup_spawner_network() -> void:
+	if not budget_manager:
+		budget_manager = EnemyBudgetManager.new(300)
+		budget_manager.set_simulation(swarm_simulation)
+	
+	var sess := _get_game_session()
+	var seed_val = sess.active_seed if sess and "active_seed" in sess else 12345
+	var map_seed := MapSeed.new(seed_val)
+	map_generator = MapGenerator.new(map_seed)
+	
+	var layout_plan := map_generator.generate_layout_plan(3)
+	spawner_chain = map_generator.spawn_spawner_chain(self, layout_plan, budget_manager, swarm_simulation)
+	
+	spawner_chain.spawner_unlocked.connect(_on_spawner_unlocked)
+	spawner_chain.spawner_chain_step_completed.connect(_on_spawner_step_completed)
+	spawner_chain.all_spawners_destroyed.connect(_on_all_spawners_cleared)
+
+
+func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
+	if sc2_hud_root and sc2_hud_root.top_wave_label:
+		sc2_hud_root.top_wave_label.text = "¡OBJETIVO: DESTRUYE %s!" % spawner.spawner_name.to_upper()
+		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+
+
+func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
+	spawners_destroyed_count += 1
+	if sc2_hud_root and sc2_hud_root.top_wave_label:
+		if remaining > 0:
+			sc2_hud_root.top_wave_label.text = "¡ENGENDRADOR DESTRUIDO! Quedan %d engendradores." % remaining
+			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+		else:
+			sc2_hud_root.top_wave_label.text = "¡TODOS LOS ENGENDRADORES ERRADICADOS!"
+			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.3))
+
+
+func _on_all_spawners_cleared() -> void:
+	if is_game_over:
+		return
+	is_game_over = true
+	_save_bank_progress(false)
+	
+	var total_min := economy_manager.current_minerals if economy_manager else 0
+	var modal := SFEGameOverModal.new()
+	modal.setup(
+		true,
+		match_timer,
+		session_kills,
+		total_min,
+		spawner_chain.get_total_spawner_count() if spawner_chain else 3,
+		spawner_chain.get_total_spawner_count() if spawner_chain else 3,
+		SFEDifficultyManager.get_difficulty_name()
+	)
+	add_child(modal)
 
 
 func _register_all_perimeter_obstacles() -> void:
@@ -1279,9 +1377,27 @@ func _on_start_wave_pressed() -> void:
 
 
 func _on_base_destroyed() -> void:
+	if is_game_over:
+		return
+	is_game_over = true
 	_save_bank_progress(true)
 	if game_over_panel:
 		game_over_panel.visible = true
+	
+	var total_min := economy_manager.current_minerals if economy_manager else 0
+	var cleared := spawners_destroyed_count
+	var total_sp := spawner_chain.get_total_spawner_count() if spawner_chain else 3
+	var modal := SFEGameOverModal.new()
+	modal.setup(
+		false,
+		match_timer,
+		session_kills,
+		total_min,
+		cleared,
+		total_sp,
+		SFEDifficultyManager.get_difficulty_name()
+	)
+	add_child(modal)
 
 
 func _save_bank_progress(is_game_over: bool) -> void:

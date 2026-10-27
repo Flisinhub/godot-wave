@@ -4,6 +4,11 @@ extends RefCounted
 ## Encapsulates the complete result of an SFE5 combat calculation.
 
 var damage_dealt: float = 0.0
+var effective_damage: float:
+	get:
+		return damage_dealt
+	set(val):
+		damage_dealt = val
 var is_immune: bool = false
 var overkill: float = 0.0
 var absorbed: float = 0.0
