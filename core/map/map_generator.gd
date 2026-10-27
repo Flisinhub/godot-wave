@@ -15,13 +15,13 @@ const SpawnerChain = preload("res://core/spawners/spawner_chain.gd")
 const SpawnerFamilyData = preload("res://core/data/spawner_family_data.gd")
 const EnemyBudgetManager = preload("res://core/spawners/enemy_budget_manager.gd")
 
-# Standard map tactical anchor locations (POI) around battle arena
+# Standard map tactical anchor locations (POI) around battle arena (Hostile Territory)
 const DEFAULT_SPAWNER_SLOTS: Array[Vector3] = [
-	Vector3(25.0, 0.0, 15.0),   # Slot A: Eastern Plain
-	Vector3(0.0, 0.0, 32.0),    # Slot B: Northern Ridge
-	Vector3(-28.0, 0.0, 22.0),  # Slot C: North-Western Choke
-	Vector3(30.0, 0.0, -10.0),  # Slot D: South-Eastern Badlands
-	Vector3(-15.0, 0.0, 38.0)   # Slot E: Deep Hive Hollow
+	Vector3(-18.0, 0.0, -26.0), # Slot A: Noroeste
+	Vector3(0.0, 0.0, -30.0),   # Slot B: Norte Central
+	Vector3(24.0, 0.0, -24.0),  # Slot C: Noreste
+	Vector3(26.0, 0.0, 4.0),    # Slot D: Este Central
+	Vector3(6.0, 0.0, -12.0)    # Slot E: Centro del Cráter
 ]
 
 var map_seed: MapSeed

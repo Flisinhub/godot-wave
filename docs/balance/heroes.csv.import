@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://ydrrtqkhxail"
+
+[deps]
+
+files=["res://docs/balance/heroes.name.translation", "res://docs/balance/heroes.role.translation", "res://docs/balance/heroes.race.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.attack.translation", "res://docs/balance/heroes.attack.translation", "res://docs/balance/heroes.flat.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.energy.translation", "res://docs/balance/heroes.move.translation", "res://docs/balance/heroes.str.translation", "res://docs/balance/heroes.dex.translation", "res://docs/balance/heroes.int.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.is.translation"]
+
+source_file="res://docs/balance/heroes.csv"
+dest_files=["res://docs/balance/heroes.name.translation", "res://docs/balance/heroes.role.translation", "res://docs/balance/heroes.race.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.attack.translation", "res://docs/balance/heroes.attack.translation", "res://docs/balance/heroes.flat.translation", "res://docs/balance/heroes.base.translation", "res://docs/balance/heroes.energy.translation", "res://docs/balance/heroes.move.translation", "res://docs/balance/heroes.str.translation", "res://docs/balance/heroes.dex.translation", "res://docs/balance/heroes.int.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.growth.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.skill.translation", "res://docs/balance/heroes.is.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

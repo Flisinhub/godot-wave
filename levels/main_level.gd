@@ -42,6 +42,10 @@ const DropPodManager = preload("res://core/events/drop_pod_manager.gd")
 const NydusCraterManager = preload("res://core/events/nydus_crater_manager.gd")
 const ScheduledAttackManager = preload("res://core/events/scheduled_attack_manager.gd")
 const StoryPhaseManager = preload("res://core/story/story_phase_manager.gd")
+const BossBrutalisk3D = preload("res://entities/enemies/boss_brutalisk_3d.gd")
+const BossHybrid3D = preload("res://entities/enemies/boss_hybrid_3d.gd")
+const BossNydus3D = preload("res://entities/enemies/boss_nydus_3d.gd")
+const DebugConsole = preload("res://core/modes/debug_console.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -104,6 +108,12 @@ var timed_schedule: TimedEventSchedule = null
 var drop_pod_manager: DropPodManager = null
 var nydus_crater_manager: NydusCraterManager = null
 var scheduled_attack_manager: ScheduledAttackManager = null
+
+# SFE5 Developer Console (Ctrl+Alt+C)
+var debug_console: DebugConsole = null
+var debug_cli_layer: CanvasLayer = null
+var debug_cli_input: LineEdit = null
+var debug_cli_output: Label = null
 
 
 func _ready() -> void:
@@ -175,16 +185,21 @@ func _setup_timed_events_and_pressure() -> void:
 	if sess and "match_seed" in sess:
 		seed_val = int(sess.match_seed)
 
-	timed_schedule = TimedEventSchedule.new(seed_val)
-	drop_pod_manager = DropPodManager.new()
-	nydus_crater_manager = NydusCraterManager.new(timed_schedule)
-	scheduled_attack_manager = ScheduledAttackManager.new(timed_schedule)
+	var base_origin: Vector3 = command_center.global_position if command_center else Vector3(-24.0, 0.0, 24.0)
+	var hive_origin: Vector3 = Vector3(24.0, 0.0, -28.0)
 
-	# Wire internal signals to SignalBus for decoupled presentation
+	timed_schedule = TimedEventSchedule.new(seed_val)
+	drop_pod_manager = DropPodManager.new(base_origin, 28.0)
+	nydus_crater_manager = NydusCraterManager.new(timed_schedule)
+	scheduled_attack_manager = ScheduledAttackManager.new(timed_schedule, hive_origin, base_origin)
+
+	# Wire internal signals to SignalBus and handlers
 	timed_schedule.drop_pod_due.connect(_on_drop_pod_due)
+	drop_pod_manager.drop_pod_landed.connect(_on_drop_pod_landed)
 	scheduled_attack_manager.attack_warning_received.connect(_on_scheduled_attack_warning)
 	scheduled_attack_manager.wave_attack_dispatched.connect(_on_scheduled_attack_dispatched)
 	nydus_crater_manager.crater_tremor_started.connect(_on_nydus_tremor_started)
+	nydus_crater_manager.nydus_emerged.connect(_on_nydus_emerged)
 
 
 func _process(delta: float) -> void:
@@ -225,17 +240,68 @@ func _on_drop_pod_due(_pod_index: int, _game_time: float) -> void:
 			SignalBus.drop_pod_incoming.emit(target_pos, drop_pod_manager.warning_delay)
 
 
+func _get_swarm_archetype_id(type_name: Variant) -> int:
+	if type_name is int:
+		return type_name
+	var s: String = str(type_name).to_lower()
+	match s:
+		"zergling":
+			return 0
+		"roach":
+			return 1
+		"baneling":
+			return 2
+		"hydralisk", "hydra":
+			return 3
+	return 0
+
+
+func _on_drop_pod_landed(target_position: Vector3, _units_spawned: Array = []) -> void:
+	if swarm_simulation:
+		swarm_simulation.spawn_wave(0, 4, target_position, 2.5) # Zergling
+		swarm_simulation.spawn_wave(1, 2, target_position, 3.0) # Roach
+	if combat_vfx_pool and combat_vfx_pool.has_method("spawn_acid_burst"):
+		combat_vfx_pool.spawn_acid_burst(target_position)
+	_play_sfx_3d(&"baneling_explode", target_position)
+
+
 func _on_scheduled_attack_warning(wave_index: int, leader_name: String, seconds_left: float, dir: Vector3) -> void:
 	if SignalBus.has_signal("scheduled_attack_warned"):
 		SignalBus.scheduled_attack_warned.emit(wave_index, leader_name, seconds_left, dir)
 
 
-func _on_scheduled_attack_dispatched(wave_index: int, leader_data: Dictionary, _hive: Vector3, _base: Vector3) -> void:
+func _on_scheduled_attack_dispatched(wave_index: int, leader_data: Dictionary, hive_pos: Vector3, _base_pos: Vector3) -> void:
 	if SignalBus.has_signal("scheduled_attack_started"):
 		SignalBus.scheduled_attack_started.emit(wave_index, leader_data)
 	if state_label:
 		state_label.text = "¡ASALTO DE LA COLMENA: %s EN CAMINO!" % leader_data.get("leader_name", "Líder")
 		state_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
+
+	# Spawn escort swarm wave
+	if swarm_simulation:
+		var escort_type: Variant = leader_data.get("escort_type", &"zergling")
+		var escort_arch_id: int = _get_swarm_archetype_id(escort_type)
+		var escort_count: int = leader_data.get("escort_count", 8)
+		swarm_simulation.spawn_wave(escort_arch_id, escort_count, hive_pos, 4.0)
+
+	# Spawn Leader Boss (Brutalisk or Hybrid Dominator scaled by leader_data)
+	var boss: CharacterBody3D = null
+	if wave_index % 2 == 0:
+		boss = BossHybrid3D.new()
+	else:
+		boss = BossBrutalisk3D.new()
+
+	boss.global_position = hive_pos
+	boss.max_health = float(leader_data.get("hp", 4000.0))
+	boss.current_health = boss.max_health
+	boss.flat_armor = float(leader_data.get("armor", 8.0))
+	boss.attack_damage = float(leader_data.get("damage", 50.0))
+	boss.boss_name = leader_data.get("leader_name", "Líder de Asalto")
+	add_child(boss)
+
+	if boss_health_bar_ui:
+		var shields: float = boss.max_shields if "max_shields" in boss else 0.0
+		boss_health_bar_ui.track_boss(boss, boss.boss_name, boss.max_health, shields)
 
 
 func _on_nydus_tremor_started(crater_index: int, pos: Vector3, _delay: float) -> void:
@@ -245,11 +311,105 @@ func _on_nydus_tremor_started(crater_index: int, pos: Vector3, _delay: float) ->
 		SignalBus.nydus_tremor_alert.emit(crater_index, pos, tier_name)
 
 
+func _on_nydus_emerged(_crater_index: int, pos: Vector3, nydus_data: Dictionary) -> void:
+	var nydus := BossNydus3D.new()
+	nydus.global_position = pos
+	nydus.max_health = float(nydus_data.get("max_health", 8000.0))
+	nydus.current_health = nydus.max_health
+	nydus.kill_reward = int(nydus_data.get("bounty", 2500))
+	add_child(nydus)
+	if boss_health_bar_ui:
+		var tier_name: String = nydus_data.get("tier_name", "Gusano Nydus")
+		boss_health_bar_ui.track_boss(nydus, tier_name, nydus.max_health, 0.0)
+
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F3:
 			_toggle_debug_telemetry()
+		elif event.ctrl_pressed and event.alt_pressed and event.keycode == KEY_C:
+			_toggle_debug_cli_modal()
+		elif debug_cli_layer and debug_cli_layer.visible and event.keycode == KEY_ESCAPE:
+			_toggle_debug_cli_modal()
+
+
+func _setup_debug_console() -> void:
+	if debug_console == null:
+		debug_console = DebugConsole.new(economy_manager, story_phase_manager, active_hero)
+
+
+func _toggle_debug_cli_modal() -> void:
+	if debug_cli_layer == null:
+		_build_debug_cli_modal()
+	debug_cli_layer.visible = not debug_cli_layer.visible
+	if debug_cli_layer.visible and debug_cli_input:
+		debug_cli_input.grab_focus()
+
+
+func _build_debug_cli_modal() -> void:
+	debug_cli_layer = CanvasLayer.new()
+	debug_cli_layer.name = "DebugCLILayer"
+	debug_cli_layer.layer = 120
+	add_child(debug_cli_layer)
+
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.5
+	panel.anchor_top = 0.15
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 0.15
+	panel.offset_left = -280.0
+	panel.offset_top = 0.0
+	panel.offset_right = 280.0
+	panel.offset_bottom = 120.0
+	panel.custom_minimum_size = Vector2(560, 120)
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.06, 0.1, 0.95)
+	style.border_color = Color(0.2, 0.8, 1.0, 0.9)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_bottom = 8.0
+	panel.add_theme_stylebox_override("panel", style)
+	debug_cli_layer.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "★ SFE5 DEVELOPER DEBUG CONSOLE (Ctrl+Alt+C) ★"
+	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	vbox.add_child(title)
+
+	debug_cli_input = LineEdit.new()
+	debug_cli_input.placeholder_text = "Comandos: give 50000 | kill | god | phase 2 | tp 0 0 | help"
+	debug_cli_input.text_submitted.connect(_on_debug_cli_submitted)
+	vbox.add_child(debug_cli_input)
+
+	debug_cli_output = Label.new()
+	debug_cli_output.text = "Escribe un comando y pulsa ENTER."
+	debug_cli_output.add_theme_font_size_override("font_size", 11)
+	debug_cli_output.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	vbox.add_child(debug_cli_output)
+
+
+func _on_debug_cli_submitted(raw_cmd: String) -> void:
+	if debug_console == null:
+		_setup_debug_console()
+	debug_console.economy_manager = economy_manager
+	debug_console.story_phase_manager = story_phase_manager
+	debug_console.active_hero = active_hero
+
+	var res: String = debug_console.execute_command_string(raw_cmd)
+	if debug_cli_output:
+		debug_cli_output.text = res
+	if debug_cli_input:
+		debug_cli_input.clear()
 
 
 func _setup_start_modal() -> void:
@@ -349,6 +509,11 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	# 5. Bind Selected Hero Data & Visuals
 	if selected_hero and active_hero:
 		active_hero.hero_data = selected_hero
+		active_hero.spawn_position = active_hero.global_position
+		if debug_console:
+			debug_console.active_hero = active_hero
+			debug_console.story_phase_manager = story_phase_manager
+			debug_console.economy_manager = economy_manager
 		var diff_paths := [
 			"res://data/difficulties/casual.tres",
 			"res://data/difficulties/normal.tres",
@@ -585,7 +750,19 @@ func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.3))
 
 
-func _on_story_phase_changed(_old_phase: int, _new_phase: int, phase_title: String, announcement: String) -> void:
+func _on_story_phase_changed(_old_phase: int, new_phase: int, phase_title: String, announcement: String) -> void:
+	if story_phase_manager:
+		var ambient_color: Color = story_phase_manager.get_ambient_lighting_color(new_phase)
+		var env_node := get_node_or_null("WorldEnvironment") as WorldEnvironment
+		if env_node and env_node.environment:
+			env_node.environment.ambient_light_color = ambient_color
+		var sun := get_node_or_null("DirectionalLight3D") as DirectionalLight3D
+		if sun:
+			sun.light_color = ambient_color
+
+	if new_phase == StoryPhaseManager.StoryPhase.PROTOSS_1 and nydus_crater_manager:
+		nydus_crater_manager.activate_network()
+
 	if sc2_hud_root:
 		var bounty_rate: int = 50
 		if economy_manager and "bounty_per_kill" in economy_manager:
@@ -993,6 +1170,7 @@ func _process_swarm_combat(dt: float) -> void:
 			ally_dmg = ally.attack_damage
 
 		# Find nearest swarm unit using spatial hash
+		var hit_target: bool = false
 		if swarm_simulation.spatial_hash:
 			var center_2d := Vector2(ally.global_position.x, ally.global_position.z)
 			var candidates = swarm_simulation.spatial_hash.query_radius(center_2d, ally_range, sdata)
@@ -1004,6 +1182,27 @@ func _process_swarm_combat(dt: float) -> void:
 				var killed: bool = swarm_simulation.apply_damage_to_unit(target_idx, ally_dmg)
 				if killed:
 					_on_swarm_unit_killed(target_idx, ally, target_pos, 5)
+				hit_target = true
+
+		# If no swarm unit was attacked within range, check for enemy nodes (SpawnerNode or Bosses)
+		if not hit_target and get_tree():
+			var enemies: Array[Node] = get_tree().get_nodes_in_group("enemies")
+			var closest_enemy: Node3D = null
+			var closest_dist: float = ally_range
+			for e in enemies:
+				if not is_instance_valid(e) or not (e is Node3D) or e == ally:
+					continue
+				var dist: float = ally.global_position.distance_to((e as Node3D).global_position)
+				if dist <= closest_dist:
+					closest_dist = dist
+					closest_enemy = e as Node3D
+			if closest_enemy:
+				if combat_vfx_pool:
+					combat_vfx_pool.spawn_tracer(ally.global_position + Vector3(0.0, 1.1, 0.0), closest_enemy.global_position + Vector3(0.0, 1.0, 0.0))
+				if closest_enemy.has_method("take_damage_context"):
+					closest_enemy.take_damage_context(ally_dmg, CombatTypes.DamageType.PHYSICAL, false, 0)
+				elif closest_enemy.has_method("take_damage"):
+					closest_enemy.take_damage(ally_dmg)
 
 	# 3. Fortified Bunkers Automated Defense Firing
 	for s_node in structures:

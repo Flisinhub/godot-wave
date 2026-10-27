@@ -590,6 +590,7 @@ func _apply_racial_upgrade_effects(upgrade_id: String, count: int) -> void:
 		"armor_plating":
 			stats_comp.armor_upgrade_flat += 1.0 * float(count)
 		"bio_vitality":
+			stats_comp.hp_upgrade_mult += 0.05 * float(count)
 			stats_comp.base_max_hp += 50.0 * float(count)
 		"plasma_reactor":
 			stats_comp.base_max_energy += 25.0 * float(count)
@@ -745,6 +746,10 @@ func _on_recruit_unit_pressed(unit_id: String) -> void:
 	if u:
 		unit_recruited.emit(u, UnitRecruitmentManager.RECRUIT_CATALOG[unit_id]["cost"])
 		_refresh_all_tabs()
+		if is_inside_tree() and get_tree():
+			var hud = get_tree().root.find_child("SC2HUDRoot", true, false)
+			if hud and hud.has_method("update_supply"):
+				hud.update_supply(_get_current_supply(), _get_max_supply())
 
 
 func _get_current_supply() -> int:

@@ -28,7 +28,7 @@ signal revive_countdown_updated(remaining: float, total: float)
 var is_dead: bool = false
 var revive_timer: float = 0.0
 var total_revive_time: float = 0.0
-var spawn_position: Vector3 = Vector3(-45.0, 0.0, -45.0)
+var spawn_position: Vector3 = Vector3(-22.0, 0.0, 20.0)
 var current_difficulty_data: Resource = null
 
 @export var hero_data: HeroData
@@ -168,8 +168,8 @@ func _ensure_components() -> void:
 			stats_component = StatsComponent.new()
 			stats_component.name = "StatsComponent"
 			add_child(stats_component)
-		if not stats_component.stats_changed.is_connected(_on_stats_component_changed):
-			stats_component.stats_changed.connect(_on_stats_component_changed)
+		if not stats_component.stats_changed.is_connected(_sync_from_stats_component):
+			stats_component.stats_changed.connect(_sync_from_stats_component)
 	
 	if not buff_component:
 		buff_component = get_node_or_null("BuffComponent") as BuffComponent
@@ -210,15 +210,21 @@ func promote_to_elite() -> void:
 		elite_component.promote_to_elite()
 
 
-func _on_stats_component_changed() -> void:
+func _sync_from_stats_component() -> void:
 	if not stats_component:
 		return
+	var old_max_hp: float = max_health
 	max_health = stats_component.get_effective_max_hp()
+	var hp_delta: float = max_health - old_max_hp
+	if hp_delta > 0.0:
+		current_health += hp_delta
 	current_health = clampf(current_health, 1.0, max_health)
+
 	attack_damage = stats_component.get_effective_damage()
 	attack_cooldown = stats_component.get_effective_attack_period()
 	flat_armor = stats_component.get_effective_armor()
 	move_speed = stats_component.base_move_speed
+
 	if hero_data:
 		hero_data.strength = stats_component.strength
 		hero_data.dexterity = stats_component.dexterity
@@ -231,6 +237,13 @@ func _on_stats_component_changed() -> void:
 		hero_data.effective_armor = flat_armor
 		hero_data.max_energy = stats_component.get_effective_max_energy()
 		hero_data.energy_regen = stats_component.get_effective_energy_regen()
+
+	if health_bar and health_bar.has_method("setup"):
+		health_bar.setup(current_health, max_health)
+
+
+func _on_stats_component_changed() -> void:
+	_sync_from_stats_component()
 
 
 func _on_experience_level_up(new_lvl: int) -> void:
@@ -309,6 +322,14 @@ func _physics_process(delta: float) -> void:
 	# 2. Buff engine tick
 	if buff_engine:
 		buff_engine.tick(delta)
+
+	# 2b. BuffComponent tick for conditional buffs (Momentum, Bulwark, Optical Lens, Static Charge, Demiurge)
+	if buff_component:
+		var speed_2d: float = Vector2(velocity.x, velocity.z).length()
+		var energy_ratio: float = 1.0
+		if hero_data:
+			energy_ratio = hero_data.current_energy / maxf(1.0, hero_data.max_energy)
+		buff_component.update_conditions(delta, speed_2d, energy_ratio)
 
 	# 3. HP and Energy regeneration from derived RPG attributes & armory upgrades
 	if hero_data:
@@ -465,6 +486,9 @@ func take_damage_context(
 	is_aoe: bool = false,
 	armor_upgrade_level: int = 0
 ) -> CombatResult:
+	if buff_component:
+		buff_component.record_damage_taken()
+
 	var is_invuln: bool = buff_engine.is_invulnerable() if buff_engine else false
 	var hero_armor: float = flat_armor
 	var hero_shield: float = hero_data.current_shield if hero_data else 0.0
@@ -483,10 +507,23 @@ func take_damage_context(
 		target_tags
 	)
 
+	# Apply flat mitigation from Neutron Armor (Task 4.10)
+	var net_damage: float = result.damage_dealt
+	if stats_component:
+		var neutron_mitigation: float = stats_component.get_neutron_armor_mitigation()
+		net_damage = maxf(1.0 if net_damage > 0.0 else 0.0, net_damage - neutron_mitigation)
+
+	# Apply percentage mitigation from BuffComponent (Bulwark, etc.)
+	if buff_component:
+		var buff_mitigation_ratio: float = buff_component.get_mitigation_ratio()
+		net_damage = maxf(0.0, net_damage * (1.0 - buff_mitigation_ratio))
+
+	result.damage_dealt = net_damage
+
 	if hero_data and result.absorbed > 0.0:
 		hero_data.current_shield = maxf(0.0, hero_data.current_shield - result.absorbed)
 
-	current_health = maxf(0.0, current_health - result.damage_dealt)
+	current_health = maxf(0.0, current_health - net_damage)
 	if hero_data:
 		hero_data.current_hp = current_health
 
@@ -522,9 +559,10 @@ func _fire_at(target: Node3D) -> void:
 		if buff_engine:
 			buff_engine.apply_buff(&"tychus_passive", 4.0, 20)
 
-	var base_dmg: float = hero_data.weapon_damage if hero_data else attack_damage
+	var base_dmg: float = stats_component.get_effective_damage() if stats_component else (hero_data.weapon_damage if hero_data else attack_damage)
 	var buff_mult: float = buff_engine.get_total_stat_multiplier("attack_damage") if buff_engine else 1.0
-	var final_damage: float = base_dmg * buff_mult
+	var tier_buff_mult: float = buff_component.get_damage_multiplier(target.is_in_group("heroes") or target.is_in_group("bosses")) if buff_component else 1.0
+	var final_damage: float = base_dmg * buff_mult * tier_buff_mult
 
 	if target.has_method("take_damage_context"):
 		target.take_damage_context(final_damage, CombatTypes.DamageType.PHYSICAL, false, 0)

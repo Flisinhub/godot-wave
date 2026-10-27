@@ -218,10 +218,11 @@ func _populate_hero_card(hero: Node) -> void:
 	_bind_order_button(7, "HOLD", "H", "Hold Position (H)\nStand ground and engage enemies in range.")
 	_bind_order_button(8, "PATROL", "P", "Patrol (P)\nPatrol back and forth between points.")
 
-	# Row 2: Tactical Move (Slot 10: M), SFE5 Console (Slot 12: C), Elite Troops (Slot 13: V)
+	# Row 2: Tactical Move (Slot 10: M), SFE5 Console (Slot 12 & 14: C), Elite Troops (Slot 13: V)
 	_bind_order_button(10, "MOVE", "M", "Move (M)\nMove directly to location ignoring hostiles.")
 	_bind_order_button(12, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
 	_bind_order_button(13, "ÉLITE", "V", "Mejorar Élite / Tropas (V)\nAbre el reclutamiento de tropas y ascenso a veteranía élite.")
+	_bind_order_button(14, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
 
 
 func _populate_standard_unit_card(_unit: Node) -> void:
@@ -231,6 +232,7 @@ func _populate_standard_unit_card(_unit: Node) -> void:
 	_bind_order_button(10, "MOVE", "M", "Move (M)")
 	_bind_order_button(12, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
 	_bind_order_button(13, "ÉLITE", "V", "Mejorar Élite / Tropas (V)\nAbre el reclutamiento de tropas y ascenso a veteranía élite.")
+	_bind_order_button(14, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
 
 
 func _bind_order_button(slot_idx: int, order_id: String, hotkey: String, tooltip: String = "") -> void:

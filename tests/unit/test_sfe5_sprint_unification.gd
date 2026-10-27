@@ -211,8 +211,64 @@ func test_command_card_shortcuts() -> Dictionary:
 	if not assert_true(trigger_events.has("open_recruitment"), "Open recruitment triggered from slot 13"):
 		return get_last_failure()
 
+	# Trigger slot 14 ([C] Consola corner)
+	trigger_events.clear()
+	card._on_slot_pressed(14)
+	if not assert_true(trigger_events.has("open_console"), "Open console triggered from slot 14"):
+		return get_last_failure()
+
 	dummy_unit.free()
 	card.free()
+	return pass_test()
+
+
+## 7. Test Hero Combat Sync with Stats and Buff Components
+func test_hero_combat_stats_and_buff_sync() -> Dictionary:
+	var hero := HeroUnit3D.new()
+	var h_data := HeroSelector.select_hero_manual(&"raynor")
+	hero.hero_data = h_data
+	hero._ensure_components()
+	hero._bind_hero_data()
+
+	var initial_hp: float = hero.max_health
+	var initial_dmg: float = hero.attack_damage
+	var initial_armor: float = hero.flat_armor
+
+	# Invest in strength (increases damage) and endurance (increases armor and hp)
+	hero.stats_component.invest_attribute("strength", 5)
+	hero.stats_component.invest_attribute("endurance", 5)
+
+	if not assert_true(hero.attack_damage > initial_dmg, "Hero attack_damage synced from stats_component"):
+		return get_last_failure()
+	if not assert_true(hero.max_health > initial_hp, "Hero max_health synced from stats_component"):
+		return get_last_failure()
+	if not assert_true(hero.flat_armor > initial_armor, "Hero flat_armor synced from stats_component"):
+		return get_last_failure()
+
+	# Test damage taken with Neutron Armor mitigation and Bulwark
+	hero.stats_component.neutron_armor_level = 2 # 2 flat mitigation
+	hero.buff_component.bulwark_stacks = 5 # 5% damage reduction
+	var prev_hp: float = hero.current_health
+	hero.take_damage_context(50.0)
+	var dmg_taken: float = prev_hp - hero.current_health
+	# Without mitigation it would be 50. With armor (>=1.0), neutron (-2) and bulwark (-5%), dmg_taken < 48
+	if not assert_true(dmg_taken < 48.0, "Damage mitigated by neutron armor and bulwark"):
+		return get_last_failure()
+	if not assert_true(hero.buff_component.time_since_last_damage == 0.0, "Recent damage taken recorded in buff_component"):
+		return get_last_failure()
+
+	hero.free()
+	return pass_test()
+
+
+## 8. Test Map Generator Hostile Slots Outside Base
+func test_map_generator_hostile_slots_outside_base() -> Dictionary:
+	var MapGenerator = preload("res://core/map/map_generator.gd")
+	var base_pos := Vector3(-24.0, 0.0, 24.0)
+	for slot in MapGenerator.DEFAULT_SPAWNER_SLOTS:
+		var dist: float = slot.distance_to(base_pos)
+		if not assert_true(dist > 20.0, "Spawner slot %s is outside base (distance: %.1f > 20)" % [slot, dist]):
+			return get_last_failure()
 	return pass_test()
 
 
