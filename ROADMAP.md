@@ -495,14 +495,14 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 | Impossible | ×0.30 | 40 s | +0.9 s | 100 % | 100 % |
 
 ### Tareas
-- [ ] **7.1** `DifficultyData` (.tres) × 6 con la tabla anterior. `S`
-- [ ] **7.2** Votación de dificultad en la sala previa (modo local: selector). `M`
-- [ ] **7.3** Muerte de héroe: pérdida de mineral y de bufos según dificultad. `M`
-- [ ] **7.4** Tiempo de revivir = base + (incremento × nivel). Cuenta atrás en HUD. `S`
-- [ ] **7.5** Reaparición en la base con invulnerabilidad breve. `S`
-- [ ] **7.6** Escalado de enemigos por dificultad (vida/daño/densidad). `M`
-- [ ] **7.7** Bloqueo de Torment/Impossible por logros (placeholder hasta Fase 12). `S`
-- [ ] **7.8** Tests de cálculo de penalizaciones por dificultad. `S`
+- [x] **7.1** `DifficultyData` (.tres) × 6 con la tabla anterior. `S`
+- [x] **7.2** Votación de dificultad en la sala previa (modo local: selector). `M`
+- [x] **7.3** Muerte de héroe: pérdida de mineral y de bufos según dificultad. `M`
+- [x] **7.4** Tiempo de revivir = base + (incremento × nivel). Cuenta atrás en HUD. `S`
+- [x] **7.5** Reaparición en la base con invulnerabilidad breve. `S`
+- [x] **7.6** Escalado de enemigos por dificultad (vida/daño/densidad). `M`
+- [x] **7.7** Bloqueo de Torment/Impossible por logros (placeholder hasta Fase 12). `S`
+- [x] **7.8** Tests de cálculo de penalizaciones por dificultad. `S`
 
 ### CdH
 - Misma partida en Casual y en Brutal: diferencias evidentes en ingresos, muertes y tiempos.

@@ -354,6 +354,16 @@ func update_hive_evolution(lvl: int, time_remaining: float) -> void:
 		top_hive_label.text = "HIVE LVL %d (Next: %ds)" % [lvl, int(ceilf(time_remaining))]
 
 
+func update_revive_countdown(remaining: float, total: float) -> void:
+	if top_wave_label:
+		if remaining > 0.0:
+			top_wave_label.text = "¡HÉROE CAÍDO! REVIVIENDO EN: %d s" % int(ceilf(remaining))
+			top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.25))
+		else:
+			top_wave_label.text = "¡HÉROE REVIVIDO!"
+			top_wave_label.add_theme_color_override("font_color", Color(0.25, 0.95, 0.45))
+
+
 func update_wave_status(wave_num: int, swarm_alive: int, is_in_progress: bool = false) -> void:
 	if top_wave_label:
 		if is_in_progress:

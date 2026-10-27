@@ -222,3 +222,21 @@ func purchase_maxima_experiencia(current_level: int, available_minerals: int) ->
 		"refund_amount": current_level * 750,
 		"remaining": available_minerals - cost
 	}
+
+
+## Strips active buffs upon hero death according to difficulty rules (Task 7.3).
+## Returns total mineral refund based on cost_retention percentage (e.g. 0.25 -> 25% cost retained).
+func strip_buffs_on_death(cost_retention: float = 0.0) -> int:
+	var total_refund: int = 0
+	for tier in active_tier_buffs.keys():
+		var buff_info: Dictionary = active_tier_buffs[tier]
+		var cost: int = buff_info.get("cost", 0)
+		total_refund += int(float(cost) * cost_retention)
+		buff_removed.emit(tier, buff_info.get("id", ""))
+	
+	active_tier_buffs.clear()
+	momentum_stacks = 0
+	static_charge_stacks = 0
+	bulwark_stacks = 0
+	is_camouflaged = false
+	return total_refund

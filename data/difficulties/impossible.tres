@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="DifficultyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/difficulty_data.gd" id="1_diff"]
+
+[resource]
+script = ExtResource("1_diff")
+tier = 5
+difficulty_name = "Impossible"
+badge_color = Color(0.7, 0.1, 0.9, 1.0)
+income_multiplier = 0.30
+enemy_stat_multiplier = 3.50
+hive_evolution_cadence = 30.0
+base_revive_time_seconds = 40.0
+revive_time_increment_per_level = 0.9
+mineral_penalty_on_death = 1.00
+buff_cost_retention = 1.00
+loses_buffs_on_death = true
+permadeath = true

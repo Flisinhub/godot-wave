@@ -227,6 +227,22 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	# 3. Bind Selected Hero Data & Visuals
 	if selected_hero and active_hero:
 		active_hero.hero_data = selected_hero
+		var diff_paths := [
+			"res://data/difficulties/casual.tres",
+			"res://data/difficulties/normal.tres",
+			"res://data/difficulties/hard.tres",
+			"res://data/difficulties/brutal.tres",
+			"res://data/difficulties/torment.tres",
+			"res://data/difficulties/impossible.tres"
+		]
+		if diff_tier >= 0 and diff_tier < diff_paths.size() and ResourceLoader.exists(diff_paths[diff_tier]):
+			active_hero.current_difficulty_data = load(diff_paths[diff_tier])
+
+		if not active_hero.revive_countdown_updated.is_connected(_on_hero_revive_countdown_updated):
+			active_hero.revive_countdown_updated.connect(_on_hero_revive_countdown_updated)
+		if not active_hero.hero_respawned.is_connected(_on_hero_respawned):
+			active_hero.hero_respawned.connect(_on_hero_respawned)
+
 		active_hero._bind_hero_data()
 		active_hero.apply_archetype_visuals(selected_hero)
 		if rts_controller:
@@ -284,6 +300,16 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 				if sc2_hud_root and sc2_hud_root.top_wave_label:
 					sc2_hud_root.top_wave_label.text = "¡CADENA DE ENGENDRADORES ACTIVA! Quedan %d nidos." % spawner_chain.get_remaining_spawner_count()
 					sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+
+
+func _on_hero_revive_countdown_updated(remaining: float, total: float) -> void:
+	if sc2_hud_root and is_instance_valid(sc2_hud_root):
+		sc2_hud_root.update_revive_countdown(remaining, total)
+
+
+func _on_hero_respawned(hero: Node) -> void:
+	if sc2_hud_root and is_instance_valid(sc2_hud_root):
+		sc2_hud_root.update_revive_countdown(0.0, 0.0)
 
 
 func _prepare_navigation_and_gates() -> void:

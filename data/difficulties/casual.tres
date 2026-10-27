@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="DifficultyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/difficulty_data.gd" id="1_diff"]
+
+[resource]
+script = ExtResource("1_diff")
+tier = 0
+difficulty_name = "Casual"
+badge_color = Color(0.2, 0.9, 0.4, 1.0)
+income_multiplier = 1.15
+enemy_stat_multiplier = 0.75
+hive_evolution_cadence = 180.0
+base_revive_time_seconds = 15.0
+revive_time_increment_per_level = 0.3
+mineral_penalty_on_death = 0.0
+buff_cost_retention = 0.0
+loses_buffs_on_death = false
+permadeath = false

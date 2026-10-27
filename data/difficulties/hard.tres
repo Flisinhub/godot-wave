@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="DifficultyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/difficulty_data.gd" id="1_diff"]
+
+[resource]
+script = ExtResource("1_diff")
+tier = 2
+difficulty_name = "Hard"
+badge_color = Color(1.0, 0.85, 0.2, 1.0)
+income_multiplier = 0.80
+enemy_stat_multiplier = 1.30
+hive_evolution_cadence = 90.0
+base_revive_time_seconds = 30.0
+revive_time_increment_per_level = 0.6
+mineral_penalty_on_death = 0.50
+buff_cost_retention = 0.50
+loses_buffs_on_death = true
+permadeath = false

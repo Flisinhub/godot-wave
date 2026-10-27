@@ -20,6 +20,15 @@ const ExperienceComponent = preload("res://core/components/experience_component.
 
 signal skill_cast(skill: HeroSkillData, target: Variant)
 signal hero_leveled_up(new_level: int)
+signal hero_died_event(hero: Node, revive_time: float, mineral_penalty_pct: float)
+signal hero_respawned(hero: Node)
+signal revive_countdown_updated(remaining: float, total: float)
+
+var is_dead: bool = false
+var revive_timer: float = 0.0
+var total_revive_time: float = 0.0
+var spawn_position: Vector3 = Vector3(-45.0, 0.0, -45.0)
+var current_difficulty_data: Resource = null
 
 @export var hero_data: HeroData
 
@@ -241,6 +250,13 @@ func _apply_hero_stats_to_unit() -> void:
 		health_bar.setup(current_health, max_health)
 
 func _physics_process(delta: float) -> void:
+	if is_dead:
+		revive_timer = maxf(0.0, revive_timer - delta)
+		revive_countdown_updated.emit(revive_timer, total_revive_time)
+		if revive_timer <= 0.0:
+			respawn(spawn_position)
+		return
+
 	# 1. Gravity handling
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -441,7 +457,13 @@ func take_damage_context(
 		sb.emit_signal("unit_health_changed", self, current_health, max_health)
 
 	if current_health <= 0.0:
-		die()
+		if buff_component and buff_component.attempt_cheat_death():
+			current_health = max_health * 0.35
+			if hero_data:
+				hero_data.current_hp = current_health
+			FloatingTextManager.spawn_text(self, get_world_pos() + Vector3(0, 2.5, 0), "¡DEMIURGE SALVADOR!", Color(0.2, 0.9, 1.0))
+		else:
+			die()
 
 	return result
 
@@ -483,18 +505,109 @@ func _fire_at(target: Node3D) -> void:
 
 
 func die() -> void:
+	if is_dead:
+		return
+	is_dead = true
+
 	var sb := _get_signal_bus()
 	if sb:
 		sb.emit_signal("unit_died", self)
-	if is_instance_valid(anim_player) and anim_player.has_animation("death") and DisplayServer.get_name() != "headless":
-		set_physics_process(false)
-		var col := get_node_or_null("CollisionShape3D") as CollisionShape3D
-		if col:
-			col.set_deferred("disabled", true)
-		anim_player.play("death")
-		anim_player.animation_finished.connect(func(_a): queue_free(), CONNECT_ONE_SHOT)
-	else:
-		queue_free()
+
+	# Determine difficulty
+	var diff = current_difficulty_data
+	if diff == null and ResourceLoader.exists("res://data/difficulties/normal.tres"):
+		diff = load("res://data/difficulties/normal.tres")
+
+	var is_permadeath: bool = diff.get("permadeath") if (diff and "permadeath" in diff) else false
+	if is_permadeath:
+		hero_died_event.emit(self, 0.0, 1.0)
+		if sb and sb.has_signal("base_destroyed"):
+			sb.emit_signal("base_destroyed")
+		if is_instance_valid(anim_player) and anim_player.has_animation("death") and DisplayServer.get_name() != "headless":
+			set_physics_process(false)
+			anim_player.play("death")
+		else:
+			queue_free()
+		return
+
+	var hero_lvl: int = 1
+	if experience_component:
+		hero_lvl = experience_component.current_level
+	elif hero_data:
+		hero_lvl = hero_data.xp_level
+
+	total_revive_time = diff.calculate_revive_time(hero_lvl) if (diff and diff.has_method("calculate_revive_time")) else (20.0 + float(hero_lvl) * 0.4)
+	revive_timer = total_revive_time
+
+	var pen_pct: float = diff.get("mineral_penalty_on_death") if (diff and "mineral_penalty_on_death" in diff) else 0.25
+
+	# Deduct mineral penalty from economy manager
+	var econ = get_tree().root.find_child("EconomyManager", true, false) if is_inside_tree() else null
+	if econ and "current_minerals" in econ:
+		var penalty := int(float(econ.current_minerals) * pen_pct)
+		if penalty > 0 and econ.has_method("spend_minerals"):
+			econ.spend_minerals(penalty)
+
+	# Strip buffs according to difficulty
+	var loses_buffs: bool = diff.get("loses_buffs_on_death") if (diff and "loses_buffs_on_death" in diff) else true
+	var buff_retention: float = diff.get("buff_cost_retention") if (diff and "buff_cost_retention" in diff) else 0.25
+	if loses_buffs and buff_component:
+		buff_component.strip_buffs_on_death(buff_retention)
+
+	hero_died_event.emit(self, total_revive_time, pen_pct)
+
+	# Visual hiding & collision disable
+	velocity = Vector3.ZERO
+	if nav_agent:
+		nav_agent.target_position = get_world_pos()
+
+	var col := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if col:
+		col.set_deferred("disabled", true)
+	if selection_ring:
+		selection_ring.visible = false
+	if health_bar:
+		health_bar.visible = false
+	if visual_root:
+		visual_root.visible = false
+
+
+func respawn(pos: Vector3 = Vector3.ZERO) -> void:
+	is_dead = false
+	revive_timer = 0.0
+	var target_pos: Vector3 = pos if pos != Vector3.ZERO else spawn_position
+	set_world_pos(target_pos)
+	velocity = Vector3.ZERO
+
+	current_health = max_health
+	if hero_data:
+		hero_data.current_hp = max_health
+		hero_data.current_energy = hero_data.max_energy
+
+	if visual_root:
+		visual_root.visible = true
+	if health_bar:
+		health_bar.visible = true
+		if health_bar.has_method("setup"):
+			health_bar.setup(current_health, max_health)
+
+	var col := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if col:
+		col.set_deferred("disabled", false)
+
+	# Brief invulnerability shield (Task 7.5: 3.5s)
+	if buff_engine:
+		buff_engine.apply_buff({"buff_id": &"invulnerability", "default_duration": 3.5, "is_invulnerable": true}, 3.5)
+
+	hero_respawned.emit(self)
+
+	if is_inside_tree():
+		FloatingTextManager.spawn_text(
+			self,
+			get_world_pos() + Vector3(0, 2.5, 0),
+			"¡HÉROE REVIVIDO!",
+			Color(0.2, 0.95, 0.4)
+		)
 
 
 func get_world_pos() -> Vector3:
