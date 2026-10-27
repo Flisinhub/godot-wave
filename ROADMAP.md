@@ -746,11 +746,11 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 **HJ:** descubro contenido especial y eventos temporales.
 
 ### Tareas
-- [ ] **16.1** Mecánica de héroes secretos: probabilidad `(6 − dificultad)%`, condición ≥ 3.000 puntos, deshabilita logros de la partida. `M`
-- [ ] **16.2** Héroes secretos (6): decidir si se conservan o se sustituyen por personajes originales (**recomendado**: originales, por evitar figuras reales — ver ADR-06). `M`
-- [ ] **16.3** Eventos de calendario real (Navidad, Año Nuevo, April Fools…): temas visuales y reglas ligeras. `M`
-- [ ] **16.4** Easter eggs (Outhouse, lagartos, cajas de cartón). `S`
-- [ ] **16.5** Secretos del *Xel'Naga Harbinger* (1 % con Random Hero; ya existe un esbozo). `S`
+- [x] **16.1** Mecánica de héroes secretos: probabilidad `(6 − dificultad)%`, condición ≥ 3.000 puntos, deshabilita logros de la partida. `M`
+- [x] **16.2** Héroes secretos (6): decidir si se conservan o se sustituyen por personajes originales (**recomendado**: originales, por evitar figuras reales — ver ADR-06). `M`
+- [x] **16.3** Eventos de calendario real (Navidad, Año Nuevo, April Fools…): temas visuales y reglas ligeras. `M`
+- [x] **16.4** Easter eggs (Outhouse, lagartos, cajas de cartón). `S`
+- [x] **16.5** Secretos del *Xel'Naga Harbinger* (1 % con Random Hero; ya existe un esbozo). `S`
 
 ---
 

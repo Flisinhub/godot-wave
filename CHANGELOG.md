@@ -5,11 +5,13 @@ Todos los cambios notables de este proyecto están documentados en este archivo,
 ---
 
 ## [1.0.0] — 2026-10-27
-### Fase 15: Rendimiento, QA y Lanzamiento Final
+### Fase 15 y Fase 16: Rendimiento, QA, Extras y Lanzamiento Final
 - **Añadido:**
   - `core/qa/performance_benchmarks.gd`: Suite integral de benchmarking y pruebas de estrés para CPU, simulación de enjambre (1.500 unidades a > 60 FPS / ~10 ms por frame), rendimiento de cálculo de daño (> 300.000 operaciones/s), empaquetado de red en 10 bytes y pruebas de saturación de memoria libre de fugas.
+  - `core/meta/secret_hero_manager.gd`: Mecánica de activación de héroes secretos según probabilidad `(6 - dificultad)%`, requisito de $\ge 3000$ puntos de logro y catálogo de 6 héroes originales de ciencia ficción (ADR-06).
+  - `core/events/calendar_event_manager.gd`: Eventos de calendario real (Navidad, Año Nuevo, April Fools, Halloween) con temas visuales y modificadores ambientales.
   - `export_presets.cfg`: Presets de exportación para Windows Desktop (D3D12/Vulkan) y Linux/X11 con PCK embebido.
-  - `tests/unit/test_performance_and_qa.gd`: 5 tests automatizados de QA y presupuestos de hardware, integrados en el test runner principal (238/238 tests pasando en verde).
+  - `tests/unit/test_performance_and_qa.gd` y `tests/unit/test_secret_heroes_and_calendar.gd`: Tests automatizados integrados en el test runner principal (244/244 tests pasando en verde).
   - `docs/LEGAL.md`: Declaración de descargo de responsabilidad y propiedad intelectual respecto a StarCraft II y Blizzard Entertainment.
 
 ## [0.13.0] — 2026-10-27
