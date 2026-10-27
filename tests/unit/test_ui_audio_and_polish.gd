@@ -113,3 +113,6 @@ func test_audio_manager_bus_integration() -> void:
 	_assert_true(SFXManager.POOL_SIZE_3D == 24, "SFXManager defines 24 3D audio players pool size")
 	_assert_true(SFXManager.POOL_SIZE_2D == 8, "SFXManager defines 8 2D audio players pool size")
 	_assert_true(SFXManager.DEFAULT_MAX_POLYPHONY == 4, "SFXManager default polyphony clamp is 4")
+	_assert_true(SFXManager.MusicState.CALM == 0, "MusicState.CALM defined")
+	_assert_true(SFXManager.MusicState.COMBAT == 1, "MusicState.COMBAT defined")
+	_assert_true(SFXManager.MusicState.BOSS == 2, "MusicState.BOSS defined")

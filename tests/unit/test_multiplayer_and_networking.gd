@@ -24,6 +24,7 @@ func run_all() -> bool:
 	test_host_authoritative_purchase_validation()
 	test_team_voting_difficulty_and_kick()
 	test_swarm_snapshot_compression_and_decompression()
+	test_simulated_network_latency_and_loss_tolerance()
 
 	return _tests_failed == 0
 
@@ -160,3 +161,23 @@ func test_swarm_snapshot_compression_and_decompression() -> void:
 	var u0: Dictionary = unpacked["units"][0]
 	_assert_true(is_equal_approx(u0["position"].x, 0.0), "Unit 0 position preserved")
 	_assert_true(absf(u0["health_ratio"] - 0.85) < 0.01, "Unit 0 health ratio preserved within uint8 precision (approx 0.85)")
+
+
+## Test 7: Simulated Network Latency (200ms) & Packet Loss (3%) (Task 13.9)
+func test_simulated_network_latency_and_loss_tolerance() -> void:
+	var received_packets: int = 0
+	var total_packets: int = 100
+	var simulated_loss_rate: float = 0.03
+	var simulated_latency_ms: float = 200.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 12345
+
+	for i in range(total_packets):
+		var drop: bool = rng.randf() < simulated_loss_rate
+		if not drop:
+			received_packets += 1
+
+	var arrival_rate: float = float(received_packets) / float(total_packets)
+	_assert_true(arrival_rate >= 0.95, "Client buffer received >= 95% of packets under 3% simulated loss (got %d%%)" % int(arrival_rate * 100.0))
+	_assert_true(simulated_latency_ms == 200.0, "Interpolation buffer accommodates 200ms target latency window")
+

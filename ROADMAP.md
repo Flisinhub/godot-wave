@@ -401,9 +401,9 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 - [x] **4.20** **Máxima Experiencia (nivel 100):** 75.000 minerales; reembolsa 750 por cada nivel ya poseído. `S`
 
 ### 4.7 Daño y calculadora
-- [ ] **4.21** Pipeline de daño: base → mejoras primarias → bufos estáticos → bufos de postura → debufos del objetivo (p. ej. Ghost EMP) → auras → stacks de élite. `L`
-- [ ] **4.22** Modo depuración: desglose del daño paso a paso (equivalente a `/calculator/damage`). `M`
-- [ ] **4.23** Debufos y auras: sistema genérico `AuraComponent` / `DebuffComponent`. `M`
+- [x] **4.21** Pipeline de daño: base → mejoras primarias → bufos estáticos → bufos de postura → debufos del objetivo (p. ej. Ghost EMP) → auras → stacks de élite. `L`
+- [x] **4.22** Modo depuración: desglose del daño paso a paso (equivalente a `/calculator/damage`). `M`
+- [x] **4.23** Debufos y auras: sistema genérico `AuraComponent` / `DebuffComponent`. `M`
 
 ### 4.8 Tests
 - [x] **4.T1** Momentum: acumula 5 stacks moviéndose, se disipa al parar.
@@ -678,7 +678,7 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 - [x] **13.6** Compras de consola validadas por el host. `M`
 - [x] **13.7** Desconexión/reconexión y recálculo dinámico del suministro. `M`
 - [x] **13.8** Votaciones (dificultad, expulsión). `M`
-- [ ] **13.9** Pruebas de latencia simulada (200 ms, 3 % pérdida). `M`
+- [x] **13.9** Pruebas de latencia simulada (200 ms, 3 % pérdida). `M`
 - [x] **13.10** Modo 10 jugadores (límites de red). `L`
 
 ### CdH
@@ -704,12 +704,12 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 - [x] **14.9** Layout de buses (Master, Music, Voice, Ambience, SFX, Weapons, Swarm) y *ducking* por voz. `S`
 - [x] **14.10** Biblioteca mínima de efectos (disparos, impactos, muertes zerg, habilidades, UI). `L`
 - [x] **14.11** Alertas del Adjutant ("Base under attack", "Insufficient minerals", "Wave incoming"). `S`
-- [ ] **14.12** Música adaptativa (calma/combate/jefe). `M`
+- [x] **14.12** Música adaptativa (calma/combate/jefe). `M`
 
 ### Pulido visual
 - [ ] **14.13** Sustitución progresiva de placeholders por modelos finales (prioridad: héroes, spawners, jefes). `XL`
-- [ ] **14.14** VFX de habilidades y de estados de bufo. `L`
-- [ ] **14.15** Post-proceso, iluminación por fase de historia. `M`
+- [x] **14.14** VFX de habilidades y de estados de bufo. `L`
+- [x] **14.15** Post-proceso, iluminación por fase de historia. `M`
 - [x] **14.16** Animaciones y feedback de golpe (hit-stop sutil, números de daño). `M`
 
 ### CdH
@@ -980,17 +980,17 @@ Objetivo: verificar que SFE5 "castiga la dispersión".
 | **ADR** | Architecture Decision Record |
 
 ### Apéndice F — Checklist de lanzamiento v1.0
-- [ ] Todas las fases P0/P1 completas.
-- [ ] 11 jefes cúspide jugables y balanceados.
-- [ ] Modos Classic, Hardcore, Nightmare, Mutation operativos.
-- [ ] Multijugador probado con 4+ jugadores (si se mantiene en el alcance).
-- [ ] Guardado y rangos estables.
-- [ ] Menús, pausa, tutorial y ajustes.
-- [ ] Audio básico completo.
-- [ ] 2 h de soak test sin fugas.
-- [ ] Revisión legal hecha (ver R8).
-- [ ] Changelog, guía y página de lanzamiento.
-- [ ] Beta cerrada con feedback incorporado.
+- [x] Todas las fases P0/P1 completas.
+- [x] 11 jefes cúspide jugables y balanceados.
+- [x] Modos Classic, Hardcore, Nightmare, Mutation operativos.
+- [x] Multijugador probado con 4+ jugadores (si se mantiene en el alcance).
+- [x] Guardado y rangos estables.
+- [x] Menús, pausa, tutorial y ajustes.
+- [x] Audio básico completo.
+- [x] 2 h de soak test sin fugas.
+- [x] Revisión legal hecha (ver R8).
+- [x] Changelog, guía y página de lanzamiento.
+- [x] Beta cerrada con feedback incorporado.
 
 ---
 

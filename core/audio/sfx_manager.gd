@@ -10,6 +10,16 @@ extends Node
 signal voice_alert_played(alert_id: StringName)
 signal hero_voice_played(line_id: StringName)
 signal sfx_played(sound_id: StringName, is_3d: bool)
+signal music_state_changed(new_state: int)
+
+## Adaptive Music States (Task 14.12)
+enum MusicState {
+	CALM = 0,
+	COMBAT = 1,
+	BOSS = 2
+}
+
+var current_music_state: int = MusicState.CALM
 
 # Static Singleton Reference
 static var instance: SFXManager = null
@@ -254,6 +264,15 @@ func play_sfx_3d(sound_id: StringName, global_pos: Vector3, custom_max_polyphony
 	active_plays += 1
 	total_plays += 1
 	emit_signal("sfx_played", canonical_id, true)
+
+
+## Switches adaptive music state (Calm, Combat, Boss) (Task 14.12)
+func set_music_state(new_state: int) -> void:
+	if current_music_state == new_state:
+		return
+	current_music_state = new_state
+	emit_signal("music_state_changed", new_state)
+
 
 
 ## Plays a 2D non-spatial sound effect (UI, Alerts, Music, Voice)
