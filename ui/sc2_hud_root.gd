@@ -18,6 +18,8 @@ var stat_panel: SC2StatPanel
 var command_card: SC2CommandCard
 var armory_modal: ArmoryModal = null
 
+signal console_open_requested(tab_index: int)
+
 # Top Bar Elements
 var top_bar: PanelContainer
 var top_diff_badge: Label
@@ -150,11 +152,15 @@ func _build_hud_layout() -> void:
 	# 2. Bottom-Center: Unit Stat Console
 	stat_panel = SC2StatPanel.new()
 	stat_panel.name = "StatPanel"
+	if not stat_panel.console_open_requested.is_connected(func(): console_open_requested.emit(0)):
+		stat_panel.console_open_requested.connect(func(): console_open_requested.emit(0))
 	bottom_console.add_child(stat_panel)
 
 	# 3. Bottom-Right: 3x5 Command Card
 	command_card = SC2CommandCard.new()
 	command_card.name = "CommandCard"
+	if not command_card.command_triggered.is_connected(_on_command_card_command_triggered):
+		command_card.command_triggered.connect(_on_command_card_command_triggered)
 	bottom_console.add_child(command_card)
 
 	# 4. StarCraft II Procedural Top Command Bar
@@ -480,6 +486,19 @@ func update_command_center_hp(curr_hp: float, max_hp: float) -> void:
 			top_cc_hp_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
 		else:
 			top_cc_hp_label.add_theme_color_override("font_color", Color(0.25, 0.95, 0.45))
+
+
+func _on_command_card_command_triggered(cmd_id: String, _payload: Variant) -> void:
+	if cmd_id == "open_console":
+		console_open_requested.emit(0)
+	elif cmd_id == "open_recruitment":
+		console_open_requested.emit(3)
+
+
+func update_story_phase(phase_title: String, bounty_info: int) -> void:
+	if top_wave_label:
+		top_wave_label.text = "FASE: %s  |  BOTÍN BASE: +%d 💎" % [phase_title.to_upper(), bounty_info]
+		top_wave_label.add_theme_color_override("font_color", Color(0.25, 0.88, 1.0))
 
 
 func update_veterancy(vet_level: int) -> void:

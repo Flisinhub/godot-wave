@@ -2,6 +2,8 @@ class_name GameSessionScript
 extends Node
 
 const GameConfigScript = preload("res://core/game_config.gd")
+const ModeData = preload("res://core/data/mode_data.gd")
+const GameModeManager = preload("res://core/modes/game_mode_manager.gd")
 
 ## GameSession - Active Match State Autoload for SFE5 Godot.
 ## Tracks current game difficulty, players, seed, story phase, and session economy metrics.
@@ -23,6 +25,10 @@ var pedestal_bonus_active: bool = false
 var outhouse_secret_discovered: bool = false
 var current_story_phase: String = "zerg" # "zerg", "protoss_1", "protoss_2", "pinnacle_bosses"
 
+# Mode & Mutators
+var active_mode: ModeData = null
+var mode_manager: GameModeManager = null
+
 # Session Runtime Stats
 var session_elapsed_time: float = 0.0
 var total_minerals_earned: int = 0
@@ -39,7 +45,23 @@ static func parse_cli_seed() -> int:
 	return 0
 
 
+func set_game_mode(mode_id: StringName) -> void:
+	var mode_res_path: String = "res://data/modes/%s.tres" % str(mode_id)
+	var mode_data: ModeData = null
+	if ResourceLoader.exists(mode_res_path):
+		mode_data = load(mode_res_path)
+	if mode_data == null:
+		mode_data = ModeData.new()
+		mode_data.id = mode_id
+		mode_data.mode_name = str(mode_id).capitalize()
+	active_mode = mode_data
+	mode_manager = GameModeManager.new(mode_data)
+	split_income_mode = mode_manager.is_split_income
+
+
 func start_new_session(p_difficulty: int = 1, p_players: int = 1, p_seed: int = 0) -> void:
+	if active_mode == null:
+		set_game_mode(&"classic")
 	difficulty_tier = p_difficulty
 	player_count = maxi(1, p_players)
 	var effective_seed: int = p_seed

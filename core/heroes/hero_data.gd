@@ -37,6 +37,7 @@ signal xp_changed(curr_xp: int, next_xp: int)
 @export var strength: int = 10
 @export var dexterity: int = 10
 @export var intelligence: int = 10
+@export var endurance: int = 10
 @export var attribute_points: int = 0
 
 # Progression & Leveling
@@ -47,6 +48,7 @@ signal xp_changed(curr_xp: int, next_xp: int)
 @export var growth_strength: int = 2
 @export var growth_dexterity: int = 2
 @export var growth_intelligence: int = 2
+@export var growth_endurance: int = 2
 
 # Skills Array
 @export var skills: Array[Resource] = []
@@ -147,6 +149,8 @@ func allocate_attribute(attribute_name: String, amount: int = 1) -> bool:
 			dexterity += amount
 		"intelligence", "int":
 			intelligence += amount
+		"endurance", "end":
+			endurance += amount
 		_:
 			return false
 
@@ -175,6 +179,7 @@ func add_experience(amount: int) -> bool:
 		strength += growth_strength
 		dexterity += growth_dexterity
 		intelligence += growth_intelligence
+		endurance += growth_endurance
 
 		xp_for_next_level = _calculate_xp_requirement(xp_level + 1)
 		recalculate_derived_stats(false)

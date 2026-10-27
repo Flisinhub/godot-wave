@@ -4,6 +4,10 @@ extends CharacterBody3D
 ## BaseUnit3D - Standard RTS Unit with Navigation, Auto-Attack, Focus Fire & Micromanagement Support
 
 const EliteComponent = preload("res://core/components/elite_component.gd")
+const StatsComponent = preload("res://core/components/stats_component.gd")
+const BuffComponent = preload("res://core/components/buff_component.gd")
+const AbilityComponent = preload("res://core/components/ability_component.gd")
+const ExperienceComponent = preload("res://core/components/experience_component.gd")
 const CategoryRingStyler = preload("res://core/vfx/category_ring_styler.gd")
 
 @export var unit_data: UnitData
@@ -29,6 +33,10 @@ var focus_target: Node3D = null
 var _attack_timer: float = 0.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 var elite_component: EliteComponent = null
+var stats_component: StatsComponent = null
+var buff_component: BuffComponent = null
+var ability_component: AbilityComponent = null
+var experience_component: ExperienceComponent = null
 
 
 func _get_signal_bus() -> Node:
@@ -50,9 +58,44 @@ func _ensure_elite_component() -> EliteComponent:
 	return elite_component
 
 
+func _ensure_all_components() -> void:
+	_ensure_elite_component()
+	if not stats_component:
+		stats_component = get_node_or_null("StatsComponent") as StatsComponent
+		if not stats_component:
+			stats_component = StatsComponent.new()
+			stats_component.name = "StatsComponent"
+			add_child(stats_component)
+		stats_component.base_max_hp = max_health
+		stats_component.base_damage = attack_damage
+		stats_component.base_attack_period = attack_cooldown
+		stats_component.base_move_speed = move_speed
+		stats_component.recalculate()
+	if not buff_component:
+		buff_component = get_node_or_null("BuffComponent") as BuffComponent
+		if not buff_component:
+			buff_component = BuffComponent.new()
+			buff_component.name = "BuffComponent"
+			add_child(buff_component)
+	if not ability_component:
+		ability_component = get_node_or_null("AbilityComponent") as AbilityComponent
+		if not ability_component:
+			ability_component = AbilityComponent.new()
+			ability_component.name = "AbilityComponent"
+			ability_component.stats_component = stats_component
+			add_child(ability_component)
+	if not experience_component:
+		experience_component = get_node_or_null("ExperienceComponent") as ExperienceComponent
+		if not experience_component:
+			experience_component = ExperienceComponent.new()
+			experience_component.name = "ExperienceComponent"
+			experience_component.stats_component = stats_component
+			add_child(experience_component)
+
+
 func _ready() -> void:
 	add_to_group("allies")
-	_ensure_elite_component()
+	_ensure_all_components()
 	
 	if unit_data:
 		max_health = unit_data.max_health

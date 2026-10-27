@@ -17,6 +17,7 @@ const StatsComponent = preload("res://core/components/stats_component.gd")
 const BuffComponent = preload("res://core/components/buff_component.gd")
 const AbilityComponent = preload("res://core/components/ability_component.gd")
 const ExperienceComponent = preload("res://core/components/experience_component.gd")
+const EliteComponent = preload("res://core/components/elite_component.gd")
 
 signal skill_cast(skill: HeroSkillData, target: Variant)
 signal hero_leveled_up(new_level: int)
@@ -73,6 +74,7 @@ var stats_component: StatsComponent = null
 var buff_component: BuffComponent = null
 var ability_component: AbilityComponent = null
 var experience_component: ExperienceComponent = null
+var elite_component: EliteComponent = null
 
 # Target classification bitmask tagged HEROIC
 var target_tags: int = CombatTypes.TargetTag.HEROIC | CombatTypes.TargetTag.BIOLOGICAL | CombatTypes.TargetTag.GROUND
@@ -166,6 +168,8 @@ func _ensure_components() -> void:
 			stats_component = StatsComponent.new()
 			stats_component.name = "StatsComponent"
 			add_child(stats_component)
+		if not stats_component.stats_changed.is_connected(_on_stats_component_changed):
+			stats_component.stats_changed.connect(_on_stats_component_changed)
 	
 	if not buff_component:
 		buff_component = get_node_or_null("BuffComponent") as BuffComponent
@@ -191,6 +195,42 @@ func _ensure_components() -> void:
 			add_child(experience_component)
 			if not experience_component.level_up.is_connected(_on_experience_level_up):
 				experience_component.level_up.connect(_on_experience_level_up)
+
+	if not elite_component:
+		elite_component = get_node_or_null("EliteComponent") as EliteComponent
+		if not elite_component:
+			elite_component = EliteComponent.new()
+			elite_component.name = "EliteComponent"
+			add_child(elite_component)
+
+
+func promote_to_elite() -> void:
+	_ensure_components()
+	if elite_component:
+		elite_component.promote_to_elite()
+
+
+func _on_stats_component_changed() -> void:
+	if not stats_component:
+		return
+	max_health = stats_component.get_effective_max_hp()
+	current_health = clampf(current_health, 1.0, max_health)
+	attack_damage = stats_component.get_effective_damage()
+	attack_cooldown = stats_component.get_effective_attack_period()
+	flat_armor = stats_component.get_effective_armor()
+	move_speed = stats_component.base_move_speed
+	if hero_data:
+		hero_data.strength = stats_component.strength
+		hero_data.dexterity = stats_component.dexterity
+		hero_data.intelligence = stats_component.intelligence
+		hero_data.endurance = stats_component.endurance
+		hero_data.max_hp = max_health
+		hero_data.current_hp = current_health
+		hero_data.weapon_damage = attack_damage
+		hero_data.attack_cooldown = attack_cooldown
+		hero_data.effective_armor = flat_armor
+		hero_data.max_energy = stats_component.get_effective_max_energy()
+		hero_data.energy_regen = stats_component.get_effective_energy_regen()
 
 
 func _on_experience_level_up(new_lvl: int) -> void:
@@ -222,6 +262,7 @@ func _bind_hero_data() -> void:
 		stats_component.strength = hero_data.strength
 		stats_component.dexterity = hero_data.dexterity
 		stats_component.intelligence = hero_data.intelligence
+		stats_component.endurance = hero_data.endurance
 		stats_component.recalculate()
 
 	# Synchronize ability_component skills

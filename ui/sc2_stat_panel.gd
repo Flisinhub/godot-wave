@@ -7,6 +7,11 @@ extends PanelContainer
 ## Built with headless DisplayServer safety guards.
 
 const HeroData = preload("res://core/heroes/hero_data.gd")
+const StatsComponent = preload("res://core/components/stats_component.gd")
+const BuffComponent = preload("res://core/components/buff_component.gd")
+const SFEEconomyManager = preload("res://core/economy/sfe_economy_manager.gd")
+
+signal console_open_requested()
 
 var bound_unit: Node = null
 
@@ -20,6 +25,10 @@ var shield_label: Label
 var energy_bar: ProgressBar
 var energy_label: Label
 
+# Active Buffs Row (Task 4.17)
+var active_buffs_scroll: ScrollContainer
+var active_buffs_container: HBoxContainer
+
 # Vital Bar StyleBoxes for Dynamic Color Shifts
 var _hp_fill_style: StyleBoxFlat
 var _shield_fill_style: StyleBoxFlat
@@ -28,6 +37,7 @@ var _trough_style: StyleBoxFlat
 
 # Attribute UI Elements
 var attribute_container: VBoxContainer
+var combat_stats_label: Label
 var points_label: Label
 var str_label: Label
 var str_plus_btn: Button
@@ -35,6 +45,9 @@ var dex_label: Label
 var dex_plus_btn: Button
 var int_label: Label
 var int_plus_btn: Button
+var end_label: Label
+var end_plus_btn: Button
+var console_btn: Button
 
 
 ## Inner class: Procedural Holographic Tactical Wireframe display.
@@ -221,17 +234,34 @@ func _build_ui_layout() -> void:
 	energy_bar.add_theme_stylebox_override("fill", _energy_fill_style)
 	center_box.add_child(energy_bar)
 
+	# Active Buffs Row (Task 4.17)
+	active_buffs_scroll = ScrollContainer.new()
+	active_buffs_scroll.custom_minimum_size = Vector2(190, 36)
+	active_buffs_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	active_buffs_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	
+	active_buffs_container = HBoxContainer.new()
+	active_buffs_container.add_theme_constant_override("separation", 4)
+	active_buffs_scroll.add_child(active_buffs_container)
+	center_box.add_child(active_buffs_scroll)
+
 	h_split.add_child(center_box)
 
-	# Right: RPG Attributes Panel (STR, DEX, INT with [+] spend buttons)
+	# Right: RPG Attributes Panel (STR, DEX, INT, END with [+] spend buttons)
 	attribute_container = VBoxContainer.new()
-	attribute_container.custom_minimum_size = Vector2(150, 160)
-	attribute_container.add_theme_constant_override("separation", 4)
+	attribute_container.custom_minimum_size = Vector2(170, 160)
+	attribute_container.add_theme_constant_override("separation", 2)
+
+	combat_stats_label = Label.new()
+	combat_stats_label.text = "DMG: 0 | ARM: 0 (+0 NA)"
+	combat_stats_label.add_theme_color_override("font_color", Color(0.3, 0.9, 1.0, 1.0))
+	combat_stats_label.add_theme_font_size_override("font_size", 10)
+	attribute_container.add_child(combat_stats_label)
 
 	points_label = Label.new()
 	points_label.text = "Points: 0"
 	points_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25, 1.0))
-	points_label.add_theme_font_size_override("font_size", 11)
+	points_label.add_theme_font_size_override("font_size", 10)
 	attribute_container.add_child(points_label)
 
 	# Reusable Button Styles
@@ -244,14 +274,14 @@ func _build_ui_layout() -> void:
 	var str_row := HBoxContainer.new()
 	str_label = Label.new()
 	str_label.text = "STR: 10"
-	str_label.custom_minimum_size = Vector2(80, 24)
+	str_label.custom_minimum_size = Vector2(85, 20)
 	str_label.add_theme_color_override("font_color", Color(1.0, 0.5, 0.45, 1.0))
-	str_label.add_theme_font_size_override("font_size", 11)
+	str_label.add_theme_font_size_override("font_size", 10)
 	str_row.add_child(str_label)
 
 	str_plus_btn = Button.new()
 	str_plus_btn.text = "[+]"
-	str_plus_btn.custom_minimum_size = Vector2(32, 24)
+	str_plus_btn.custom_minimum_size = Vector2(28, 20)
 	_apply_button_styles(str_plus_btn, btn_normal, btn_hover, btn_pressed, btn_disabled)
 	str_plus_btn.pressed.connect(func(): _on_attribute_allocated("str"))
 	str_row.add_child(str_plus_btn)
@@ -261,14 +291,14 @@ func _build_ui_layout() -> void:
 	var dex_row := HBoxContainer.new()
 	dex_label = Label.new()
 	dex_label.text = "DEX: 10"
-	dex_label.custom_minimum_size = Vector2(80, 24)
+	dex_label.custom_minimum_size = Vector2(85, 20)
 	dex_label.add_theme_color_override("font_color", Color(0.35, 0.95, 0.55, 1.0))
-	dex_label.add_theme_font_size_override("font_size", 11)
+	dex_label.add_theme_font_size_override("font_size", 10)
 	dex_row.add_child(dex_label)
 
 	dex_plus_btn = Button.new()
 	dex_plus_btn.text = "[+]"
-	dex_plus_btn.custom_minimum_size = Vector2(32, 24)
+	dex_plus_btn.custom_minimum_size = Vector2(28, 20)
 	_apply_button_styles(dex_plus_btn, btn_normal, btn_hover, btn_pressed, btn_disabled)
 	dex_plus_btn.pressed.connect(func(): _on_attribute_allocated("dex"))
 	dex_row.add_child(dex_plus_btn)
@@ -278,18 +308,43 @@ func _build_ui_layout() -> void:
 	var int_row := HBoxContainer.new()
 	int_label = Label.new()
 	int_label.text = "INT: 10"
-	int_label.custom_minimum_size = Vector2(80, 24)
+	int_label.custom_minimum_size = Vector2(85, 20)
 	int_label.add_theme_color_override("font_color", Color(0.4, 0.8, 1.0, 1.0))
-	int_label.add_theme_font_size_override("font_size", 11)
+	int_label.add_theme_font_size_override("font_size", 10)
 	int_row.add_child(int_label)
 
 	int_plus_btn = Button.new()
 	int_plus_btn.text = "[+]"
-	int_plus_btn.custom_minimum_size = Vector2(32, 24)
+	int_plus_btn.custom_minimum_size = Vector2(28, 20)
 	_apply_button_styles(int_plus_btn, btn_normal, btn_hover, btn_pressed, btn_disabled)
 	int_plus_btn.pressed.connect(func(): _on_attribute_allocated("int"))
 	int_row.add_child(int_plus_btn)
 	attribute_container.add_child(int_row)
+
+	# END row
+	var end_row := HBoxContainer.new()
+	end_label = Label.new()
+	end_label.text = "END: 10"
+	end_label.custom_minimum_size = Vector2(85, 20)
+	end_label.add_theme_color_override("font_color", Color(0.9, 0.65, 0.35, 1.0))
+	end_label.add_theme_font_size_override("font_size", 10)
+	end_row.add_child(end_label)
+
+	end_plus_btn = Button.new()
+	end_plus_btn.text = "[+]"
+	end_plus_btn.custom_minimum_size = Vector2(28, 20)
+	_apply_button_styles(end_plus_btn, btn_normal, btn_hover, btn_pressed, btn_disabled)
+	end_plus_btn.pressed.connect(func(): _on_attribute_allocated("end"))
+	end_row.add_child(end_plus_btn)
+	attribute_container.add_child(end_row)
+
+	console_btn = Button.new()
+	console_btn.text = "⚡ CONSOLA (Alt+C)"
+	console_btn.custom_minimum_size = Vector2(130, 22)
+	_apply_button_styles(console_btn, btn_normal, btn_hover, btn_pressed, btn_disabled)
+	console_btn.add_theme_font_size_override("font_size", 10)
+	console_btn.pressed.connect(func(): console_open_requested.emit())
+	attribute_container.add_child(console_btn)
 
 	h_split.add_child(attribute_container)
 
@@ -379,6 +434,9 @@ func _clear_display() -> void:
 		energy_bar.visible = false
 	if attribute_container:
 		attribute_container.visible = false
+	if active_buffs_container:
+		for c in active_buffs_container.get_children():
+			c.queue_free()
 	if wireframe_rect and "bound_unit" in wireframe_rect:
 		wireframe_rect.bound_unit = null
 
@@ -395,7 +453,7 @@ func bind_unit(unit: Node) -> void:
 	refresh_display()
 
 
-## Refreshes real-time statistics, bars, and attribute allocation button states.
+## Refreshes real-time statistics, bars, active buffs, and attribute allocation button states.
 func refresh_display() -> void:
 	if bound_unit == null or not is_instance_valid(bound_unit):
 		_clear_display()
@@ -405,18 +463,27 @@ func refresh_display() -> void:
 		wireframe_rect.bound_unit = bound_unit
 
 	var is_hero: bool = "hero_data" in bound_unit and bound_unit.hero_data != null
+	var stats_comp: StatsComponent = bound_unit.get_node_or_null("StatsComponent") as StatsComponent
+	var buff_comp: BuffComponent = bound_unit.get_node_or_null("BuffComponent") as BuffComponent
+
+	var econ: SFEEconomyManager = null
+	if is_inside_tree():
+		var tree := get_tree()
+		if tree and tree.root:
+			econ = tree.root.find_child("EconomyManager", true, false) as SFEEconomyManager
 
 	if is_hero:
 		var hd: HeroData = bound_unit.hero_data
 		if name_label:
 			name_label.text = "%s (Lvl %d)" % [hd.hero_name, hd.xp_level]
 
-		# Health with dynamic green -> amber -> red shift
+		var cur_hp: float = bound_unit.current_health if "current_health" in bound_unit else hd.current_hp
+		var max_hp_val: float = stats_comp.get_effective_max_hp() if stats_comp else hd.max_hp
 		if hp_label and hp_bar:
-			hp_label.text = "Health: %d / %d" % [int(hd.current_hp), int(hd.max_hp)]
-			hp_bar.max_value = hd.max_hp
-			hp_bar.value = hd.current_hp
-			_update_hp_bar_color(hd.current_hp, hd.max_hp)
+			hp_label.text = "Health: %d / %d" % [int(cur_hp), int(max_hp_val)]
+			hp_bar.max_value = max_hp_val
+			hp_bar.value = cur_hp
+			_update_hp_bar_color(cur_hp, max_hp_val)
 
 		# Shield
 		if shield_label and shield_bar:
@@ -432,41 +499,54 @@ func refresh_display() -> void:
 
 		# Energy
 		if energy_label and energy_bar:
-			if hd.max_energy > 0.0:
+			var max_eng: float = stats_comp.get_effective_max_energy() if stats_comp else hd.max_energy
+			if max_eng > 0.0:
 				energy_label.visible = true
 				energy_bar.visible = true
-				energy_label.text = "Energy: %d / %d" % [int(hd.current_energy), int(hd.max_energy)]
-				energy_bar.max_value = hd.max_energy
+				energy_label.text = "Energy: %d / %d" % [int(hd.current_energy), int(max_eng)]
+				energy_bar.max_value = max_eng
 				energy_bar.value = hd.current_energy
 			else:
 				energy_label.visible = false
 				energy_bar.visible = false
 
-		# Attributes
+		# Attributes & Combat Stats
 		if attribute_container:
 			attribute_container.visible = true
-			if points_label:
-				points_label.text = "Attribute Points: %d" % hd.attribute_points
-			if str_label:
-				str_label.text = "STR: %d" % hd.strength
-			if dex_label:
-				dex_label.text = "DEX: %d" % hd.dexterity
-			if int_label:
-				int_label.text = "INT: %d" % hd.intelligence
+			if stats_comp:
+				if combat_stats_label:
+					combat_stats_label.text = "DMG: %.1f | ARM: %.1f (+%.1f NA)" % [
+						stats_comp.get_effective_damage(),
+						stats_comp.get_effective_armor(),
+						stats_comp.get_neutron_armor_mitigation()
+					]
+				if points_label:
+					var pt_str := (" | Ptos: %d" % hd.attribute_points) if hd.attribute_points > 0 else ""
+					points_label.text = "💎 %d%s" % [econ.current_minerals if econ else 0, pt_str]
 
-			var can_spend: bool = hd.attribute_points > 0
-			if str_plus_btn:
-				str_plus_btn.disabled = not can_spend
-			if dex_plus_btn:
-				dex_plus_btn.disabled = not can_spend
-			if int_plus_btn:
-				int_plus_btn.disabled = not can_spend
+				_update_attr_row("strength", "STR", stats_comp, hd, econ, str_label, str_plus_btn)
+				_update_attr_row("dexterity", "DEX", stats_comp, hd, econ, dex_label, dex_plus_btn)
+				_update_attr_row("intelligence", "INT", stats_comp, hd, econ, int_label, int_plus_btn)
+				_update_attr_row("endurance", "END", stats_comp, hd, econ, end_label, end_plus_btn)
+			else:
+				if points_label:
+					points_label.text = "Attribute Points: %d" % hd.attribute_points
+				if str_label: str_label.text = "STR: %d" % hd.strength
+				if dex_label: dex_label.text = "DEX: %d" % hd.dexterity
+				if int_label: int_label.text = "INT: %d" % hd.intelligence
+				if end_label: end_label.text = "END: %d" % hd.endurance
+
+				var can_spend: bool = hd.attribute_points > 0
+				if str_plus_btn: str_plus_btn.disabled = not can_spend
+				if dex_plus_btn: dex_plus_btn.disabled = not can_spend
+				if int_plus_btn: int_plus_btn.disabled = not can_spend
+				if end_plus_btn: end_plus_btn.disabled = not can_spend
 	else:
 		# Standard Unit (BaseUnit3D / Structure)
 		if name_label:
 			name_label.text = bound_unit.name
 		var cur_hp: float = bound_unit.get("current_health") if "current_health" in bound_unit else 100.0
-		var max_hp: float = bound_unit.get("max_health") if "max_health" in bound_unit else 100.0
+		var max_hp: float = stats_comp.get_effective_max_hp() if stats_comp else (bound_unit.get("max_health") if "max_health" in bound_unit else 100.0)
 
 		if hp_label and hp_bar:
 			hp_label.text = "Health: %d / %d" % [int(cur_hp), int(max_hp)]
@@ -480,8 +560,113 @@ func refresh_display() -> void:
 		if energy_label and energy_bar:
 			energy_label.visible = false
 			energy_bar.visible = false
-		if attribute_container:
+
+		if stats_comp and attribute_container:
+			attribute_container.visible = true
+			if combat_stats_label:
+				combat_stats_label.text = "DMG: %.1f | ARM: %.1f" % [
+					stats_comp.get_effective_damage(),
+					stats_comp.get_effective_armor()
+				]
+			if points_label:
+				points_label.text = "Minerales: %d 💎" % (econ.current_minerals if econ else 0)
+			_update_attr_row("strength", "STR", stats_comp, null, econ, str_label, str_plus_btn)
+			_update_attr_row("dexterity", "DEX", stats_comp, null, econ, dex_label, dex_plus_btn)
+			_update_attr_row("intelligence", "INT", stats_comp, null, econ, int_label, int_plus_btn)
+			_update_attr_row("endurance", "END", stats_comp, null, econ, end_label, end_plus_btn)
+		elif attribute_container:
 			attribute_container.visible = false
+
+	# Refresh Active Buff Icons Row (Task 4.17)
+	_refresh_active_buffs(buff_comp)
+
+
+func _update_attr_row(
+	attr_id: String,
+	display_name: String,
+	stats_comp: StatsComponent,
+	hd: HeroData,
+	econ: SFEEconomyManager,
+	lbl: Label,
+	btn: Button
+) -> void:
+	if not stats_comp:
+		return
+	var val: int = stats_comp.get_attribute_value(attr_id)
+	var cost: int = stats_comp.get_next_attribute_cost(attr_id)
+	if lbl:
+		lbl.text = "%s: %d" % [display_name, val]
+	if btn:
+		var can_spend: bool = (hd != null and hd.attribute_points > 0) or (econ != null and econ.current_minerals >= cost)
+		btn.disabled = not can_spend
+		btn.tooltip_text = "+1 %s\nCoste: %d 💎%s" % [
+			display_name,
+			cost,
+			" (o 1 Pto disponible)" if (hd != null and hd.attribute_points > 0) else ""
+		]
+
+
+func _refresh_active_buffs(buff_comp: BuffComponent) -> void:
+	if not active_buffs_container:
+		return
+
+	# Clear old badges
+	for child in active_buffs_container.get_children():
+		child.queue_free()
+
+	if not buff_comp:
+		return
+
+	# 1. Tier 1 to 7 active buffs
+	for tier in buff_comp.active_tier_buffs.keys():
+		var b_data: Dictionary = buff_comp.active_tier_buffs[tier]
+		var b_name: String = b_data.get("name", "Buff")
+		_create_buff_badge("T%d: %s" % [tier, b_name.left(8)], Color(0.25, 0.85, 1.0), "Tier %d: %s" % [tier, b_name])
+
+	# 2. Supreme Buffs
+	if buff_comp.supreme_buffs.get("ace", false) or buff_comp.is_ace_active:
+		_create_buff_badge("⭐ ACE", Color(1.0, 0.82, 0.15), "Ace Supremo: +50% Daño Total")
+	if buff_comp.supreme_buffs.get("demiurge", false):
+		var cd_text := "LISTO" if buff_comp.demiurge_cooldown_timer <= 0.0 else "CD: %ds" % int(ceilf(buff_comp.demiurge_cooldown_timer))
+		_create_buff_badge("⭐ DEMI [%s]" % cd_text, Color(0.2, 0.95, 0.7), "Demiurge: Previene muerte (180s CD)")
+	if buff_comp.supreme_buffs.get("maxima_experiencia", false):
+		_create_buff_badge("⭐ MAX XP", Color(0.85, 0.45, 1.0), "Máxima Experiencia: Nivel 100")
+
+	# 3. Dynamic Condition Stacks
+	if buff_comp.momentum_stacks > 0:
+		_create_buff_badge("MOM x%d" % buff_comp.momentum_stacks, Color(0.3, 0.95, 0.4), "Momentum: %d stacks (+%d%% Daño)" % [buff_comp.momentum_stacks, buff_comp.momentum_stacks * 5])
+	if buff_comp.static_charge_stacks > 0:
+		_create_buff_badge("STAT x%d" % buff_comp.static_charge_stacks, Color(1.0, 0.9, 0.25), "Static Charge: %d stacks" % buff_comp.static_charge_stacks)
+	if buff_comp.bulwark_stacks > 0:
+		_create_buff_badge("BULW x%d" % buff_comp.bulwark_stacks, Color(0.4, 0.75, 1.0), "Bulwark: %d stacks (-%d%% Daño)" % [buff_comp.bulwark_stacks, buff_comp.bulwark_stacks * 5])
+	if buff_comp.is_camouflaged:
+		_create_buff_badge("CAMUFLADO", Color(0.65, 0.4, 1.0), "Optical Lens: Camuflaje táctico activo")
+
+
+func _create_buff_badge(text: String, border_color: Color, tooltip: String) -> void:
+	var badge := Label.new()
+	badge.text = text
+	badge.tooltip_text = tooltip
+	badge.add_theme_font_size_override("font_size", 9)
+	badge.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.95))
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(border_color.r * 0.15, border_color.g * 0.15, border_color.b * 0.15, 0.9)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.border_color = border_color
+	style.corner_radius_top_left = 3
+	style.corner_radius_top_right = 3
+	style.corner_radius_bottom_left = 3
+	style.corner_radius_bottom_right = 3
+	style.content_margin_left = 4.0
+	style.content_margin_right = 4.0
+	style.content_margin_top = 2.0
+	style.content_margin_bottom = 2.0
+	badge.add_theme_stylebox_override("panel", style)
+	active_buffs_container.add_child(badge)
 
 
 func _update_hp_bar_color(cur_hp: float, max_hp: float) -> void:
@@ -500,7 +685,40 @@ func _on_attribute_allocated(stat_name: String) -> void:
 	if bound_unit == null or not is_instance_valid(bound_unit):
 		return
 
-	if "hero_data" in bound_unit and bound_unit.hero_data != null:
+	var stats_comp: StatsComponent = bound_unit.get_node_or_null("StatsComponent") as StatsComponent
+	var econ: SFEEconomyManager = null
+	if is_inside_tree():
+		var tree := get_tree()
+		if tree and tree.root:
+			econ = tree.root.find_child("EconomyManager", true, false) as SFEEconomyManager
+
+	if stats_comp:
+		var cost := stats_comp.get_next_attribute_cost(stat_name)
+		if "hero_data" in bound_unit and bound_unit.hero_data != null and bound_unit.hero_data.attribute_points > 0:
+			bound_unit.hero_data.attribute_points -= 1
+			stats_comp.invest_attribute(stat_name, 1)
+			_sync_hero_data_attributes()
+			refresh_display()
+			return
+
+		if econ and econ.current_minerals >= cost:
+			if econ.spend_minerals(cost):
+				stats_comp.invest_attribute(stat_name, 1)
+				_sync_hero_data_attributes()
+				refresh_display()
+				return
+	elif "hero_data" in bound_unit and bound_unit.hero_data != null:
 		var hd: HeroData = bound_unit.hero_data
 		hd.allocate_attribute(stat_name, 1)
 		refresh_display()
+
+
+func _sync_hero_data_attributes() -> void:
+	if bound_unit and "hero_data" in bound_unit and bound_unit.hero_data != null:
+		var stats_comp: StatsComponent = bound_unit.get_node_or_null("StatsComponent") as StatsComponent
+		if stats_comp:
+			bound_unit.hero_data.strength = stats_comp.strength
+			bound_unit.hero_data.dexterity = stats_comp.dexterity
+			bound_unit.hero_data.intelligence = stats_comp.intelligence
+			bound_unit.hero_data.endurance = stats_comp.endurance
+			bound_unit.hero_data.recalculate_derived_stats(false)

@@ -218,8 +218,10 @@ func _populate_hero_card(hero: Node) -> void:
 	_bind_order_button(7, "HOLD", "H", "Hold Position (H)\nStand ground and engage enemies in range.")
 	_bind_order_button(8, "PATROL", "P", "Patrol (P)\nPatrol back and forth between points.")
 
-	# Row 2: Tactical Move (Slot 10: M)
+	# Row 2: Tactical Move (Slot 10: M), SFE5 Console (Slot 12: C), Elite Troops (Slot 13: V)
 	_bind_order_button(10, "MOVE", "M", "Move (M)\nMove directly to location ignoring hostiles.")
+	_bind_order_button(12, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
+	_bind_order_button(13, "ÉLITE", "V", "Mejorar Élite / Tropas (V)\nAbre el reclutamiento de tropas y ascenso a veteranía élite.")
 
 
 func _populate_standard_unit_card(_unit: Node) -> void:
@@ -227,6 +229,8 @@ func _populate_standard_unit_card(_unit: Node) -> void:
 	_bind_order_button(6, "STOP", "S", "Stop (S)")
 	_bind_order_button(7, "HOLD", "H", "Hold Position (H)")
 	_bind_order_button(10, "MOVE", "M", "Move (M)")
+	_bind_order_button(12, "CONSOLA", "C", "Consola SFE5 (C / Alt+C)\nAbre la consola de atributos, bufos y mejoras raciales.")
+	_bind_order_button(13, "ÉLITE", "V", "Mejorar Élite / Tropas (V)\nAbre el reclutamiento de tropas y ascenso a veteranía élite.")
 
 
 func _bind_order_button(slot_idx: int, order_id: String, hotkey: String, tooltip: String = "") -> void:
@@ -313,6 +317,12 @@ func _on_slot_pressed(slot_idx: int) -> void:
 		command_triggered.emit("cast_skill", skill)
 	elif slot_type == "order":
 		var order_id: String = info.get("id", "")
+		if order_id == "CONSOLA":
+			command_triggered.emit("open_console", null)
+			return
+		elif order_id == "ÉLITE":
+			command_triggered.emit("open_recruitment", null)
+			return
 		if bound_unit and is_instance_valid(bound_unit):
 			if (order_id == "STOP" or order_id == "HOLD") and bound_unit.has_method("stop_action"):
 				bound_unit.stop_action()

@@ -2,17 +2,20 @@ class_name SFEStartModal
 extends CanvasLayer
 
 ## SFEStartModal - Pre-Mission Deployment & Hero Selection Console for SFE5.
-## Allows the player to view their BankManager career stats, choose mission difficulty,
-## select their Hero Archetype (or roll Random with +50 bonus minerals and 1% secret roll),
+## Allows the player to view their BankManager career stats, choose mission game mode & difficulty,
+## select from 12 Hero Archetypes (or roll Random with +15.000/players minerals bonus and 1% secret roll),
 ## and deploy into Planet Char.
 
 const SFEDifficultyManager = preload("res://core/economy/sfe_difficulty_manager.gd")
 const HeroSelector = preload("res://core/heroes/hero_selector.gd")
 const HeroData = preload("res://core/heroes/hero_data.gd")
 const BankManager = preload("res://core/persistence/bank_manager.gd")
+const GameModeManager = preload("res://core/modes/game_mode_manager.gd")
 
 signal deployment_confirmed(selected_hero: HeroData, difficulty_tier: int, is_random_hero: bool)
+signal mode_selected(mode_id: StringName)
 
+var selected_mode_id: StringName = &"classic"
 var selected_difficulty: int = 1 # 1 = NORMAL
 var selected_archetype_id: StringName = &"raynor"
 var is_random_selected: bool = false
@@ -21,12 +24,40 @@ var bank_data: Dictionary = {}
 # UI Nodes
 var root_panel: PanelContainer
 var profile_label: Label
+var mode_desc_label: Label
 var difficulty_desc_label: Label
 var hero_desc_label: Label
+var mode_buttons: Array[Button] = []
 var diff_buttons: Array[Button] = []
 var hero_buttons: Array[Button] = []
 var random_button: Button
 var deploy_btn: Button
+
+const MODES_DATA := [
+	{"id": &"classic", "name": "CLÁSICO", "desc": "MODO CLÁSICO: Partida estándar SFE5. Héroes normales, bufos T1-T7, fases de historia (Zerg/Protoss/Cúspide) y eventos."},
+	{"id": &"torment", "name": "TORMENTO", "desc": "MODO TORMENTO: Muerte permanente. Los héroes caídos no reviven. Daño de enemigos extremo y tensión máxima."},
+	{"id": &"hardcore", "name": "HARDCORE", "desc": "MODO HARDCORE: Despliegue con 12 unidades élite iniciales. Sin tienda de bufos ni eventos de bonificación."},
+	{"id": &"nightmare", "name": "PESADILLA", "desc": "MODO PESADILLA: Base central en (0,0), barrera de radiación y ciclos infinitos de 10 oleadas periódicas."},
+	{"id": &"mutation", "name": "MUTACIÓN", "desc": "MODO MUTACIÓN: Mutadores caóticos activos (nidos acelerados, regeneración enemiga y enjambres voraces)."},
+	{"id": &"split_income", "name": "SPLIT INCOME", "desc": "MODO ECONOMÍA DIVIDIDA: Recursos no compartidos. Cada jugador gestiona sus propios minerales de forma individual."}
+]
+
+const HEROES_CATALOG := [
+	# Row 1: SFE5 Heroes
+	{"id": &"raynor", "label": "RAYNOR\n(Marine)"},
+	{"id": &"tychus", "label": "TYCHUS\n(Marauder)"},
+	{"id": &"nova", "label": "NOVA\n(Ghost)"},
+	{"id": &"zeratul", "label": "ZERATUL\n(Dark Templar)"},
+	{"id": &"tassadar", "label": "TASSADAR\n(High Templar)"},
+	{"id": &"medic", "label": "STETMANN\n(Support)"},
+	# Row 2: Standard Units & Secret Archetypes
+	{"id": &"marine", "label": "MARINE\n(Assault)"},
+	{"id": &"marauder", "label": "MARAUDER\n(Shock)"},
+	{"id": &"reaper", "label": "REAPER\n(Jetpack)"},
+	{"id": &"ghost", "label": "GHOST\n(Sniper Ops)"},
+	{"id": &"spectre", "label": "🔒 SPECTRE\n(Black-Ops)"},
+	{"id": &"secret_harbinger", "label": "🔒 HARBINGER\n(Xel'Naga)"}
+]
 
 
 func _init() -> void:
@@ -36,6 +67,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	load_player_profile()
+	_update_mode_selection(&"classic")
 	_update_difficulty_selection(1)
 	_update_hero_selection(&"raynor", false)
 
@@ -58,7 +90,7 @@ func _build_modal_layout() -> void:
 	bg_tint.name = "BackdropTint"
 	bg_tint.anchor_right = 1.0
 	bg_tint.anchor_bottom = 1.0
-	bg_tint.color = Color(0.015, 0.025, 0.04, 0.88)
+	bg_tint.color = Color(0.015, 0.025, 0.04, 0.90)
 	add_child(bg_tint)
 
 	# Main Dialog Box
@@ -68,11 +100,11 @@ func _build_modal_layout() -> void:
 	root_panel.anchor_top = 0.5
 	root_panel.anchor_right = 0.5
 	root_panel.anchor_bottom = 0.5
-	root_panel.offset_left = -380.0
-	root_panel.offset_top = -280.0
-	root_panel.offset_right = 380.0
-	root_panel.offset_bottom = 280.0
-	root_panel.custom_minimum_size = Vector2(760, 560)
+	root_panel.offset_left = -440.0
+	root_panel.offset_top = -340.0
+	root_panel.offset_right = 440.0
+	root_panel.offset_bottom = 340.0
+	root_panel.custom_minimum_size = Vector2(880, 680)
 
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.04, 0.065, 0.095, 0.98)
@@ -86,23 +118,23 @@ func _build_modal_layout() -> void:
 	panel_style.corner_radius_bottom_left = 6
 	panel_style.corner_radius_bottom_right = 6
 	panel_style.shadow_color = Color(0.0, 0.0, 0.0, 0.85)
-	panel_style.shadow_size = 14
-	panel_style.content_margin_left = 20.0
-	panel_style.content_margin_right = 20.0
-	panel_style.content_margin_top = 18.0
-	panel_style.content_margin_bottom = 18.0
+	panel_style.shadow_size = 16
+	panel_style.content_margin_left = 22.0
+	panel_style.content_margin_right = 22.0
+	panel_style.content_margin_top = 16.0
+	panel_style.content_margin_bottom = 16.0
 	root_panel.add_theme_stylebox_override("panel", panel_style)
 	add_child(root_panel)
 
 	var main_vbox := VBoxContainer.new()
-	main_vbox.add_theme_constant_override("separation", 10)
+	main_vbox.add_theme_constant_override("separation", 8)
 	root_panel.add_child(main_vbox)
 
 	# Title Banner
 	var title_lbl := Label.new()
 	title_lbl.text = "SPECIAL FORCES ELITE 5 : MISSION DEPLOYMENT"
 	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_lbl.add_theme_font_size_override("font_size", 20)
+	title_lbl.add_theme_font_size_override("font_size", 19)
 	title_lbl.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0, 1.0))
 	main_vbox.add_child(title_lbl)
 
@@ -110,16 +142,45 @@ func _build_modal_layout() -> void:
 	profile_label = Label.new()
 	profile_label.text = "OPERATOR: Loading...  |  VETERANCY LEVEL: 1  |  CAREER KILLS: 0"
 	profile_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	profile_label.add_theme_font_size_override("font_size", 12)
+	profile_label.add_theme_font_size_override("font_size", 11)
 	profile_label.add_theme_color_override("font_color", Color(0.9, 0.75, 0.3, 1.0))
 	main_vbox.add_child(profile_label)
 
 	main_vbox.add_child(HSeparator.new())
 
-	# Section 1: Difficulty
+	# Section 1: Game Mode Selector
+	var mode_title := Label.new()
+	mode_title.text = "1. MODO DE JUEGO (GAME MODE)"
+	mode_title.add_theme_font_size_override("font_size", 12)
+	mode_title.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0, 0.9))
+	main_vbox.add_child(mode_title)
+
+	var mode_hbox := HBoxContainer.new()
+	mode_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	mode_hbox.add_theme_constant_override("separation", 6)
+	main_vbox.add_child(mode_hbox)
+
+	for m in MODES_DATA:
+		var btn := Button.new()
+		btn.text = m["name"]
+		btn.custom_minimum_size = Vector2(130, 28)
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.pressed.connect(_on_mode_button_pressed.bind(m["id"]))
+		mode_hbox.add_child(btn)
+		mode_buttons.append(btn)
+
+	mode_desc_label = Label.new()
+	mode_desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mode_desc_label.add_theme_font_size_override("font_size", 11)
+	mode_desc_label.add_theme_color_override("font_color", Color(0.65, 0.85, 1.0, 0.85))
+	main_vbox.add_child(mode_desc_label)
+
+	main_vbox.add_child(HSeparator.new())
+
+	# Section 2: Difficulty
 	var diff_title := Label.new()
-	diff_title.text = "SELECT DIFFICULTY TIER"
-	diff_title.add_theme_font_size_override("font_size", 13)
+	diff_title.text = "2. DIFICULTAD DE MISIÓN (DIFFICULTY TIER)"
+	diff_title.add_theme_font_size_override("font_size", 12)
 	diff_title.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0, 0.9))
 	main_vbox.add_child(diff_title)
 
@@ -132,7 +193,7 @@ func _build_modal_layout() -> void:
 	for i in range(5):
 		var btn := Button.new()
 		btn.text = diff_names[i]
-		btn.custom_minimum_size = Vector2(130, 34)
+		btn.custom_minimum_size = Vector2(140, 28)
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.pressed.connect(_on_difficulty_button_pressed.bind(i))
 		diff_hbox.add_child(btn)
@@ -146,43 +207,35 @@ func _build_modal_layout() -> void:
 
 	main_vbox.add_child(HSeparator.new())
 
-	# Section 2: Hero Selection
+	# Section 3: Hero Archetype Selection
 	var hero_title := Label.new()
-	hero_title.text = "SELECT HERO ARCHETYPE"
-	hero_title.add_theme_font_size_override("font_size", 13)
+	hero_title.text = "3. ARQUETIPO DE HÉROE (12 CLASES SFE5 + RANDOM)"
+	hero_title.add_theme_font_size_override("font_size", 12)
 	hero_title.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0, 0.9))
 	main_vbox.add_child(hero_title)
 
-	var hero_hbox := HBoxContainer.new()
-	hero_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hero_hbox.add_theme_constant_override("separation", 6)
-	main_vbox.add_child(hero_hbox)
+	var hero_grid := GridContainer.new()
+	hero_grid.columns = 6
+	hero_grid.add_theme_constant_override("h_separation", 6)
+	hero_grid.add_theme_constant_override("v_separation", 6)
+	main_vbox.add_child(hero_grid)
 
-	var heroes_data := [
-		{"id": &"raynor", "label": "RAYNOR\n(Marine)"},
-		{"id": &"tychus", "label": "TYCHUS\n(Marauder)"},
-		{"id": &"nova", "label": "NOVA\n(Ghost)"},
-		{"id": &"zeratul", "label": "ZERATUL\n(Dark Templar)"},
-		{"id": &"tassadar", "label": "TASSADAR\n(High Templar)"},
-		{"id": &"medic", "label": "STETMANN\n(Support)"}
-	]
-
-	for entry in heroes_data:
+	for entry in HEROES_CATALOG:
 		var btn := Button.new()
 		btn.text = entry["label"]
-		btn.custom_minimum_size = Vector2(98, 48)
+		btn.custom_minimum_size = Vector2(132, 40)
 		btn.focus_mode = Control.FOCUS_NONE
 		btn.pressed.connect(_on_hero_button_pressed.bind(entry["id"]))
-		hero_hbox.add_child(btn)
+		hero_grid.add_child(btn)
 		hero_buttons.append(btn)
 
 	# Random Hero Button
 	random_button = Button.new()
-	random_button.text = "🎲 RANDOM\n(+15.000 Min)"
-	random_button.custom_minimum_size = Vector2(110, 48)
+	random_button.text = "🎲 RANDOM (+15.000 / Nº Jugadores Minerales | 1.0% Probabilidad Heraldo Secreto)"
+	random_button.custom_minimum_size = Vector2(0, 32)
 	random_button.focus_mode = Control.FOCUS_NONE
 	random_button.pressed.connect(_on_random_button_pressed)
-	hero_hbox.add_child(random_button)
+	main_vbox.add_child(random_button)
 
 	# Hero Details Box
 	var hero_details_panel := PanelContainer.new()
@@ -195,27 +248,22 @@ func _build_modal_layout() -> void:
 	details_style.border_color = Color(0.18, 0.35, 0.55, 0.6)
 	details_style.content_margin_left = 12.0
 	details_style.content_margin_right = 12.0
-	details_style.content_margin_top = 8.0
-	details_style.content_margin_bottom = 8.0
+	details_style.content_margin_top = 6.0
+	details_style.content_margin_bottom = 6.0
 	hero_details_panel.add_theme_stylebox_override("panel", details_style)
 	main_vbox.add_child(hero_details_panel)
 
 	hero_desc_label = Label.new()
 	hero_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hero_desc_label.add_theme_font_size_override("font_size", 12)
+	hero_desc_label.add_theme_font_size_override("font_size", 11)
 	hero_desc_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95, 0.95))
 	hero_details_panel.add_child(hero_desc_label)
 
-	# Spacer
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 4)
-	main_vbox.add_child(spacer)
-
 	# Deploy Button
 	deploy_btn = Button.new()
-	deploy_btn.text = "▶ INITIATE DEPLOYMENT [ ENTER / SPACE ]"
-	deploy_btn.custom_minimum_size = Vector2(300, 44)
-	deploy_btn.add_theme_font_size_override("font_size", 15)
+	deploy_btn.text = "▶ INICIAR DESPLIEGUE EN CHAR [ ENTER / SPACE ]"
+	deploy_btn.custom_minimum_size = Vector2(300, 38)
+	deploy_btn.add_theme_font_size_override("font_size", 14)
 	deploy_btn.add_theme_color_override("font_color", Color(1.0, 0.95, 0.4, 1.0))
 	deploy_btn.pressed.connect(_on_deploy_pressed)
 	main_vbox.add_child(deploy_btn)
@@ -229,6 +277,24 @@ func _unhandled_input(event: InputEvent) -> void:
 			_on_deploy_pressed()
 
 
+func _on_mode_button_pressed(mode_id: StringName) -> void:
+	_update_mode_selection(mode_id)
+
+
+func _update_mode_selection(mode_id: StringName) -> void:
+	selected_mode_id = mode_id
+	mode_selected.emit(mode_id)
+	for i in range(mode_buttons.size()):
+		var btn: Button = mode_buttons[i]
+		var m_data: Dictionary = MODES_DATA[i]
+		if m_data["id"] == mode_id:
+			btn.modulate = Color(1.2, 1.1, 0.4, 1.0)
+			if mode_desc_label:
+				mode_desc_label.text = m_data["desc"]
+		else:
+			btn.modulate = Color(0.85, 0.85, 0.85, 1.0)
+
+
 func _on_difficulty_button_pressed(tier: int) -> void:
 	_update_difficulty_selection(tier)
 
@@ -238,7 +304,7 @@ func _update_difficulty_selection(tier: int) -> void:
 	for i in range(diff_buttons.size()):
 		var btn: Button = diff_buttons[i]
 		if i == tier:
-			btn.modulate = Color(1.2, 1.1, 0.4, 1.0) # Highlight selected
+			btn.modulate = Color(1.2, 1.1, 0.4, 1.0)
 		else:
 			btn.modulate = Color(0.85, 0.85, 0.85, 1.0)
 
@@ -268,7 +334,7 @@ func _update_difficulty_selection(tier: int) -> void:
 			cadence = 40.0
 
 	if difficulty_desc_label:
-		difficulty_desc_label.text = "Difficulty Multipliers: Income Rate: %.2fx  |  Enemy Health & Damage: %.2fx  |  Hive Evolution Cadence: %ds" % [
+		difficulty_desc_label.text = "Multiplicadores: Tasa de Ingreso: %.2fx  |  Vida y Daño Enemigo: %.2fx  |  Cadencia de Nidos: %ds" % [
 			income_mult, enemy_mult, int(cadence)
 		]
 
@@ -285,7 +351,6 @@ func _update_hero_selection(id: StringName, is_rand: bool) -> void:
 	is_random_selected = is_rand
 	selected_archetype_id = id
 
-	# Update button modulations
 	for btn in hero_buttons:
 		btn.modulate = Color(0.85, 0.85, 0.85, 1.0)
 
@@ -300,27 +365,30 @@ func _update_hero_selection(id: StringName, is_rand: bool) -> void:
 		return
 
 	var hero_index: int = -1
-	match id:
-		&"raynor": hero_index = 0
-		&"tychus": hero_index = 1
-		&"nova": hero_index = 2
-		&"zeratul": hero_index = 3
-		&"tassadar": hero_index = 4
-		&"medic": hero_index = 5
+	for i in range(HEROES_CATALOG.size()):
+		if HEROES_CATALOG[i]["id"] == id:
+			hero_index = i
+			break
 
 	if hero_index >= 0 and hero_index < hero_buttons.size():
 		hero_buttons[hero_index].modulate = Color(0.4, 1.1, 1.3, 1.0)
 
-	var h_data: HeroData = HeroSelector.select_hero_manual(id)
+	var all_heroes: Dictionary = HeroSelector.get_all_archetypes()
+	var h_data: HeroData = all_heroes.get(id)
+	if h_data == null:
+		h_data = HeroSelector.select_hero_manual(id, true)
+
 	if h_data and hero_desc_label:
 		var skill_names: Array[String] = []
 		for sk in h_data.skills:
 			if sk:
 				skill_names.append("%s [%s]" % [sk.skill_name, sk.hotkey])
 		var skills_text: String = ", ".join(skill_names) if not skill_names.is_empty() else "None"
-		hero_desc_label.text = "✦ %s (%s)\nHP: %d | Shields: %d | Energy: %d | Damage: %d | Armor: %d | Speed: %.1f\nAbilities: %s" % [
+		var secret_tag: String = " [🔒 ARQUETIPO SECRETO: Selección 1% en Random o Modo Debug]" if h_data.is_secret else ""
+		hero_desc_label.text = "✦ %s (%s)%s\nHP: %d | Shields: %d | Energy: %d | Damage: %d | Armor: %d | Speed: %.1f\nHabilidades: %s" % [
 			h_data.hero_name,
 			h_data.role_description,
+			secret_tag,
 			int(h_data.max_hp),
 			int(h_data.max_shield),
 			int(h_data.max_energy),
@@ -336,7 +404,12 @@ func _on_deploy_pressed() -> void:
 	if is_random_selected:
 		final_hero = HeroSelector.select_hero_random()
 	else:
-		final_hero = HeroSelector.select_hero_manual(selected_archetype_id)
+		var allow_secret: bool = (selected_mode_id == &"debug")
+		final_hero = HeroSelector.select_hero_manual(selected_archetype_id, allow_secret)
+		if final_hero == null:
+			# If user clicked a secret hero without debug, fall back to random roll with bonus
+			final_hero = HeroSelector.select_hero_random()
+			is_random_selected = true
 
 	if final_hero == null:
 		final_hero = HeroSelector.select_hero_manual(&"raynor")

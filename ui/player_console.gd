@@ -8,12 +8,15 @@ extends CanvasLayer
 
 const StatsComponent = preload("res://core/components/stats_component.gd")
 const BuffComponent = preload("res://core/components/buff_component.gd")
+const EliteComponent = preload("res://core/components/elite_component.gd")
+const UnitRecruitmentManager = preload("res://core/recruitment/unit_recruitment_manager.gd")
 const SFEEconomyManager = preload("res://core/economy/sfe_economy_manager.gd")
 const GameConfig = preload("res://core/game_config.gd")
 
 var target_unit: Node = null
 var stats_comp: StatsComponent = null
 var buff_comp: BuffComponent = null
+var elite_comp: EliteComponent = null
 var economy_manager: SFEEconomyManager = null
 
 # UI Root Containers
@@ -26,10 +29,115 @@ var target_name_lbl: Label = null
 var attr_labels: Dictionary = {}
 var attr_buttons: Dictionary = {}
 
+# Racial & Unit-Specific Upgrades (Tasks 4.8, 4.9)
+const RACIAL_UPGRADE_DEFS: Dictionary = {
+	"weapon_damage": {
+		"title": "Daño de Armas / Balística",
+		"desc": "+3.0 Daño base y +5% Daño total por nivel",
+		"base_cost": 100,
+		"growth": 1.15,
+		"max_lvl": 30
+	},
+	"armor_plating": {
+		"title": "Blindaje de Infantería",
+		"desc": "+1.0 Armadura plana por nivel",
+		"base_cost": 120,
+		"growth": 1.15,
+		"max_lvl": 30
+	},
+	"bio_vitality": {
+		"title": "Bio-Ingeniería / Vitalidad",
+		"desc": "+50.0 Vida máxima por nivel",
+		"base_cost": 150,
+		"growth": 1.20,
+		"max_lvl": 20
+	},
+	"plasma_reactor": {
+		"title": "Reactor / Ópticas Plasma",
+		"desc": "+25 Energía máx y +0.25 Reg/s por nivel",
+		"base_cost": 200,
+		"growth": 1.20,
+		"max_lvl": 15
+	},
+	"attack_speed": {
+		"title": "Aceleración de Disparo",
+		"desc": "+4% Velocidad de ataque por nivel",
+		"base_cost": 175,
+		"growth": 1.18,
+		"max_lvl": 20
+	},
+	"unit_gauss": {
+		"title": "Cadencia Gauss (Marine/Raynor)",
+		"desc": "+15% Cadencia y +2 Daño balístico",
+		"base_cost": 250,
+		"growth": 1.35,
+		"max_lvl": 5
+	},
+	"unit_concussion": {
+		"title": "Proyectil Conmocionador (Marauder)",
+		"desc": "Ralentiza 25% y otorga +25 Vida",
+		"base_cost": 300,
+		"growth": 1.35,
+		"max_lvl": 5
+	},
+	"unit_cloak": {
+		"title": "Reactor Ocular (Ghost/Nova)",
+		"desc": "+30 Energía máx y +1.5 Rango ataque",
+		"base_cost": 350,
+		"growth": 1.35,
+		"max_lvl": 5
+	},
+	"unit_void_blade": {
+		"title": "Hojas de Vacío (Zeratul)",
+		"desc": "+8 Daño cuerpo a cuerpo y +10% Vel. movimiento",
+		"base_cost": 400,
+		"growth": 1.35,
+		"max_lvl": 5
+	},
+	"unit_storm": {
+		"title": "Sobrecarga Psiónica (Tassadar)",
+		"desc": "+20% Poder de habilidad (AP) y +15 Escudo máx",
+		"base_cost": 400,
+		"growth": 1.35,
+		"max_lvl": 5
+	},
+	"unit_nano": {
+		"title": "Nano-Inyectores (Medic/Stetmann)",
+		"desc": "+30% Rango curativo y +150 Vida de aura",
+		"base_cost": 300,
+		"growth": 1.35,
+		"max_lvl": 5
+	}
+}
+
+var racial_levels: Dictionary = {
+	"weapon_damage": 0,
+	"armor_plating": 0,
+	"bio_vitality": 0,
+	"plasma_reactor": 0,
+	"attack_speed": 0,
+	"unit_gauss": 0,
+	"unit_concussion": 0,
+	"unit_cloak": 0,
+	"unit_void_blade": 0,
+	"unit_storm": 0,
+	"unit_nano": 0
+}
+var racial_labels: Dictionary = {}
+var racial_buttons: Dictionary = {}
+
+# Recruitment & Elite Elements (Fase 6)
+var elite_info_lbl: Label = null
+var elite_upgrade_btn: Button = null
+var supply_lbl: Label = null
+var recruit_buttons: Dictionary = {}
+
 signal console_opened()
 signal console_closed()
 signal attribute_purchased(attr_name: String, points: int)
 signal buff_purchased(tier: int, buff_id: String)
+signal racial_upgrade_purchased(upgrade_id: String, new_level: int)
+signal unit_recruited(unit: Node, cost: int)
 
 
 func _ready() -> void:
@@ -53,7 +161,7 @@ func toggle_console() -> void:
 		open_console()
 
 
-func open_console(unit: Node = null) -> void:
+func open_console(unit: Node = null, tab_index: int = -1) -> void:
 	if unit:
 		target_unit = unit
 	elif target_unit == null:
@@ -64,6 +172,8 @@ func open_console(unit: Node = null) -> void:
 	
 	_resolve_components()
 	_refresh_all_tabs()
+	if tab_index >= 0 and tab_container and tab_index < tab_container.get_tab_count():
+		tab_container.current_tab = tab_index
 	visible = true
 	console_opened.emit()
 
@@ -87,6 +197,10 @@ func _resolve_components() -> void:
 			buff_comp = BuffComponent.new()
 			buff_comp.name = "BuffComponent"
 			target_unit.add_child(buff_comp)
+		
+		elite_comp = target_unit.get_node_or_null("EliteComponent") as EliteComponent
+		if not elite_comp and target_unit.has_method("_ensure_elite_component"):
+			elite_comp = target_unit._ensure_elite_component()
 	
 	if not economy_manager:
 		var econ = get_tree().root.find_child("EconomyManager", true, false)
@@ -168,6 +282,7 @@ func _build_console_ui() -> void:
 	_build_attributes_tab()
 	_build_buffs_tab()
 	_build_racial_tab()
+	_build_recruitment_tab()
 
 
 func _build_attributes_tab() -> void:
@@ -344,16 +459,320 @@ func _build_racial_tab() -> void:
 	tab.name = "Mejoras Raciales"
 	tab.add_theme_constant_override("separation", 10)
 	tab_container.add_child(tab)
-	
-	var lbl := Label.new()
-	lbl.text = "Mejoras de Balística, Armadura de Infantería y Ópticas de Plasma Terran"
-	tab.add_child(lbl)
+
+	var hint := Label.new()
+	hint.text = "💡 Clic: +1 Nivel  |  Ctrl+Clic: +5 Niveles  |  Shift+Clic: Invertir TODO"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
+	tab.add_child(hint)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+
+	# 1. Primary Racial Upgrades
+	var prim_header := Label.new()
+	prim_header.text = "— MEJORAS RACIALES PRIMARIAS (ARMAMENTO, BLINDAJE, VITALIDAD) —"
+	prim_header.add_theme_color_override("font_color", Color(0.2, 0.85, 1.0))
+	list.add_child(prim_header)
+
+	for up_id in ["weapon_damage", "armor_plating", "bio_vitality", "plasma_reactor", "attack_speed"]:
+		_add_racial_upgrade_row(list, up_id)
+
+	list.add_child(HSeparator.new())
+
+	# 2. Unit-Specific Upgrades (Task 4.9)
+	var unit_header := Label.new()
+	unit_header.text = "— MEJORAS ESPECÍFICAS DE UNIDAD (TAREA 4.9) —"
+	unit_header.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
+	list.add_child(unit_header)
+
+	for up_id in ["unit_gauss", "unit_concussion", "unit_cloak", "unit_void_blade", "unit_storm", "unit_nano"]:
+		_add_racial_upgrade_row(list, up_id)
+
+
+func _add_racial_upgrade_row(container: VBoxContainer, up_id: String) -> void:
+	var def: Dictionary = RACIAL_UPGRADE_DEFS[up_id]
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	container.add_child(row)
+
+	var title_lbl := Label.new()
+	title_lbl.text = def["title"]
+	title_lbl.custom_minimum_size = Vector2(190, 0)
+	title_lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
+	row.add_child(title_lbl)
+
+	var lvl_lbl := Label.new()
+	lvl_lbl.text = "Nv. 0 / %d" % def["max_lvl"]
+	lvl_lbl.custom_minimum_size = Vector2(80, 0)
+	racial_labels[up_id] = lvl_lbl
+	row.add_child(lvl_lbl)
+
+	var desc_lbl := Label.new()
+	desc_lbl.text = def["desc"]
+	desc_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_lbl.add_theme_font_size_override("font_size", 11)
+	desc_lbl.add_theme_color_override("font_color", Color(0.7, 0.75, 0.8))
+	row.add_child(desc_lbl)
+
+	var buy_btn := Button.new()
+	buy_btn.text = "+1 (%d 💎)" % def["base_cost"]
+	buy_btn.custom_minimum_size = Vector2(130, 28)
+	racial_buttons[up_id] = buy_btn
+	buy_btn.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			var is_shift: bool = event.shift_pressed
+			var is_ctrl: bool = event.ctrl_pressed
+			_on_racial_upgrade_clicked(up_id, is_shift, is_ctrl)
+	)
+	row.add_child(buy_btn)
+
+
+func _get_upgrade_cost(def: Dictionary, level: int) -> int:
+	var base_cost: int = def.get("base_cost", 100)
+	var growth: float = def.get("growth", 1.15)
+	return int(round(float(base_cost) * pow(growth, float(level))))
+
+
+func _on_racial_upgrade_clicked(upgrade_id: String, is_shift: bool, is_ctrl: bool) -> void:
+	if not economy_manager or not stats_comp:
+		return
+
+	var def: Dictionary = RACIAL_UPGRADE_DEFS.get(upgrade_id, {})
+	var max_lvl: int = def.get("max_lvl", 20)
+	var cur_lvl: int = racial_levels.get(upgrade_id, 0)
+
+	if cur_lvl >= max_lvl:
+		return
+
+	var available_minerals: int = economy_manager.current_minerals
+	var levels_to_buy: int = 1
+	if is_shift:
+		levels_to_buy = max_lvl - cur_lvl
+	elif is_ctrl:
+		levels_to_buy = mini(5, max_lvl - cur_lvl)
+
+	var total_spent: int = 0
+	var actual_bought: int = 0
+	var sim_lvl: int = cur_lvl
+	var sim_min: int = available_minerals
+
+	for i in range(levels_to_buy):
+		var cost := _get_upgrade_cost(def, sim_lvl)
+		if sim_min < cost or sim_lvl >= max_lvl:
+			break
+		sim_min -= cost
+		total_spent += cost
+		sim_lvl += 1
+		actual_bought += 1
+
+	if actual_bought > 0 and total_spent > 0:
+		if economy_manager.spend_minerals(total_spent):
+			racial_levels[upgrade_id] += actual_bought
+			_apply_racial_upgrade_effects(upgrade_id, actual_bought)
+			racial_upgrade_purchased.emit(upgrade_id, racial_levels[upgrade_id])
+			_refresh_all_tabs()
+
+
+func _apply_racial_upgrade_effects(upgrade_id: String, count: int) -> void:
+	if not stats_comp:
+		return
+	match upgrade_id:
+		"weapon_damage":
+			stats_comp.damage_upgrade_mult += 0.05 * float(count)
+			stats_comp.base_damage += 3.0 * float(count)
+		"armor_plating":
+			stats_comp.armor_upgrade_flat += 1.0 * float(count)
+		"bio_vitality":
+			stats_comp.base_max_hp += 50.0 * float(count)
+		"plasma_reactor":
+			stats_comp.base_max_energy += 25.0 * float(count)
+			stats_comp.base_energy_regen += 0.25 * float(count)
+		"attack_speed":
+			stats_comp.attack_speed_upgrade_mult += 0.04 * float(count)
+		"unit_gauss":
+			stats_comp.attack_speed_upgrade_mult += 0.15 * float(count)
+			stats_comp.base_damage += 2.0 * float(count)
+		"unit_concussion":
+			stats_comp.base_max_hp += 25.0 * float(count)
+		"unit_cloak":
+			stats_comp.base_max_energy += 30.0 * float(count)
+		"unit_void_blade":
+			stats_comp.base_damage += 8.0 * float(count)
+			stats_comp.base_move_speed += 0.5 * float(count)
+		"unit_storm":
+			stats_comp.base_shield += 15.0 * float(count)
+		"unit_nano":
+			stats_comp.base_max_hp += 150.0 * float(count)
+	stats_comp.mark_dirty()
+
+
+func _build_recruitment_tab() -> void:
+	var tab := VBoxContainer.new()
+	tab.name = "Reclutamiento y Élite"
+	tab.add_theme_constant_override("separation", 12)
+	tab_container.add_child(tab)
+
+	# 1. Section: Veteranía Élite (Tarea 6.1)
+	var elite_box := PanelContainer.new()
+	var elite_style := StyleBoxFlat.new()
+	elite_style.bg_color = Color(0.08, 0.10, 0.16, 0.95)
+	elite_style.border_color = Color(1.0, 0.75, 0.2, 0.9)
+	elite_style.set_border_width_all(1)
+	elite_style.set_corner_radius_all(4)
+	elite_style.content_margin_left = 12.0
+	elite_style.content_margin_right = 12.0
+	elite_style.content_margin_top = 8.0
+	elite_style.content_margin_bottom = 8.0
+	elite_box.add_theme_stylebox_override("panel", elite_style)
+	tab.add_child(elite_box)
+
+	var elite_vbox := VBoxContainer.new()
+	elite_vbox.add_theme_constant_override("separation", 6)
+	elite_box.add_child(elite_vbox)
+
+	var elite_title := Label.new()
+	elite_title.text = "★ SISTEMA DE VETERANÍA ÉLITE (TAREA 6.1) ★"
+	elite_title.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
+	elite_vbox.add_child(elite_title)
+
+	elite_info_lbl = Label.new()
+	elite_info_lbl.text = "Unidad seleccionada: Normal. Puedes ascenderla a Élite para acumular hasta +125 daño y x1.67 vel. ataque."
+	elite_info_lbl.add_theme_font_size_override("font_size", 12)
+	elite_info_lbl.add_theme_color_override("font_color", Color(0.85, 0.9, 0.95))
+	elite_vbox.add_child(elite_info_lbl)
+
+	elite_upgrade_btn = Button.new()
+	elite_upgrade_btn.text = "★ ASCENDER A VETERANÍA ÉLITE (500 💎)"
+	elite_upgrade_btn.custom_minimum_size = Vector2(280, 32)
+	elite_upgrade_btn.pressed.connect(_on_buy_veterancy_pressed)
+	elite_vbox.add_child(elite_upgrade_btn)
+
+	# 2. Section: Reclutamiento de Tropas y Apoyo (Tareas 6.3 - 6.7)
+	var recruit_header := HBoxContainer.new()
+	tab.add_child(recruit_header)
+
+	var rec_title := Label.new()
+	rec_title.text = "— RECLUTAMIENTO DE TROPAS Y UNIDADES DE VISIÓN/APOYO —"
+	rec_title.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
+	recruit_header.add_child(rec_title)
+
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	recruit_header.add_child(sp)
+
+	supply_lbl = Label.new()
+	supply_lbl.text = "Suministro: 1 / 80"
+	supply_lbl.add_theme_color_override("font_color", Color(0.9, 0.8, 0.2))
+	recruit_header.add_child(supply_lbl)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 8)
+	scroll.add_child(list)
+
+	_add_recruit_row(list, "marine", "Marine Terran", "Infantería ligera con rifle Gauss", 50, 1)
+	_add_recruit_row(list, "zealot", "Zealot Protoss", "Combatiente cuerpo a cuerpo con escudos de plasma", 100, 2)
+	_add_recruit_row(list, "zergling", "Zergling Enjambre", "Criatura rápida de flanqueo", 25, 1)
+	_add_recruit_row(list, "observer", "Observer Protoss", "Unidad voladora de detección y visión táctica", 150, 1)
+	_add_recruit_row(list, "blimp", "Medivac / Tactical Blimp", "Nave táctica de visión y apoyo aéreo", 150, 1)
+
+
+func _add_recruit_row(container: VBoxContainer, unit_id: String, unit_name: String, desc: String, cost: int, supply: int) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	container.add_child(row)
+
+	var name_lbl := Label.new()
+	name_lbl.text = "%s (%d Sup)" % [unit_name, supply]
+	name_lbl.custom_minimum_size = Vector2(180, 0)
+	name_lbl.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
+	row.add_child(name_lbl)
+
+	var desc_lbl := Label.new()
+	desc_lbl.text = desc
+	desc_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc_lbl.add_theme_font_size_override("font_size", 11)
+	desc_lbl.add_theme_color_override("font_color", Color(0.65, 0.72, 0.8))
+	row.add_child(desc_lbl)
+
+	var btn := Button.new()
+	btn.text = "Reclutar (%d 💎)" % cost
+	btn.custom_minimum_size = Vector2(130, 28)
+	recruit_buttons[unit_id] = btn
+	btn.pressed.connect(func(): _on_recruit_unit_pressed(unit_id))
+	row.add_child(btn)
+
+
+func _on_buy_veterancy_pressed() -> void:
+	if not target_unit:
+		return
+	if UnitRecruitmentManager.buy_veterancy(target_unit, economy_manager):
+		if target_unit.has_node("EliteComponent"):
+			elite_comp = target_unit.get_node("EliteComponent") as EliteComponent
+		_refresh_all_tabs()
+
+
+func _on_recruit_unit_pressed(unit_id: String) -> void:
+	if not economy_manager:
+		return
+	var cur_sup: int = _get_current_supply()
+	var max_sup: int = _get_max_supply()
+	var spawn_pos := Vector3(-20.0, 0.0, 20.0)
+	if target_unit and target_unit is Node3D:
+		spawn_pos = target_unit.global_position + Vector3(randf_range(-2.5, 2.5), 0.0, randf_range(-2.5, 2.5))
+
+	var parent_scene: Node = get_tree().current_scene if get_tree() else null
+	var u := UnitRecruitmentManager.recruit_unit(
+		unit_id,
+		spawn_pos,
+		parent_scene,
+		economy_manager,
+		cur_sup,
+		max_sup,
+		buff_comp != null and buff_comp.is_ace_active
+	)
+	if u:
+		unit_recruited.emit(u, UnitRecruitmentManager.RECRUIT_CATALOG[unit_id]["cost"])
+		_refresh_all_tabs()
+
+
+func _get_current_supply() -> int:
+	if not is_inside_tree():
+		return 1
+	var allies := get_tree().get_nodes_in_group("allies")
+	return maxi(1, allies.size())
+
+
+func _get_max_supply() -> int:
+	var sess = Engine.get_singleton("GameSession") if Engine.has_singleton("GameSession") else null
+	if not sess and is_inside_tree() and get_tree() and get_tree().root.has_node("GameSession"):
+		sess = get_tree().root.get_node("GameSession")
+	if sess and sess.has_method("get_max_supply"):
+		return sess.get_max_supply()
+	return 80
 
 
 func _refresh_all_tabs() -> void:
 	if economy_manager:
 		minerals_lbl.text = "💎 %d" % economy_manager.current_minerals
 	
+	if target_name_lbl:
+		var t_name: String = target_unit.name if target_unit else "JIM RAYNOR"
+		if target_unit and "hero_data" in target_unit and target_unit.hero_data:
+			t_name = target_unit.hero_data.hero_name
+		target_name_lbl.text = "CONSOLA DEL JUGADOR — [%s]" % t_name.to_upper()
+
 	if stats_comp:
 		for attr in ["strength", "dexterity", "intelligence", "endurance"]:
 			var pts := stats_comp.get_attribute_value(attr)
@@ -362,6 +781,7 @@ func _refresh_all_tabs() -> void:
 				attr_labels[attr].text = "%d pts" % pts
 			if attr_buttons.has(attr):
 				attr_buttons[attr].text = "+1 (%d 💎)" % cost
+				attr_buttons[attr].disabled = (economy_manager != null and economy_manager.current_minerals < cost)
 		
 		var na_lbl := root_panel.find_child("NeutronArmorLabel", true, false) as Label
 		var na_btn := root_panel.find_child("NeutronArmorBtn", true, false) as Button
@@ -370,7 +790,52 @@ func _refresh_all_tabs() -> void:
 				stats_comp.neutron_armor_level,
 				stats_comp.get_neutron_armor_mitigation()
 			]
-			na_btn.text = "Mejorar (%d 💎)" % stats_comp.get_next_neutron_armor_cost()
+			var na_cost := stats_comp.get_next_neutron_armor_cost()
+			na_btn.text = "Mejorar (%d 💎)" % na_cost
+			na_btn.disabled = (economy_manager != null and economy_manager.current_minerals < na_cost)
+
+	# Refresh Racial Upgrades tab
+	for up_id in RACIAL_UPGRADE_DEFS.keys():
+		var def: Dictionary = RACIAL_UPGRADE_DEFS[up_id]
+		var cur_lvl: int = racial_levels.get(up_id, 0)
+		var max_lvl: int = def.get("max_lvl", 20)
+		var cost := _get_upgrade_cost(def, cur_lvl)
+		if racial_labels.has(up_id):
+			racial_labels[up_id].text = "Nv. %d / %d" % [cur_lvl, max_lvl]
+		if racial_buttons.has(up_id):
+			if cur_lvl >= max_lvl:
+				racial_buttons[up_id].text = "MÁXIMO"
+				racial_buttons[up_id].disabled = true
+			else:
+				racial_buttons[up_id].text = "+1 (%d 💎)" % cost
+				racial_buttons[up_id].disabled = (economy_manager != null and economy_manager.current_minerals < cost)
+
+	# Refresh Elite Veterancy Section
+	if elite_info_lbl:
+		var is_el: bool = elite_comp.is_elite if elite_comp else false
+		var st: int = elite_comp.elite_stacks if elite_comp else 0
+		var bonus_d: float = elite_comp.get_bonus_damage() if elite_comp else 0.0
+		var spd: float = elite_comp.get_attack_speed_multiplier() if elite_comp else 1.0
+		if is_el:
+			elite_info_lbl.text = "★ UNIDAD ÉLITE ACTIVA ★ Bajas: %d / 125 | Daño extra: +%.0f | Vel. Ataque: x%.2f" % [st, bonus_d, spd]
+			if elite_upgrade_btn:
+				elite_upgrade_btn.disabled = true
+				elite_upgrade_btn.text = "★ YA ES VETERANA ÉLITE ★"
+		else:
+			elite_info_lbl.text = "Unidad: Normal. Puedes ascenderla a Élite para acumular hasta +125 daño y x1.67 vel. ataque por bajas."
+			if elite_upgrade_btn:
+				var vet_cost: int = UnitRecruitmentManager.VETERANCY_COST
+				elite_upgrade_btn.disabled = (economy_manager == null or economy_manager.current_minerals < vet_cost)
+				elite_upgrade_btn.text = "★ ASCENDER A VETERANÍA ÉLITE (%d 💎)" % vet_cost
+
+	# Refresh Supply & Recruitment
+	var cur_sup: int = _get_current_supply()
+	var max_sup: int = _get_max_supply()
+	if supply_lbl:
+		supply_lbl.text = "Suministro: %d / %d" % [cur_sup, max_sup]
+	for u_id in recruit_buttons.keys():
+		var check: Dictionary = UnitRecruitmentManager.can_recruit(u_id, economy_manager.current_minerals if economy_manager else 0, cur_sup, max_sup)
+		recruit_buttons[u_id].disabled = not check.get("can_recruit", false)
 
 
 func _on_attribute_clicked(attr_id: String, is_shift: bool) -> void:

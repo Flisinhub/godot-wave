@@ -130,6 +130,16 @@ static func _load_or_create_archetypes() -> void:
 		18, 18, 22
 	)
 
+	var spectre := _load_or_create(
+		"res://data/heroes/spectre.tres",
+		&"spectre",
+		"Shadow Spectre",
+		"Psionic Black-Ops Spectre",
+		true, # SECRET ARCHETYPE
+		850.0, 55.0, 0.75, 2.5, 300.0, 3.0, 22.0, 4.0,
+		18, 18, 22
+	)
+
 	_standard_archetypes = [marine, raynor, tychus, nova, zeratul, tassadar, marauder, ghost, medic, reaper]
 	_secret_archetype = harbinger
 
@@ -157,7 +167,8 @@ static func _load_or_create_archetypes() -> void:
 
 	_catalog_by_id[&"harbinger"] = harbinger
 	_catalog_by_id[&"secret_harbinger"] = harbinger
-	_catalog_by_id[&"spectre"] = harbinger
+	_catalog_by_id[&"spectre"] = spectre
+	_catalog_by_id[&"shadow_spectre"] = spectre
 	_catalog_by_id[&"xel_naga_harbinger"] = harbinger
 
 static func _load_or_create(
@@ -194,9 +205,9 @@ static func _load_or_create(
 	h.recalculate_derived_stats(true)
 	return h
 
-## Manual selection filtering out secret hero archetypes.
+## Manual selection filtering out secret hero archetypes unless explicitly allowed.
 ## Returns an isolated instance of the selected hero or null if invalid / secret.
-static func select_hero_manual(archetype_id: StringName) -> HeroData:
+static func select_hero_manual(archetype_id: StringName, allow_secret: bool = false) -> HeroData:
 	_ensure_catalog_initialized()
 	var key: StringName = StringName(str(archetype_id).to_lower().strip_edges())
 
@@ -204,8 +215,8 @@ static func select_hero_manual(archetype_id: StringName) -> HeroData:
 		return null
 
 	var hero: HeroData = _catalog_by_id[key]
-	# Strictly prohibit manual selection of secret hero
-	if hero.is_secret:
+	# Strictly prohibit manual selection of secret hero unless allow_secret
+	if hero.is_secret and not allow_secret:
 		return null
 
 	return hero.duplicate_for_instance()

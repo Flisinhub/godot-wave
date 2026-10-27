@@ -41,6 +41,7 @@ const TimedEventSchedule = preload("res://core/events/timed_event_schedule.gd")
 const DropPodManager = preload("res://core/events/drop_pod_manager.gd")
 const NydusCraterManager = preload("res://core/events/nydus_crater_manager.gd")
 const ScheduledAttackManager = preload("res://core/events/scheduled_attack_manager.gd")
+const StoryPhaseManager = preload("res://core/story/story_phase_manager.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -94,6 +95,9 @@ var is_game_over: bool = false
 
 # SFE5 Player RPG Console (Fase 4)
 var player_console: PlayerConsole = null
+
+# SFE5 Story Progression (Fase 9)
+var story_phase_manager: StoryPhaseManager = null
 
 # SFE5 Timed Events & External Pressure (Fase 8)
 var timed_schedule: TimedEventSchedule = null
@@ -156,6 +160,13 @@ func _setup_player_console() -> void:
 	add_child(player_console)
 	if active_hero:
 		player_console.target_unit = active_hero
+	if sc2_hud_root and not sc2_hud_root.console_open_requested.is_connected(_on_hud_console_open_requested):
+		sc2_hud_root.console_open_requested.connect(_on_hud_console_open_requested)
+
+
+func _on_hud_console_open_requested(tab_index: int) -> void:
+	if player_console:
+		player_console.open_console(active_hero, tab_index)
 
 
 func _setup_timed_events_and_pressure() -> void:
@@ -293,14 +304,24 @@ func _get_tree_safe() -> SceneTree:
 
 
 func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random: bool) -> void:
+	var chosen_mode: StringName = start_modal.selected_mode_id if start_modal else &"classic"
+
 	# 1. Apply difficulty scaling
 	if difficulty_manager:
 		difficulty_manager.set_difficulty(diff_tier)
 	elif SFEDifficultyManager.instance:
 		SFEDifficultyManager.set_difficulty(diff_tier)
 
-	# 2. Start GameSession and calculate initial minerals per SFE5 wiki rules
+	# 2. Configure Game Mode & GameSession
 	var sess := _get_game_session()
+	if sess and sess.has_method("set_game_mode"):
+		sess.set_game_mode(chosen_mode)
+	elif sess:
+		var mode_res_path: String = "res://data/modes/%s.tres" % str(chosen_mode)
+		if ResourceLoader.exists(mode_res_path):
+			sess.active_mode = load(mode_res_path)
+
+	# 3. Start GameSession and calculate initial minerals per SFE5 wiki rules
 	var initial_mins: int = 12000
 	var max_sup: int = 80
 	if sess:
@@ -313,7 +334,19 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	if economy_manager:
 		economy_manager.reset(initial_mins)
 
-	# 3. Bind Selected Hero Data & Visuals
+	# 4. Setup Story Phase Manager (Fase 9: Zerg -> Protoss 1 -> Protoss 2 -> Jefes Cúspide)
+	if story_phase_manager == null:
+		story_phase_manager = StoryPhaseManager.new(3, 3)
+		if not story_phase_manager.phase_changed.is_connected(_on_story_phase_changed):
+			story_phase_manager.phase_changed.connect(_on_story_phase_changed)
+
+	var bounty_rate: int = 50
+	if economy_manager and "bounty_per_kill" in economy_manager:
+		bounty_rate = economy_manager.bounty_per_kill
+	elif sess and "active_mode" in sess and sess.active_mode and "mineral_bounty_mult" in sess.active_mode:
+		bounty_rate = int(50 * sess.active_mode.mineral_bounty_mult)
+
+	# 5. Bind Selected Hero Data & Visuals
 	if selected_hero and active_hero:
 		active_hero.hero_data = selected_hero
 		var diff_paths := [
@@ -343,9 +376,10 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 		if player_console:
 			player_console.target_unit = active_hero
 
-	# 4. Update SC2 Top Bar
+	# 6. Update SC2 Top Bar
 	if sc2_hud_root:
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
+		sc2_hud_root.update_story_phase(story_phase_manager.get_phase_title(), bounty_rate)
 		if economy_manager:
 			sc2_hud_root.update_minerals(economy_manager.current_minerals)
 		sc2_hud_root.update_supply(1, max_sup)
@@ -539,6 +573,8 @@ func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
 
 func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 	spawners_destroyed_count += 1
+	if story_phase_manager:
+		story_phase_manager.report_spawner_cleared(&"zerg")
 	_update_spawner_minimap()
 	if sc2_hud_root and sc2_hud_root.top_wave_label:
 		if remaining > 0:
@@ -547,6 +583,17 @@ func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 		else:
 			sc2_hud_root.top_wave_label.text = "¡TODOS LOS ENGENDRADORES ERRADICADOS!"
 			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.3))
+
+
+func _on_story_phase_changed(_old_phase: int, _new_phase: int, phase_title: String, announcement: String) -> void:
+	if sc2_hud_root:
+		var bounty_rate: int = 50
+		if economy_manager and "bounty_per_kill" in economy_manager:
+			bounty_rate = economy_manager.bounty_per_kill
+		sc2_hud_root.update_story_phase(phase_title, bounty_rate)
+		if sc2_hud_root.top_wave_label:
+			sc2_hud_root.top_wave_label.text = "¡%s!" % announcement.to_upper()
+			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.3, 0.9, 1.0))
 
 
 func _end_game(victory: bool) -> void:
