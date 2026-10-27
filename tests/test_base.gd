@@ -4,6 +4,8 @@ extends RefCounted
 ## SFE_TestBase - Common testing framework for SFE5 unit, integration, and E2E tests.
 ## Provides structured assertions, failure diagnostics, and test state tracking.
 
+static var runner_tree: SceneTree = null
+
 var _last_error: String = ""
 var _is_skipped: bool = false
 var _skip_reason: String = ""

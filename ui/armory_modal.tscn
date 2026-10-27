@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://arm0rym0da1u1"]
+
+[ext_resource type="Script" path="res://ui/armory_modal.gd" id="1_armory_modal_script"]
+
+[node name="ArmoryModal" type="CanvasLayer"]
+layer = 95
+script = ExtResource("1_armory_modal_script")

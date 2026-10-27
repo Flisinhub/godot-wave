@@ -80,6 +80,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			var vp: Viewport = get_viewport()
 			if vp:
 				vp.set_input_as_handled()
+		elif event.keycode == KEY_ESCAPE and is_terminal_open:
+			close_terminal()
+			var vp: Viewport = get_viewport()
+			if vp:
+				vp.set_input_as_handled()
 
 
 func toggle_terminal() -> void:
@@ -92,11 +97,57 @@ func toggle_terminal() -> void:
 func open_terminal() -> void:
 	is_terminal_open = true
 	terminal_opened.emit()
+	var hud: Node = _find_hud()
+	if hud and hud.has_method("open_armory_modal"):
+		hud.open_armory_modal(self)
+	var sb: Node = _get_signal_bus()
+	if sb:
+		if not sb.has_user_signal("armory_terminal_opened") and not sb.has_signal("armory_terminal_opened"):
+			sb.add_user_signal("armory_terminal_opened", [
+				{"name": "terminal", "type": TYPE_OBJECT}
+			])
+		sb.emit_signal("armory_terminal_opened", self)
 
 
 func close_terminal() -> void:
 	is_terminal_open = false
 	terminal_closed.emit()
+	var hud: Node = _find_hud()
+	if hud and hud.has_method("close_armory_modal"):
+		hud.close_armory_modal()
+	var sb: Node = _get_signal_bus()
+	if sb:
+		if not sb.has_user_signal("armory_terminal_closed") and not sb.has_signal("armory_terminal_closed"):
+			sb.add_user_signal("armory_terminal_closed", [
+				{"name": "terminal", "type": TYPE_OBJECT}
+			])
+		sb.emit_signal("armory_terminal_closed", self)
+
+
+func _find_hud() -> Node:
+	if is_inside_tree():
+		var tree: SceneTree = get_tree()
+		if tree and tree.current_scene:
+			var h: Node = tree.current_scene.get_node_or_null("SC2HUDRoot")
+			if h != null:
+				return h
+			h = tree.current_scene.find_child("SC2HUDRoot", true, false)
+			if h != null:
+				return h
+		if tree and tree.root:
+			var h: Node = tree.root.find_child("SC2HUDRoot", true, false)
+			if h != null:
+				return h
+	var p: Node = get_parent()
+	while p != null:
+		var h: Node = p.get_node_or_null("SC2HUDRoot")
+		if h != null:
+			return h
+		h = p.find_child("SC2HUDRoot", true, false)
+		if h != null:
+			return h
+		p = p.get_parent()
+	return null
 
 
 func _on_body_entered(body: Node3D) -> void:

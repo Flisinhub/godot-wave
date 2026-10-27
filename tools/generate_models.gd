@@ -25,6 +25,16 @@ const AUTO_TURRET_STRUCT_PATH := "res://assets/models/structures/auto_turret_mes
 const CC_MESH_PATH := "res://assets/models/structures/command_center_mesh.tres"
 const BUNKER_MESH_PATH := "res://assets/models/structures/bunker_structure_mesh.tres"
 
+const TYCHUS_GLB_PATH := "res://assets/models/heroes/tychus.glb"
+const NOVA_GLB_PATH := "res://assets/models/heroes/nova.glb"
+const ZERATUL_GLB_PATH := "res://assets/models/heroes/zeratul.glb"
+const TASSADAR_GLB_PATH := "res://assets/models/heroes/tassadar.glb"
+const MEDIC_GLB_PATH := "res://assets/models/heroes/medic.glb"
+const HARBINGER_GLB_PATH := "res://assets/models/heroes/harbinger.glb"
+const HERO_RAYNOR_GLB_PATH := "res://assets/models/heroes/raynor.glb"
+const WALL_GLB_PATH := "res://assets/models/structures/wall_segment.glb"
+const WALL_MESH_PATH := "res://assets/models/structures/wall_segment_mesh.tres"
+
 var mat_marine_armor: Material
 var mat_marine_steel: Material
 var mat_marine_visor: Material
@@ -40,6 +50,41 @@ var mat_auto_turret: Material
 var mat_hull: Material
 var mat_dark_steel: Material
 var mat_blue_glow: Material
+
+# Hero Materials
+var mat_tychus_armor: Material
+var mat_tychus_steel: Material
+var mat_tychus_brass: Material
+var mat_tychus_visor: Material
+var mat_tychus_hazard: Material
+
+var mat_nova_armor: Material
+var mat_nova_dark: Material
+var mat_nova_visor: Material
+var mat_nova_hair: Material
+var mat_nova_rifle: Material
+
+var mat_zeratul_armor: Material
+var mat_zeratul_cloth: Material
+var mat_zeratul_blade: Material
+var mat_zeratul_skin: Material
+
+var mat_tassadar_gold: Material
+var mat_tassadar_cloth: Material
+var mat_tassadar_psionic: Material
+var mat_tassadar_skin: Material
+
+var mat_medic_armor: Material
+var mat_medic_trim: Material
+var mat_medic_cross: Material
+var mat_medic_glow: Material
+var mat_medic_steel: Material
+
+var mat_harbinger_obsidian: Material
+var mat_harbinger_gold: Material
+var mat_harbinger_glow: Material
+
+var mat_wall_hazard: Material
 
 
 func _init() -> void:
@@ -59,7 +104,7 @@ func _init() -> void:
 	_build_auto_turret_mesh()
 	_ensure_structure_meshes()
 	
-	# 2. Export 9 binary .glb models with AnimationPlayer
+	# 2. Export base 9 binary .glb models with AnimationPlayer
 	_export_marine_glb()
 	_export_raynor_glb()
 	_export_zergling_glb()
@@ -70,7 +115,17 @@ func _init() -> void:
 	_export_bunker_glb()
 	_export_auto_turret_glb()
 	
-	print("[ModelGenerator] All 9 .glb models and meshes generated and exported successfully!")
+	# 3. Export 6 missing heroes + wall fortification .glb models
+	_export_tychus_glb()
+	_export_nova_glb()
+	_export_zeratul_glb()
+	_export_tassadar_glb()
+	_export_medic_glb()
+	_export_harbinger_glb()
+	_export_hero_raynor_copy()
+	_export_wall_segment_glb()
+	
+	print("[ModelGenerator] All 16 .glb models and meshes generated and exported successfully!")
 	quit(0)
 
 
@@ -80,10 +135,14 @@ func _ensure_directories() -> void:
 		dir.make_dir("assets")
 	if not dir.dir_exists("assets/models"):
 		dir.make_dir("assets/models")
+	if not dir.dir_exists("assets/models/heroes"):
+		dir.make_dir_recursive("assets/models/heroes")
 	if not dir.dir_exists("assets/models/structures"):
 		dir.make_dir_recursive("assets/models/structures")
 	if not dir.dir_exists("assets/materials"):
 		dir.make_dir("assets/materials")
+	if not dir.dir_exists("assets/materials/heroes"):
+		dir.make_dir_recursive("assets/materials/heroes")
 	if not dir.dir_exists("assets/materials/structures"):
 		dir.make_dir_recursive("assets/materials/structures")
 	if not dir.dir_exists("assets/shaders"):
@@ -124,6 +183,47 @@ func _load_materials() -> void:
 	mat_hull = _load_or_create_std_mat("res://assets/materials/structures/terran_hull_pbr.tres", Color(0.32, 0.35, 0.40), 0.8, 0.4)
 	mat_dark_steel = _load_or_create_std_mat("res://assets/materials/structures/terran_dark_steel.tres", Color(0.18, 0.20, 0.22), 0.85, 0.35)
 	mat_blue_glow = _load_or_create_std_mat("res://assets/materials/structures/terran_blue_glow.tres", Color(0.2, 0.6, 1.0), 0.1, 0.2, Color(0.2, 0.6, 1.0), 3.0)
+
+	# Tychus
+	mat_tychus_armor = _load_or_create_std_mat("res://assets/materials/heroes/tychus_armor_pbr.tres", Color(0.20, 0.28, 0.35), 0.85, 0.35)
+	mat_tychus_steel = _load_or_create_std_mat("res://assets/materials/heroes/tychus_steel_dark.tres", Color(0.12, 0.14, 0.16), 0.90, 0.40)
+	mat_tychus_brass = _load_or_create_std_mat("res://assets/materials/heroes/tychus_brass.tres", Color(0.85, 0.65, 0.20), 0.90, 0.25)
+	mat_tychus_visor = _load_or_create_std_mat("res://assets/materials/heroes/tychus_visor_glow.tres", Color(1.0, 0.55, 0.1), 0.1, 0.2, Color(1.0, 0.50, 0.05), 4.5)
+	mat_tychus_hazard = _load_or_create_std_mat("res://assets/materials/heroes/tychus_hazard.tres", Color(0.95, 0.80, 0.10), 0.2, 0.45)
+
+	# Nova
+	mat_nova_armor = _load_or_create_std_mat("res://assets/materials/heroes/nova_armor_pbr.tres", Color(0.88, 0.90, 0.94), 0.45, 0.25)
+	mat_nova_dark = _load_or_create_std_mat("res://assets/materials/heroes/nova_undersuit.tres", Color(0.12, 0.13, 0.15), 0.20, 0.60)
+	mat_nova_visor = _load_or_create_std_mat("res://assets/materials/heroes/nova_visor_glow.tres", Color(0.2, 0.85, 1.0), 0.1, 0.2, Color(0.2, 0.85, 1.0), 4.5)
+	mat_nova_hair = _load_or_create_std_mat("res://assets/materials/heroes/nova_hair.tres", Color(0.92, 0.82, 0.45), 0.1, 0.65)
+	mat_nova_rifle = _load_or_create_std_mat("res://assets/materials/heroes/nova_rifle_steel.tres", Color(0.20, 0.22, 0.25), 0.85, 0.30)
+
+	# Zeratul
+	mat_zeratul_armor = _load_or_create_std_mat("res://assets/materials/heroes/zeratul_armor_pbr.tres", Color(0.18, 0.19, 0.22), 0.75, 0.35)
+	mat_zeratul_cloth = _load_or_create_std_mat("res://assets/materials/heroes/zeratul_cloth.tres", Color(0.14, 0.12, 0.18), 0.05, 0.85)
+	mat_zeratul_blade = _load_or_create_std_mat("res://assets/materials/heroes/zeratul_warp_blade.tres", Color(0.2, 1.0, 0.35), 0.1, 0.2, Color(0.2, 1.0, 0.35), 5.5)
+	mat_zeratul_skin = _load_or_create_std_mat("res://assets/materials/heroes/zeratul_skin.tres", Color(0.35, 0.40, 0.42), 0.0, 0.60)
+
+	# Tassadar
+	mat_tassadar_gold = _load_or_create_std_mat("res://assets/materials/heroes/tassadar_gold_pbr.tres", Color(0.85, 0.70, 0.22), 0.90, 0.25)
+	mat_tassadar_cloth = _load_or_create_std_mat("res://assets/materials/heroes/tassadar_cloth.tres", Color(0.12, 0.25, 0.65), 0.05, 0.75)
+	mat_tassadar_psionic = _load_or_create_std_mat("res://assets/materials/heroes/tassadar_psionic_glow.tres", Color(0.3, 0.75, 1.0), 0.1, 0.2, Color(0.3, 0.75, 1.0), 4.8)
+	mat_tassadar_skin = _load_or_create_std_mat("res://assets/materials/heroes/tassadar_skin.tres", Color(0.48, 0.45, 0.40), 0.0, 0.55)
+
+	# Medic
+	mat_medic_armor = _load_or_create_std_mat("res://assets/materials/heroes/medic_armor_pbr.tres", Color(0.92, 0.92, 0.92), 0.45, 0.30)
+	mat_medic_trim = _load_or_create_std_mat("res://assets/materials/heroes/medic_trim.tres", Color(0.35, 0.42, 0.30), 0.10, 0.50)
+	mat_medic_cross = _load_or_create_std_mat("res://assets/materials/heroes/medic_cross.tres", Color(0.90, 0.15, 0.15), 0.10, 0.40)
+	mat_medic_glow = _load_or_create_std_mat("res://assets/materials/heroes/medic_glow.tres", Color(0.2, 0.95, 0.45), 0.1, 0.2, Color(0.2, 0.95, 0.45), 4.0)
+	mat_medic_steel = _load_or_create_std_mat("res://assets/materials/heroes/medic_steel.tres", Color(0.18, 0.20, 0.22), 0.85, 0.40)
+
+	# Harbinger
+	mat_harbinger_obsidian = _load_or_create_std_mat("res://assets/materials/heroes/harbinger_obsidian_pbr.tres", Color(0.08, 0.08, 0.10), 0.85, 0.20)
+	mat_harbinger_gold = _load_or_create_std_mat("res://assets/materials/heroes/harbinger_gold.tres", Color(0.92, 0.78, 0.25), 0.95, 0.20)
+	mat_harbinger_glow = _load_or_create_std_mat("res://assets/materials/heroes/harbinger_glow.tres", Color(0.85, 0.25, 0.95), 0.1, 0.2, Color(0.85, 0.25, 0.95), 5.5)
+
+	# Wall
+	mat_wall_hazard = _load_or_create_std_mat("res://assets/materials/structures/terran_hazard_stripe.tres", Color(0.95, 0.75, 0.10), 0.2, 0.40)
 
 
 func _load_or_create_std_mat(path: String, albedo: Color, metallic: float, roughness: float, emission: Color = Color.BLACK, emission_energy: float = 0.0) -> Material:
@@ -254,26 +354,38 @@ func _add_wedge(st: SurfaceTool, tip: Vector3, b1: Vector3, b2: Vector3, b3: Vec
 	st.set_color(col)
 	var n1 := (b2 - b1).cross(tip - b1).normalized()
 	st.set_normal(n1)
+	st.set_uv(Vector2(0, 0))
 	st.add_vertex(b1)
+	st.set_uv(Vector2(1, 0))
 	st.add_vertex(b2)
+	st.set_uv(Vector2(0.5, 1))
 	st.add_vertex(tip)
 	
 	var n2 := (b3 - b2).cross(tip - b2).normalized()
 	st.set_normal(n2)
+	st.set_uv(Vector2(0, 0))
 	st.add_vertex(b2)
+	st.set_uv(Vector2(1, 0))
 	st.add_vertex(b3)
+	st.set_uv(Vector2(0.5, 1))
 	st.add_vertex(tip)
 	
 	var n3 := (b1 - b3).cross(tip - b3).normalized()
 	st.set_normal(n3)
+	st.set_uv(Vector2(0, 0))
 	st.add_vertex(b3)
+	st.set_uv(Vector2(1, 0))
 	st.add_vertex(b1)
+	st.set_uv(Vector2(0.5, 1))
 	st.add_vertex(tip)
 	
 	var n_base := (b2 - b1).cross(b3 - b1).normalized()
 	st.set_normal(n_base)
+	st.set_uv(Vector2(0, 0))
 	st.add_vertex(b1)
+	st.set_uv(Vector2(1, 0))
 	st.add_vertex(b3)
+	st.set_uv(Vector2(0.5, 1))
 	st.add_vertex(b2)
 
 
@@ -1318,4 +1430,1064 @@ func _export_auto_turret_glb() -> void:
 	
 	ap.add_animation_library("", lib)
 	_export_scene_to_glb(root, "res://assets/models/structures/auto_turret.glb")
+	root.free()
+
+
+# ==============================================================================
+# 5. EXPANDED HERO & STRUCTURE GLB EXPORTERS (SFE5 SPECIFICATION)
+# ==============================================================================
+
+func _export_tychus_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Tychus"
+	var s: float = 1.15
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Heavy Armor (Dark Teal Gunmetal)
+	var st_armor := SurfaceTool.new()
+	st_armor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_tapered_box(st_armor, Vector3(0, 0.72 * s, 0.0), Vector3(0.48, 0.22, 0.36) * s, Vector3(0.56, 0.22, 0.40) * s)
+	_add_box(st_armor, Vector3(0, 0.94 * s, 0.0), Vector3(0.60, 0.26, 0.42) * s)
+	_add_tapered_box(st_armor, Vector3(0, 1.22 * s, -0.02 * s), Vector3(0.68, 0.38, 0.46) * s, Vector3(0.78, 0.38, 0.52) * s)
+	# Oversized Pauldrons
+	_add_box(st_armor, Vector3(-0.56 * s, 1.40 * s, 0.0), Vector3(0.38, 0.36, 0.46) * s)
+	_add_box(st_armor, Vector3(0.56 * s, 1.40 * s, 0.0), Vector3(0.38, 0.36, 0.46) * s)
+	_add_box(st_armor, Vector3(-0.58 * s, 1.56 * s, 0.0), Vector3(0.30, 0.08, 0.40) * s)
+	_add_box(st_armor, Vector3(0.58 * s, 1.56 * s, 0.0), Vector3(0.30, 0.08, 0.40) * s)
+	# Arms & Gauntlets
+	_add_box(st_armor, Vector3(-0.48 * s, 1.12 * s, -0.02 * s), Vector3(0.24, 0.26, 0.26) * s)
+	_add_box(st_armor, Vector3(0.48 * s, 1.12 * s, -0.02 * s), Vector3(0.24, 0.26, 0.26) * s)
+	_add_box(st_armor, Vector3(-0.42 * s, 0.92 * s, -0.20 * s), Vector3(0.22, 0.24, 0.36) * s)
+	_add_box(st_armor, Vector3(0.42 * s, 0.92 * s, -0.20 * s), Vector3(0.22, 0.24, 0.36) * s)
+	# Legs & Boots
+	_add_box(st_armor, Vector3(-0.25 * s, 0.50 * s, 0.0), Vector3(0.26, 0.30, 0.30) * s)
+	_add_box(st_armor, Vector3(0.25 * s, 0.50 * s, 0.0), Vector3(0.26, 0.30, 0.30) * s)
+	_add_box(st_armor, Vector3(-0.25 * s, 0.40 * s, -0.16 * s), Vector3(0.24, 0.16, 0.16) * s)
+	_add_box(st_armor, Vector3(0.25 * s, 0.40 * s, -0.16 * s), Vector3(0.24, 0.16, 0.16) * s)
+	_add_box(st_armor, Vector3(-0.25 * s, 0.22 * s, -0.02 * s), Vector3(0.28, 0.28, 0.30) * s)
+	_add_box(st_armor, Vector3(0.25 * s, 0.22 * s, -0.02 * s), Vector3(0.28, 0.28, 0.30) * s)
+	_add_box(st_armor, Vector3(-0.25 * s, 0.07 * s, -0.05 * s), Vector3(0.30, 0.14, 0.44) * s)
+	_add_box(st_armor, Vector3(0.25 * s, 0.07 * s, -0.05 * s), Vector3(0.30, 0.14, 0.44) * s)
+	# Heavy CMC-600 Helmet
+	_add_box(st_armor, Vector3(0, 1.62 * s, 0.03 * s), Vector3(0.44, 0.38, 0.42) * s)
+	_add_box(st_armor, Vector3(0, 1.80 * s, 0.03 * s), Vector3(0.34, 0.08, 0.34) * s)
+	st_armor.generate_normals()
+	st_armor.generate_tangents()
+	st_armor.set_material(mat_tychus_armor)
+	st_armor.commit(b_mesh)
+
+	# Surface 1: Dark Steel Chassis & Exhaust
+	var st_steel := SurfaceTool.new()
+	st_steel.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_steel, Vector3(0, 1.20 * s, 0.35 * s), Vector3(0.56, 0.50, 0.32) * s)
+	_add_cylinder(st_steel, Vector3(-0.20 * s, 1.55 * s, 0.38 * s), 0.06 * s, 0.25 * s, 8)
+	_add_cylinder(st_steel, Vector3(0.20 * s, 1.55 * s, 0.38 * s), 0.06 * s, 0.25 * s, 8)
+	_add_cylinder(st_steel, Vector3(0, 1.45 * s, 0.0), 0.22 * s, 0.10 * s, 8)
+	_add_box(st_steel, Vector3(0, 0.82 * s, -0.18 * s), Vector3(0.32, 0.14, 0.06) * s)
+	_add_cylinder(st_steel, Vector3(-0.48 * s, 0.90 * s, -0.22 * s), 0.05 * s, 0.12 * s, 8)
+	_add_cylinder(st_steel, Vector3(0.48 * s, 0.90 * s, -0.22 * s), 0.05 * s, 0.12 * s, 8)
+	st_steel.generate_normals()
+	st_steel.generate_tangents()
+	st_steel.set_material(mat_tychus_steel)
+	st_steel.commit(b_mesh)
+
+	# Surface 2: Brass Trim & Ammo Feeder
+	var st_brass := SurfaceTool.new()
+	st_brass.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_brass, Vector3(0, 0.70 * s, -0.17 * s), Vector3(0.18, 0.12, 0.04) * s)
+	_add_box(st_brass, Vector3(0.32 * s, 1.05 * s, 0.20 * s), Vector3(0.12, 0.10, 0.28) * s)
+	st_brass.generate_normals()
+	st_brass.generate_tangents()
+	st_brass.set_material(mat_tychus_brass)
+	st_brass.commit(b_mesh)
+
+	# Surface 3: Amber Glowing Visor & Cigar
+	var st_visor := SurfaceTool.new()
+	st_visor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_visor, Vector3(0, 1.62 * s, -0.17 * s), Vector3(0.30, 0.10, 0.03) * s)
+	_add_box(st_visor, Vector3(0.08 * s, 1.50 * s, -0.20 * s), Vector3(0.04, 0.04, 0.10) * s)
+	st_visor.generate_normals()
+	st_visor.generate_tangents()
+	st_visor.set_material(mat_tychus_visor)
+	st_visor.commit(b_mesh)
+
+	# Surface 4: Pauldron Hazard Markings
+	var st_hazard := SurfaceTool.new()
+	st_hazard.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_hazard, Vector3(-0.62 * s, 1.38 * s, -0.18 * s), Vector3(0.12, 0.20, 0.02) * s)
+	_add_box(st_hazard, Vector3(0.62 * s, 1.38 * s, -0.18 * s), Vector3(0.12, 0.20, 0.02) * s)
+	st_hazard.generate_normals()
+	st_hazard.generate_tangents()
+	st_hazard.set_material(mat_tychus_hazard)
+	st_hazard.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: Dual Minigun Gatling Assembly
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.40, 0.98, -0.42)
+	var w_mesh := ArrayMesh.new()
+
+	var st_w_steel := SurfaceTool.new()
+	st_w_steel.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_steel, Vector3(0, 0, -0.05), Vector3(0.28, 0.24, 0.45))
+	_add_cylinder(st_w_steel, Vector3(-0.16, -0.10, 0.08), 0.14, 0.22, 10)
+	_add_cylinder(st_w_steel, Vector3(0, 0.02, -0.42), 0.06, 0.50, 8)
+	# Dual Gatling Barrels
+	_add_cylinder(st_w_steel, Vector3(-0.08, 0.02, -0.45), 0.04, 0.52, 8)
+	_add_cylinder(st_w_steel, Vector3(0.08, 0.02, -0.45), 0.04, 0.52, 8)
+	st_w_steel.generate_normals()
+	st_w_steel.generate_tangents()
+	st_w_steel.set_material(mat_tychus_steel)
+	st_w_steel.commit(w_mesh)
+
+	var st_w_hazard := SurfaceTool.new()
+	st_w_hazard.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_hazard, Vector3(0, 0.12, -0.32), Vector3(0.30, 0.05, 0.28))
+	st_w_hazard.generate_normals()
+	st_w_hazard.generate_tangents()
+	st_w_hazard.set_material(mat_tychus_hazard)
+	st_w_hazard.commit(w_mesh)
+
+	var st_w_brass := SurfaceTool.new()
+	st_w_brass.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_w_brass, Vector3(-0.08, 0.02, -0.68), 0.05, 0.04, 8)
+	_add_cylinder(st_w_brass, Vector3(0.08, 0.02, -0.68), 0.05, 0.04, 8)
+	st_w_brass.generate_normals()
+	st_w_brass.generate_tangents()
+	st_w_brass.set_material(mat_tychus_brass)
+	st_w_brass.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0.02, -0.75)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.4
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.7, 1.4], [Vector3.ZERO, Vector3(0, 0.03, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.7, 1.4], [Vector3(0.40, 0.98, -0.42), Vector3(0.40, 1.01, -0.42), Vector3(0.40, 0.98, -0.42)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.8
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.2, 0.4, 0.6, 0.8], [Vector3.ZERO, Vector3(0.06, 0.06, 0), Vector3.ZERO, Vector3(-0.06, 0.06, 0), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.2, 0.4, 0.6, 0.8], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.06), Quaternion.IDENTITY, Quaternion(Vector3.UP, -0.06), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.2, 0.4, 0.6, 0.8], [Vector3(0.40, 0.98, -0.42), Vector3(0.44, 1.04, -0.38), Vector3(0.40, 0.98, -0.42), Vector3(0.36, 1.04, -0.38), Vector3(0.40, 0.98, -0.42)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.30
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.05, 0.10, 0.15, 0.20, 0.30], [Vector3(0.40, 0.98, -0.42), Vector3(0.40, 0.99, -0.36), Vector3(0.40, 0.98, -0.40), Vector3(0.40, 0.99, -0.36), Vector3(0.40, 0.98, -0.41), Vector3(0.40, 0.98, -0.42)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.06, 0.30], [Vector3.ZERO, Vector3(0, 0, 0.04), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.3
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.6, 1.3], [Vector3.ZERO, Vector3(0, -0.30, 0.40), Vector3(0, -0.60, 0.80)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.6, 1.3], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.7), Quaternion(Vector3.RIGHT, 1.57)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.6, 1.3], [Vector3(0.40, 0.98, -0.42), Vector3(0.55, 0.45, -0.20), Vector3(0.65, 0.08, 0.15)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, TYCHUS_GLB_PATH)
+	root.free()
+
+
+func _export_nova_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Nova"
+	var s: float = 0.98
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Sleek Stealth White/Silver Armor
+	var st_armor := SurfaceTool.new()
+	st_armor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_tapered_box(st_armor, Vector3(0, 1.12 * s, -0.02 * s), Vector3(0.38, 0.28, 0.24) * s, Vector3(0.44, 0.28, 0.28) * s)
+	_add_box(st_armor, Vector3(0, 0.88 * s, 0.0), Vector3(0.32, 0.20, 0.22) * s)
+	_add_tapered_box(st_armor, Vector3(0, 0.70 * s, 0.0), Vector3(0.30, 0.16, 0.20) * s, Vector3(0.36, 0.16, 0.22) * s)
+	_add_box(st_armor, Vector3(-0.32 * s, 1.26 * s, 0.0), Vector3(0.18, 0.18, 0.26) * s)
+	_add_box(st_armor, Vector3(0.32 * s, 1.26 * s, 0.0), Vector3(0.18, 0.18, 0.26) * s)
+	_add_box(st_armor, Vector3(-0.28 * s, 0.88 * s, -0.12 * s), Vector3(0.14, 0.16, 0.22) * s)
+	_add_box(st_armor, Vector3(0.28 * s, 0.88 * s, -0.12 * s), Vector3(0.14, 0.16, 0.22) * s)
+	_add_box(st_armor, Vector3(-0.16 * s, 0.46 * s, 0.0), Vector3(0.18, 0.24, 0.22) * s)
+	_add_box(st_armor, Vector3(0.16 * s, 0.46 * s, 0.0), Vector3(0.18, 0.24, 0.22) * s)
+	_add_box(st_armor, Vector3(-0.16 * s, 0.06 * s, -0.02 * s), Vector3(0.18, 0.12, 0.32) * s)
+	_add_box(st_armor, Vector3(0.16 * s, 0.06 * s, -0.02 * s), Vector3(0.18, 0.12, 0.32) * s)
+	_add_box(st_armor, Vector3(0, 1.48 * s, 0.02 * s), Vector3(0.26, 0.28, 0.28) * s)
+	st_armor.generate_normals()
+	st_armor.generate_tangents()
+	st_armor.set_material(mat_nova_armor)
+	st_armor.commit(b_mesh)
+
+	# Surface 1: Dark Stealth Undersuit
+	var st_dark := SurfaceTool.new()
+	st_dark.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_dark, Vector3(0, 1.34 * s, 0.0), 0.10 * s, 0.12 * s, 8)
+	_add_box(st_dark, Vector3(-0.20 * s, 0.98 * s, 0.0), Vector3(0.08, 0.18, 0.16) * s)
+	_add_box(st_dark, Vector3(0.20 * s, 0.98 * s, 0.0), Vector3(0.08, 0.18, 0.16) * s)
+	_add_box(st_dark, Vector3(-0.28 * s, 0.74 * s, -0.18 * s), Vector3(0.12, 0.14, 0.14) * s)
+	_add_box(st_dark, Vector3(0.28 * s, 0.74 * s, -0.18 * s), Vector3(0.12, 0.14, 0.14) * s)
+	_add_box(st_dark, Vector3(-0.16 * s, 0.26 * s, -0.01 * s), Vector3(0.16, 0.22, 0.18) * s)
+	_add_box(st_dark, Vector3(0.16 * s, 0.26 * s, -0.01 * s), Vector3(0.16, 0.22, 0.18) * s)
+	st_dark.generate_normals()
+	st_dark.generate_tangents()
+	st_dark.set_material(mat_nova_dark)
+	st_dark.commit(b_mesh)
+
+	# Surface 2: Golden Blonde Ponytail
+	var st_hair := SurfaceTool.new()
+	st_hair.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_hair, Vector3(0, 1.54 * s, 0.16 * s), 0.04 * s, 0.06 * s, 8)
+	_add_tapered_box(st_hair, Vector3(0, 1.42 * s, 0.22 * s), Vector3(0.08, 0.18, 0.08) * s, Vector3(0.06, 0.18, 0.06) * s)
+	_add_tapered_box(st_hair, Vector3(0, 1.24 * s, 0.25 * s), Vector3(0.06, 0.20, 0.06) * s, Vector3(0.03, 0.20, 0.03) * s)
+	st_hair.generate_normals()
+	st_hair.generate_tangents()
+	st_hair.set_material(mat_nova_hair)
+	st_hair.commit(b_mesh)
+
+	# Surface 3: Luminous Cyan Ocular Visor & Conduits
+	var st_visor := SurfaceTool.new()
+	st_visor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_visor, Vector3(0, 1.50 * s, -0.13 * s), Vector3(0.24, 0.08, 0.04) * s)
+	_add_box(st_visor, Vector3(0, 1.08 * s, 0.14 * s), Vector3(0.04, 0.36, 0.02) * s)
+	_add_box(st_visor, Vector3(-0.18 * s, 0.46 * s, -0.11 * s), Vector3(0.02, 0.22, 0.02) * s)
+	_add_box(st_visor, Vector3(0.18 * s, 0.46 * s, -0.11 * s), Vector3(0.02, 0.22, 0.02) * s)
+	st_visor.generate_normals()
+	st_visor.generate_tangents()
+	st_visor.set_material(mat_nova_visor)
+	st_visor.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: C-20A Canister Sniper Rifle
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.28, 0.95, -0.40)
+	var w_mesh := ArrayMesh.new()
+
+	var st_rifle := SurfaceTool.new()
+	st_rifle.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_rifle, Vector3(0, 0, 0), Vector3(0.08, 0.14, 0.48))
+	_add_box(st_rifle, Vector3(0, -0.04, 0.28), Vector3(0.06, 0.12, 0.18))
+	_add_cylinder(st_rifle, Vector3(0, 0.02, -0.45), 0.022, 0.50, 8)
+	_add_cylinder(st_rifle, Vector3(0, 0.02, -0.74), 0.036, 0.16, 8)
+	_add_box(st_rifle, Vector3(0, 0.10, -0.08), Vector3(0.06, 0.07, 0.30))
+	st_rifle.generate_normals()
+	st_rifle.generate_tangents()
+	st_rifle.set_material(mat_nova_rifle)
+	st_rifle.commit(w_mesh)
+
+	var st_w_visor := SurfaceTool.new()
+	st_w_visor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_visor, Vector3(0, 0.10, -0.235), Vector3(0.045, 0.05, 0.01))
+	_add_box(st_w_visor, Vector3(-0.042, 0.01, -0.05), Vector3(0.01, 0.04, 0.18))
+	st_w_visor.generate_normals()
+	st_w_visor.generate_tangents()
+	st_w_visor.set_material(mat_nova_visor)
+	st_w_visor.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0.02, -0.83)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.6
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.8, 1.6], [Vector3.ZERO, Vector3(0, 0.025, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.8, 1.6], [Vector3(0.28, 0.95, -0.40), Vector3(0.28, 0.97, -0.40), Vector3(0.28, 0.95, -0.40)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.7
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.175, 0.35, 0.525, 0.7], [Vector3.ZERO, Vector3(0.03, 0.04, 0), Vector3.ZERO, Vector3(-0.03, 0.04, 0), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.175, 0.35, 0.525, 0.7], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.04), Quaternion.IDENTITY, Quaternion(Vector3.UP, -0.04), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.175, 0.35, 0.525, 0.7], [Vector3(0.28, 0.95, -0.40), Vector3(0.30, 0.99, -0.38), Vector3(0.28, 0.95, -0.40), Vector3(0.26, 0.99, -0.38), Vector3(0.28, 0.95, -0.40)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.5
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.06, 0.5], [Vector3(0.28, 0.95, -0.40), Vector3(0.28, 0.97, -0.28), Vector3(0.28, 0.95, -0.40)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.06, 0.5], [Vector3.ZERO, Vector3(0, 0, 0.02), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.1
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.55, 1.1], [Vector3.ZERO, Vector3(0, -0.25, 0.30), Vector3(0, -0.50, 0.60)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.55, 1.1], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.8), Quaternion(Vector3.RIGHT, 1.57)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.55, 1.1], [Vector3(0.28, 0.95, -0.40), Vector3(0.40, 0.40, -0.15), Vector3(0.50, 0.05, 0.10)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, NOVA_GLB_PATH)
+	root.free()
+
+
+func _export_zeratul_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Zeratul"
+	var s: float = 1.05
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Protoss Leathery Skin & Digitigrade Legs
+	var st_skin := SurfaceTool.new()
+	st_skin.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_skin, Vector3(0, 1.34 * s, 0.0), 0.10 * s, 0.14 * s, 8)
+	_add_tapered_box(st_skin, Vector3(0, 1.48 * s, 0.05 * s), Vector3(0.22, 0.22, 0.40) * s, Vector3(0.16, 0.18, 0.32) * s)
+	_add_box(st_skin, Vector3(-0.06 * s, 1.30 * s, 0.22 * s), Vector3(0.04, 0.30, 0.04) * s)
+	_add_box(st_skin, Vector3(0.06 * s, 1.30 * s, 0.22 * s), Vector3(0.04, 0.30, 0.04) * s)
+	# Digitigrade legs
+	_add_box(st_skin, Vector3(-0.18 * s, 0.54 * s, -0.05 * s), Vector3(0.16, 0.26, 0.20) * s)
+	_add_box(st_skin, Vector3(0.18 * s, 0.54 * s, -0.05 * s), Vector3(0.16, 0.26, 0.20) * s)
+	_add_box(st_skin, Vector3(-0.18 * s, 0.28 * s, 0.08 * s), Vector3(0.14, 0.30, 0.16) * s)
+	_add_box(st_skin, Vector3(0.18 * s, 0.28 * s, 0.08 * s), Vector3(0.14, 0.30, 0.16) * s)
+	_add_wedge(st_skin, Vector3(-0.18 * s, 0.0, -0.22 * s), Vector3(-0.24 * s, 0.08 * s, -0.02 * s), Vector3(-0.12 * s, 0.08 * s, -0.02 * s), Vector3(-0.18 * s, 0.14 * s, -0.02 * s))
+	_add_wedge(st_skin, Vector3(0.18 * s, 0.0, -0.22 * s), Vector3(0.12 * s, 0.08 * s, -0.02 * s), Vector3(0.24 * s, 0.08 * s, -0.02 * s), Vector3(0.18 * s, 0.14 * s, -0.02 * s))
+	st_skin.generate_normals()
+	st_skin.generate_tangents()
+	st_skin.set_material(mat_zeratul_skin)
+	st_skin.commit(b_mesh)
+
+	# Surface 1: Ancient Nerazim Dark Armor
+	var st_armor := SurfaceTool.new()
+	st_armor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_armor, Vector3(0, 1.08 * s, -0.02 * s), Vector3(0.38, 0.28, 0.28) * s)
+	_add_box(st_armor, Vector3(0, 0.88 * s, 0.0), Vector3(0.30, 0.18, 0.24) * s)
+	_add_box(st_armor, Vector3(0, 0.72 * s, 0.0), Vector3(0.32, 0.14, 0.26) * s)
+	_add_box(st_armor, Vector3(-0.18 * s, 0.28 * s, -0.02 * s), Vector3(0.16, 0.28, 0.10) * s)
+	_add_box(st_armor, Vector3(0.18 * s, 0.28 * s, -0.02 * s), Vector3(0.16, 0.28, 0.10) * s)
+	_add_box(st_armor, Vector3(-0.36 * s, 0.85 * s, -0.15 * s), Vector3(0.14, 0.16, 0.26) * s)
+	st_armor.generate_normals()
+	st_armor.generate_tangents()
+	st_armor.set_material(mat_zeratul_armor)
+	st_armor.commit(b_mesh)
+
+	# Surface 2: Void Cloth Cowl & Shroud
+	var st_cloth := SurfaceTool.new()
+	st_cloth.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_cloth, Vector3(0, 1.56 * s, 0.02 * s), Vector3(0.30, 0.24, 0.36) * s)
+	_add_box(st_cloth, Vector3(0, 1.40 * s, -0.15 * s), Vector3(0.20, 0.12, 0.08) * s)
+	_add_box(st_cloth, Vector3(0, 1.28 * s, 0.0), Vector3(0.50, 0.18, 0.38) * s)
+	_add_tapered_box(st_cloth, Vector3(0, 0.85 * s, 0.18 * s), Vector3(0.38, 0.65, 0.08) * s, Vector3(0.48, 0.65, 0.08) * s)
+	st_cloth.generate_normals()
+	st_cloth.generate_tangents()
+	st_cloth.set_material(mat_zeratul_cloth)
+	st_cloth.commit(b_mesh)
+
+	# Surface 3: Glowing Emerald Eyes
+	var st_blade := SurfaceTool.new()
+	st_blade.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_blade, Vector3(-0.065 * s, 1.48 * s, -0.16 * s), Vector3(0.035, 0.025, 0.03) * s)
+	_add_box(st_blade, Vector3(0.065 * s, 1.48 * s, -0.16 * s), Vector3(0.035, 0.025, 0.03) * s)
+	st_blade.generate_normals()
+	st_blade.generate_tangents()
+	st_blade.set_material(mat_zeratul_blade)
+	st_blade.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: Gauntlet-Mounted Warp Blade
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.36, 0.85, -0.20)
+	var w_mesh := ArrayMesh.new()
+
+	var st_w_armor := SurfaceTool.new()
+	st_w_armor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_armor, Vector3(0, 0, 0), Vector3(0.15, 0.16, 0.28))
+	_add_cylinder(st_w_armor, Vector3(0, 0.06, -0.12), 0.06, 0.08, 8)
+	st_w_armor.generate_normals()
+	st_w_armor.generate_tangents()
+	st_w_armor.set_material(mat_zeratul_armor)
+	st_w_armor.commit(w_mesh)
+
+	var st_w_blade := SurfaceTool.new()
+	st_w_blade.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_blade, Vector3(0, 0.07, -0.14), Vector3(0.06, 0.06, 0.08))
+	_add_box(st_w_blade, Vector3(0, 0.02, -0.45), Vector3(0.03, 0.08, 0.50))
+	_add_wedge(st_w_blade, Vector3(0, 0.02, -0.80), Vector3(-0.015, 0.06, -0.65), Vector3(0.015, 0.06, -0.65), Vector3(0, -0.04, -0.65))
+	_add_wedge(st_w_blade, Vector3(0, 0.09, -0.35), Vector3(-0.04, 0.03, -0.22), Vector3(0.04, 0.03, -0.22), Vector3(0, 0.02, -0.45))
+	st_w_blade.generate_normals()
+	st_w_blade.generate_tangents()
+	st_w_blade.set_material(mat_zeratul_blade)
+	st_w_blade.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0.02, -0.80)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.3
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.65, 1.3], [Vector3.ZERO, Vector3(0, 0.03, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.65, 1.3], [Vector3(0.36, 0.85, -0.20), Vector3(0.36, 0.875, -0.20), Vector3(0.36, 0.85, -0.20)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.65
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.16, 0.32, 0.48, 0.65], [Vector3.ZERO, Vector3(0.05, 0.05, 0), Vector3.ZERO, Vector3(-0.05, 0.05, 0), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.16, 0.32, 0.48, 0.65], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.05), Quaternion.IDENTITY, Quaternion(Vector3.UP, -0.05), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.16, 0.32, 0.48, 0.65], [Vector3(0.36, 0.85, -0.20), Vector3(0.39, 0.90, -0.16), Vector3(0.36, 0.85, -0.20), Vector3(0.33, 0.90, -0.16), Vector3(0.36, 0.85, -0.20)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.4
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.15, 0.4], [Vector3(0.36, 0.85, -0.20), Vector3(0.20, 0.95, -0.45), Vector3(0.36, 0.85, -0.20)])
+	_add_rot_track(anim_shoot, "BodyMesh:quaternion", [0.0, 0.15, 0.4], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.35), Quaternion.IDENTITY])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.0
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.5, 1.0], [Vector3.ZERO, Vector3(0, -0.25, 0.25), Vector3(0, -0.55, 0.55)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.5, 1.0], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.8), Quaternion(Vector3.RIGHT, 1.57)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.5, 1.0], [Vector3(0.36, 0.85, -0.20), Vector3(0.45, 0.40, -0.10), Vector3(0.55, 0.05, 0.10)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, ZERATUL_GLB_PATH)
+	root.free()
+
+
+func _export_tassadar_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Tassadar"
+	var s: float = 1.06
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Protoss Flesh
+	var st_skin := SurfaceTool.new()
+	st_skin.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_skin, Vector3(0, 1.34 * s, 0.0), 0.10 * s, 0.14 * s, 8)
+	_add_box(st_skin, Vector3(0, 1.48 * s, 0.02 * s), Vector3(0.24, 0.24, 0.32) * s)
+	_add_tapered_box(st_skin, Vector3(0, 1.58 * s, 0.08 * s), Vector3(0.20, 0.16, 0.30) * s, Vector3(0.14, 0.12, 0.22) * s)
+	st_skin.generate_normals()
+	st_skin.generate_tangents()
+	st_skin.set_material(mat_tassadar_skin)
+	st_skin.commit(b_mesh)
+
+	# Surface 1: Ceremonial Khalai Gold Armor
+	var st_gold := SurfaceTool.new()
+	st_gold.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_gold, Vector3(0, 1.15 * s, -0.02 * s), Vector3(0.44, 0.32, 0.32) * s)
+	_add_box(st_gold, Vector3(0, 0.82 * s, -0.04 * s), Vector3(0.36, 0.14, 0.26) * s)
+	_add_box(st_gold, Vector3(0, 1.58 * s, -0.13 * s), Vector3(0.16, 0.08, 0.04) * s)
+	# High Flared Shoulder Crests
+	_add_wedge(st_gold, Vector3(-0.52 * s, 1.75 * s, 0.0), Vector3(-0.28 * s, 1.35 * s, -0.16 * s), Vector3(-0.28 * s, 1.35 * s, 0.16 * s), Vector3(-0.46 * s, 1.30 * s, 0.0))
+	_add_wedge(st_gold, Vector3(0.52 * s, 1.75 * s, 0.0), Vector3(0.28 * s, 1.35 * s, 0.16 * s), Vector3(0.28 * s, 1.35 * s, -0.16 * s), Vector3(0.46 * s, 1.30 * s, 0.0))
+	st_gold.generate_normals()
+	st_gold.generate_tangents()
+	st_gold.set_material(mat_tassadar_gold)
+	st_gold.commit(b_mesh)
+
+	# Surface 2: Royal Blue Ceremonial Robes
+	var st_cloth := SurfaceTool.new()
+	st_cloth.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_tapered_box(st_cloth, Vector3(0, 0.52 * s, -0.10 * s), Vector3(0.26, 0.55, 0.04) * s, Vector3(0.22, 0.55, 0.04) * s)
+	_add_tapered_box(st_cloth, Vector3(0, 0.58 * s, 0.14 * s), Vector3(0.46, 0.70, 0.06) * s, Vector3(0.40, 0.70, 0.06) * s)
+	_add_tapered_box(st_cloth, Vector3(0, 0.45 * s, 0.0), Vector3(0.42, 0.55, 0.34) * s, Vector3(0.36, 0.55, 0.28) * s)
+	st_cloth.generate_normals()
+	st_cloth.generate_tangents()
+	st_cloth.set_material(mat_tassadar_cloth)
+	st_cloth.commit(b_mesh)
+
+	# Surface 3: Radiant Cyan/Violet Psionic Aura
+	var st_psionic := SurfaceTool.new()
+	st_psionic.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_psionic, Vector3(-0.065 * s, 1.50 * s, -0.145 * s), Vector3(0.035, 0.025, 0.03) * s)
+	_add_box(st_psionic, Vector3(0.065 * s, 1.50 * s, -0.145 * s), Vector3(0.035, 0.025, 0.03) * s)
+	_add_box(st_psionic, Vector3(0, 1.18 * s, -0.18 * s), Vector3(0.08, 0.12, 0.04) * s)
+	_add_box(st_psionic, Vector3(-0.40 * s, 1.48 * s, 0.0), Vector3(0.04, 0.16, 0.04) * s)
+	_add_box(st_psionic, Vector3(0.40 * s, 1.48 * s, 0.0), Vector3(0.04, 0.16, 0.04) * s)
+	st_psionic.generate_normals()
+	st_psionic.generate_tangents()
+	st_psionic.set_material(mat_tassadar_psionic)
+	st_psionic.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: Psionic Shockwave Focus
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.34, 1.05, -0.32)
+	var w_mesh := ArrayMesh.new()
+
+	var st_w_gold := SurfaceTool.new()
+	st_w_gold.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_w_gold, Vector3(0, 0, 0), 0.07, 0.14, 8)
+	st_w_gold.generate_normals()
+	st_w_gold.generate_tangents()
+	st_w_gold.set_material(mat_tassadar_gold)
+	st_w_gold.commit(w_mesh)
+
+	var st_w_psionic := SurfaceTool.new()
+	st_w_psionic.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_psionic, Vector3(0, 0, -0.18), Vector3(0.10, 0.10, 0.14))
+	_add_wedge(st_w_psionic, Vector3(0, 0.12, -0.18), Vector3(-0.04, 0, -0.14), Vector3(0.04, 0, -0.14), Vector3(0, 0, -0.22))
+	_add_wedge(st_w_psionic, Vector3(0, -0.12, -0.18), Vector3(0.04, 0, -0.14), Vector3(-0.04, 0, -0.14), Vector3(0, 0, -0.22))
+	st_w_psionic.generate_normals()
+	st_w_psionic.generate_tangents()
+	st_w_psionic.set_material(mat_tassadar_psionic)
+	st_w_psionic.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0, -0.35)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	# Levitating float idle
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.6
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.8, 1.6], [Vector3.ZERO, Vector3(0, 0.05, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.8, 1.6], [Vector3(0.34, 1.05, -0.32), Vector3(0.34, 1.10, -0.32), Vector3(0.34, 1.05, -0.32)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.8
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.4, 0.8], [Vector3.ZERO, Vector3(0, 0.06, -0.04), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.4, 0.8], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.08), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.4, 0.8], [Vector3(0.34, 1.05, -0.32), Vector3(0.34, 1.11, -0.36), Vector3(0.34, 1.05, -0.32)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.45
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.12, 0.45], [Vector3(0.34, 1.05, -0.32), Vector3(0.24, 1.15, -0.48), Vector3(0.34, 1.05, -0.32)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.12, 0.45], [Vector3.ZERO, Vector3(0, 0, 0.03), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.2
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.6, 1.2], [Vector3.ZERO, Vector3(0, -0.20, 0.15), Vector3(0, -0.45, 0.35)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.6, 1.2], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.5), Quaternion(Vector3.RIGHT, 1.2)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.6, 1.2], [Vector3(0.34, 1.05, -0.32), Vector3(0.42, 0.50, -0.15), Vector3(0.48, 0.10, 0.05)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, TASSADAR_GLB_PATH)
+	root.free()
+
+
+func _export_medic_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Medic"
+	var s: float = 0.98
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Sterile Medical White Armor
+	var st_armor := SurfaceTool.new()
+	st_armor.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_tapered_box(st_armor, Vector3(0, 1.12 * s, -0.02 * s), Vector3(0.48, 0.32, 0.34) * s, Vector3(0.56, 0.32, 0.40) * s)
+	_add_box(st_armor, Vector3(0, 0.86 * s, 0.0), Vector3(0.44, 0.20, 0.32) * s)
+	_add_tapered_box(st_armor, Vector3(0, 0.68 * s, 0.0), Vector3(0.36, 0.16, 0.28) * s, Vector3(0.42, 0.16, 0.30) * s)
+	_add_box(st_armor, Vector3(-0.42 * s, 1.28 * s, 0.0), Vector3(0.24, 0.24, 0.34) * s)
+	_add_box(st_armor, Vector3(0.42 * s, 1.28 * s, 0.0), Vector3(0.24, 0.24, 0.34) * s)
+	_add_box(st_armor, Vector3(-0.36 * s, 0.90 * s, -0.12 * s), Vector3(0.16, 0.20, 0.24) * s)
+	_add_box(st_armor, Vector3(0.36 * s, 0.90 * s, -0.12 * s), Vector3(0.16, 0.20, 0.24) * s)
+	_add_box(st_armor, Vector3(-0.20 * s, 0.46 * s, 0.0), Vector3(0.20, 0.26, 0.24) * s)
+	_add_box(st_armor, Vector3(0.20 * s, 0.46 * s, 0.0), Vector3(0.20, 0.26, 0.24) * s)
+	_add_box(st_armor, Vector3(-0.20 * s, 0.08 * s, -0.03 * s), Vector3(0.22, 0.14, 0.36) * s)
+	_add_box(st_armor, Vector3(0.20 * s, 0.08 * s, -0.03 * s), Vector3(0.22, 0.14, 0.36) * s)
+	_add_box(st_armor, Vector3(0, 1.52 * s, 0.02 * s), Vector3(0.36, 0.32, 0.36) * s)
+	st_armor.generate_normals()
+	st_armor.generate_tangents()
+	st_armor.set_material(mat_medic_armor)
+	st_armor.commit(b_mesh)
+
+	# Surface 1: Caduceus Crimson Red Cross
+	var st_cross := SurfaceTool.new()
+	st_cross.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_cross, Vector3(0, 1.16 * s, -0.19 * s), Vector3(0.06, 0.18, 0.02) * s)
+	_add_box(st_cross, Vector3(0, 1.16 * s, -0.19 * s), Vector3(0.18, 0.06, 0.02) * s)
+	_add_box(st_cross, Vector3(-0.43 * s, 1.34 * s, 0.0), Vector3(0.04, 0.12, 0.12) * s)
+	st_cross.generate_normals()
+	st_cross.generate_tangents()
+	st_cross.set_material(mat_medic_cross)
+	st_cross.commit(b_mesh)
+
+	# Surface 2: Olive Drab Utility Trim
+	var st_trim := SurfaceTool.new()
+	st_trim.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_trim, Vector3(-0.22 * s, 0.68 * s, 0.16 * s), Vector3(0.10, 0.12, 0.08) * s)
+	_add_box(st_trim, Vector3(0.22 * s, 0.68 * s, 0.16 * s), Vector3(0.10, 0.12, 0.08) * s)
+	st_trim.generate_normals()
+	st_trim.generate_tangents()
+	st_trim.set_material(mat_medic_trim)
+	st_trim.commit(b_mesh)
+
+	# Surface 3: Steel Frame
+	var st_steel := SurfaceTool.new()
+	st_steel.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_steel, Vector3(0, 1.15 * s, 0.28 * s), Vector3(0.46, 0.44, 0.22) * s)
+	st_steel.generate_normals()
+	st_steel.generate_tangents()
+	st_steel.set_material(mat_medic_steel)
+	st_steel.commit(b_mesh)
+
+	# Surface 4: Green/Cyan Medical Reagent Glow & Visor
+	var st_glow := SurfaceTool.new()
+	st_glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_glow, Vector3(-0.14 * s, 1.18 * s, 0.36 * s), 0.055 * s, 0.32 * s, 8)
+	_add_cylinder(st_glow, Vector3(0.14 * s, 1.18 * s, 0.36 * s), 0.055 * s, 0.32 * s, 8)
+	_add_box(st_glow, Vector3(0, 1.52 * s, -0.16 * s), Vector3(0.24, 0.10, 0.03) * s)
+	st_glow.generate_normals()
+	st_glow.generate_tangents()
+	st_glow.set_material(mat_medic_glow)
+	st_glow.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: Caduceus Nano-Projector (Left Arm) & Defensive Riot Shield (Right Arm)
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.32, 0.95, -0.35)
+	var w_mesh := ArrayMesh.new()
+
+	var st_w_steel := SurfaceTool.new()
+	st_w_steel.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Left projector chassis
+	_add_box(st_w_steel, Vector3(-0.58, 0.0, 0.0), Vector3(0.12, 0.14, 0.35))
+	# Right defensive shield plate
+	_add_box(st_w_steel, Vector3(0.05, 0.0, -0.15), Vector3(0.10, 0.70, 0.45))
+	st_w_steel.generate_normals()
+	st_w_steel.generate_tangents()
+	st_w_steel.set_material(mat_medic_steel)
+	st_w_steel.commit(w_mesh)
+
+	var st_w_trim := SurfaceTool.new()
+	st_w_trim.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_w_trim, Vector3(-0.58, 0.0, -0.36), 0.06, 0.04, 8)
+	_add_box(st_w_trim, Vector3(0.06, 0.0, -0.15), Vector3(0.09, 0.74, 0.49))
+	st_w_trim.generate_normals()
+	st_w_trim.generate_tangents()
+	st_w_trim.set_material(mat_medic_trim)
+	st_w_trim.commit(w_mesh)
+
+	var st_w_glow := SurfaceTool.new()
+	st_w_glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_cylinder(st_w_glow, Vector3(-0.58, 0.0, -0.28), 0.04, 0.18, 8)
+	_add_box(st_w_glow, Vector3(0.06, 0.18, -0.15), Vector3(0.09, 0.12, 0.24))
+	st_w_glow.generate_normals()
+	st_w_glow.generate_tangents()
+	st_w_glow.set_material(mat_medic_glow)
+	st_w_glow.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(-0.58, 0.0, -0.45)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.4
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.7, 1.4], [Vector3.ZERO, Vector3(0, 0.03, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.7, 1.4], [Vector3(0.32, 0.95, -0.35), Vector3(0.32, 0.98, -0.35), Vector3(0.32, 0.95, -0.35)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.75
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.19, 0.38, 0.56, 0.75], [Vector3.ZERO, Vector3(0.04, 0.04, 0), Vector3.ZERO, Vector3(-0.04, 0.04, 0), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.19, 0.38, 0.56, 0.75], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.05), Quaternion.IDENTITY, Quaternion(Vector3.UP, -0.05), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.19, 0.38, 0.56, 0.75], [Vector3(0.32, 0.95, -0.35), Vector3(0.34, 0.99, -0.33), Vector3(0.32, 0.95, -0.35), Vector3(0.30, 0.99, -0.33), Vector3(0.32, 0.95, -0.35)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.4
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.1, 0.4], [Vector3(0.32, 0.95, -0.35), Vector3(0.32, 0.97, -0.42), Vector3(0.32, 0.95, -0.35)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.1, 0.4], [Vector3.ZERO, Vector3(0, 0, 0.02), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.1
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.55, 1.1], [Vector3.ZERO, Vector3(0, -0.25, 0.30), Vector3(0, -0.50, 0.60)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.55, 1.1], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.8), Quaternion(Vector3.RIGHT, 1.57)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.55, 1.1], [Vector3(0.32, 0.95, -0.35), Vector3(0.45, 0.40, -0.15), Vector3(0.55, 0.05, 0.10)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, MEDIC_GLB_PATH)
+	root.free()
+
+
+func _export_harbinger_glb() -> void:
+	var root := Node3D.new()
+	root.name = "Harbinger"
+	var s: float = 1.25
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	var b_mesh := ArrayMesh.new()
+
+	# Surface 0: Alien Obsidian Armor
+	var st_obsidian := SurfaceTool.new()
+	st_obsidian.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_tapered_box(st_obsidian, Vector3(0, 1.20 * s, 0.0), Vector3(0.50, 0.40, 0.34) * s, Vector3(0.62, 0.40, 0.40) * s)
+	_add_tapered_box(st_obsidian, Vector3(0, 0.65 * s, 0.0), Vector3(0.24, 0.65, 0.22) * s, Vector3(0.44, 0.65, 0.30) * s)
+	_add_box(st_obsidian, Vector3(-0.46 * s, 1.42 * s, 0.0), Vector3(0.28, 0.34, 0.36) * s)
+	_add_box(st_obsidian, Vector3(0.46 * s, 1.42 * s, 0.0), Vector3(0.28, 0.34, 0.36) * s)
+	_add_tapered_box(st_obsidian, Vector3(0, 1.68 * s, 0.04 * s), Vector3(0.28, 0.32, 0.34) * s, Vector3(0.20, 0.24, 0.26) * s)
+	st_obsidian.generate_normals()
+	st_obsidian.generate_tangents()
+	st_obsidian.set_material(mat_harbinger_obsidian)
+	st_obsidian.commit(b_mesh)
+
+	# Surface 1: Celestial Cosmic Gold Trim
+	var st_gold := SurfaceTool.new()
+	st_gold.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_wedge(st_gold, Vector3(0, 1.95 * s, 0.04 * s), Vector3(-0.12 * s, 1.80 * s, -0.06 * s), Vector3(0.12 * s, 1.80 * s, -0.06 * s), Vector3(0, 1.80 * s, 0.14 * s))
+	_add_box(st_gold, Vector3(-0.48 * s, 1.58 * s, 0.0), Vector3(0.08, 0.12, 0.28) * s)
+	_add_box(st_gold, Vector3(0.48 * s, 1.58 * s, 0.0), Vector3(0.08, 0.12, 0.28) * s)
+	st_gold.generate_normals()
+	st_gold.generate_tangents()
+	st_gold.set_material(mat_harbinger_gold)
+	st_gold.commit(b_mesh)
+
+	# Surface 2: Radiant Cosmic Amethyst Emission & Floating Mantle
+	var st_glow := SurfaceTool.new()
+	st_glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_glow, Vector3(0, 1.22 * s, -0.18 * s), Vector3(0.14, 0.14, 0.08) * s)
+	_add_box(st_glow, Vector3(0, 1.68 * s, -0.13 * s), Vector3(0.18, 0.03, 0.04) * s)
+	# Detached Floating Mantle Ring Arc
+	_add_box(st_glow, Vector3(0, 1.92 * s, 0.18 * s), Vector3(0.50, 0.06, 0.06) * s)
+	_add_box(st_glow, Vector3(-0.42 * s, 1.70 * s, 0.18 * s), Vector3(0.08, 0.38, 0.06) * s)
+	_add_box(st_glow, Vector3(0.42 * s, 1.70 * s, 0.18 * s), Vector3(0.08, 0.38, 0.06) * s)
+	st_glow.generate_normals()
+	st_glow.generate_tangents()
+	st_glow.set_material(mat_harbinger_glow)
+	st_glow.commit(b_mesh)
+
+	body.mesh = normalize_mesh_ground(b_mesh)
+	root.add_child(body)
+
+	# Weapon: Void-Tachyon Annihilator
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.36, 1.10, -0.35)
+	var w_mesh := ArrayMesh.new()
+
+	var st_w_obsidian := SurfaceTool.new()
+	st_w_obsidian.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_obsidian, Vector3(0, 0, 0), Vector3(0.14, 0.14, 0.30))
+	st_w_obsidian.generate_normals()
+	st_w_obsidian.generate_tangents()
+	st_w_obsidian.set_material(mat_harbinger_obsidian)
+	st_w_obsidian.commit(w_mesh)
+
+	var st_w_gold := SurfaceTool.new()
+	st_w_gold.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_gold, Vector3(-0.06, 0, -0.32), Vector3(0.03, 0.06, 0.38))
+	_add_box(st_w_gold, Vector3(0.06, 0, -0.32), Vector3(0.03, 0.06, 0.38))
+	st_w_gold.generate_normals()
+	st_w_gold.generate_tangents()
+	st_w_gold.set_material(mat_harbinger_gold)
+	st_w_gold.commit(w_mesh)
+
+	var st_w_glow := SurfaceTool.new()
+	st_w_glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_w_glow, Vector3(0, 0, -0.32), Vector3(0.08, 0.08, 0.12))
+	st_w_glow.generate_normals()
+	st_w_glow.generate_tangents()
+	st_w_glow.set_material(mat_harbinger_glow)
+	st_w_glow.commit(w_mesh)
+
+	rifle.mesh = w_mesh
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0, -0.55)
+	rifle.add_child(muzzle)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.8
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.9, 1.8], [Vector3.ZERO, Vector3(0, 0.06, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.9, 1.8], [Vector3(0.36, 1.10, -0.35), Vector3(0.36, 1.16, -0.35), Vector3(0.36, 1.10, -0.35)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.85
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.425, 0.85], [Vector3.ZERO, Vector3(0, 0.08, -0.05), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.425, 0.85], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.06), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.425, 0.85], [Vector3(0.36, 1.10, -0.35), Vector3(0.36, 1.17, -0.40), Vector3(0.36, 1.10, -0.35)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.5
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.15, 0.5], [Vector3(0.36, 1.10, -0.35), Vector3(0.26, 1.18, -0.52), Vector3(0.36, 1.10, -0.35)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.15, 0.5], [Vector3.ZERO, Vector3(0, 0, 0.04), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.3
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.65, 1.3], [Vector3.ZERO, Vector3(0, -0.25, 0.20), Vector3(0, -0.55, 0.45)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.65, 1.3], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.5), Quaternion(Vector3.RIGHT, 1.4)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.65, 1.3], [Vector3(0.36, 1.10, -0.35), Vector3(0.48, 0.55, -0.15), Vector3(0.55, 0.10, 0.10)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, HARBINGER_GLB_PATH)
+	root.free()
+
+
+func _export_hero_raynor_copy() -> void:
+	var root := Node3D.new()
+	root.name = "Raynor"
+
+	var body := MeshInstance3D.new()
+	body.name = "BodyMesh"
+	body.mesh = load(RAYNOR_BODY_PATH)
+	root.add_child(body)
+
+	var rifle := MeshInstance3D.new()
+	rifle.name = "RifleMesh"
+	rifle.transform.origin = Vector3(0.35, 1.05, -0.45)
+	rifle.mesh = load(RAYNOR_RIFLE_PATH)
+	root.add_child(rifle)
+
+	var muzzle := Marker3D.new()
+	muzzle.name = "MuzzlePoint"
+	muzzle.transform.origin = Vector3(0, 0, -0.5)
+	rifle.add_child(muzzle)
+
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 1.5
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "BodyMesh:position", [0.0, 0.75, 1.5], [Vector3.ZERO, Vector3(0, 0.035, 0), Vector3.ZERO])
+	_add_pos_track(anim_idle, "RifleMesh:position", [0.0, 0.75, 1.5], [Vector3(0.35, 1.05, -0.45), Vector3(0.35, 1.08, -0.45), Vector3(0.35, 1.05, -0.45)])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_run := Animation.new()
+	anim_run.length = 0.8
+	anim_run.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_run, "BodyMesh:position", [0.0, 0.2, 0.4, 0.6, 0.8], [Vector3.ZERO, Vector3(0.05, 0.05, 0), Vector3.ZERO, Vector3(-0.05, 0.05, 0), Vector3.ZERO])
+	_add_rot_track(anim_run, "BodyMesh:quaternion", [0.0, 0.2, 0.4, 0.6, 0.8], [Quaternion.IDENTITY, Quaternion(Vector3.UP, 0.05), Quaternion.IDENTITY, Quaternion(Vector3.UP, -0.05), Quaternion.IDENTITY])
+	_add_pos_track(anim_run, "RifleMesh:position", [0.0, 0.2, 0.4, 0.6, 0.8], [Vector3(0.35, 1.05, -0.45), Vector3(0.38, 1.10, -0.42), Vector3(0.35, 1.05, -0.45), Vector3(0.32, 1.10, -0.42), Vector3(0.35, 1.05, -0.45)])
+	lib.add_animation("run", anim_run)
+	lib.add_animation("walk", anim_run.duplicate())
+
+	var anim_shoot := Animation.new()
+	anim_shoot.length = 0.45
+	anim_shoot.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_shoot, "RifleMesh:position", [0.0, 0.09, 0.45], [Vector3(0.35, 1.05, -0.45), Vector3(0.35, 1.08, -0.35), Vector3(0.35, 1.05, -0.45)])
+	_add_pos_track(anim_shoot, "BodyMesh:position", [0.0, 0.09, 0.45], [Vector3.ZERO, Vector3(0, 0, 0.03), Vector3.ZERO])
+	lib.add_animation("shoot", anim_shoot)
+	lib.add_animation("attack", anim_shoot.duplicate())
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.2
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "BodyMesh:position", [0.0, 0.6, 1.2], [Vector3.ZERO, Vector3(0, -0.28, 0.35), Vector3(0, -0.55, 0.7)])
+	_add_rot_track(anim_death, "BodyMesh:quaternion", [0.0, 0.6, 1.2], [Quaternion.IDENTITY, Quaternion(Vector3.RIGHT, 0.8), Quaternion(Vector3.RIGHT, 1.57)])
+	_add_pos_track(anim_death, "RifleMesh:position", [0.0, 0.6, 1.2], [Vector3(0.35, 1.05, -0.45), Vector3(0.50, 0.4, -0.2), Vector3(0.60, 0.05, 0.1)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, HERO_RAYNOR_GLB_PATH)
+	root.free()
+
+
+func _export_wall_segment_glb() -> void:
+	var root := Node3D.new()
+	root.name = "WallSegment"
+
+	var wall_mesh_inst := MeshInstance3D.new()
+	wall_mesh_inst.name = "WallMesh"
+	var mesh := ArrayMesh.new()
+
+	# Surface 0: Terran Hull (Central Bulkhead & Catwalk)
+	var st_hull := SurfaceTool.new()
+	st_hull.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_hull, Vector3(0, 1.5, 0), Vector3(3.1, 2.7, 0.85))
+	_add_wedge(st_hull, Vector3(0, 1.5, -0.60), Vector3(-1.4, 2.6, -0.42), Vector3(1.4, 2.6, -0.42), Vector3(0, 0.4, -0.42))
+	_add_box(st_hull, Vector3(0, 2.95, 0), Vector3(3.8, 0.15, 1.05))
+	st_hull.generate_normals()
+	st_hull.generate_tangents()
+	st_hull.set_material(mat_hull)
+	st_hull.commit(mesh)
+
+	# Surface 1: Dark Steel (Interlocking Pillars, Footings, Louvers & Railing)
+	var st_steel := SurfaceTool.new()
+	st_steel.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_steel, Vector3(-1.80, 1.6, 0), Vector3(0.48, 3.2, 1.2))
+	_add_box(st_steel, Vector3(1.80, 1.6, 0), Vector3(0.48, 3.2, 1.2))
+	_add_box(st_steel, Vector3(-1.80, 0.2, 0), Vector3(0.65, 0.4, 1.4))
+	_add_box(st_steel, Vector3(1.80, 0.2, 0), Vector3(0.65, 0.4, 1.4))
+	_add_box(st_steel, Vector3(0, 0.8, -0.45), Vector3(3.0, 0.12, 0.10))
+	_add_box(st_steel, Vector3(0, 1.5, -0.45), Vector3(3.0, 0.12, 0.10))
+	_add_box(st_steel, Vector3(0, 2.2, -0.45), Vector3(3.0, 0.12, 0.10))
+	_add_box(st_steel, Vector3(0, 3.10, -0.52), Vector3(3.8, 0.12, 0.05))
+	_add_cylinder(st_steel, Vector3(-1.2, 3.05, -0.52), 0.03, 0.20, 6)
+	_add_cylinder(st_steel, Vector3(0, 3.05, -0.52), 0.03, 0.20, 6)
+	_add_cylinder(st_steel, Vector3(1.2, 3.05, -0.52), 0.03, 0.20, 6)
+	st_steel.generate_normals()
+	st_steel.generate_tangents()
+	st_steel.set_material(mat_dark_steel)
+	st_steel.commit(mesh)
+
+	# Surface 2: Hazard Warning Stripes
+	var st_hazard := SurfaceTool.new()
+	st_hazard.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_hazard, Vector3(0, 2.85, -0.44), Vector3(3.1, 0.08, 0.03))
+	_add_box(st_hazard, Vector3(0, 0.35, -0.44), Vector3(3.1, 0.08, 0.03))
+	st_hazard.generate_normals()
+	st_hazard.generate_tangents()
+	st_hazard.set_material(mat_wall_hazard)
+	st_hazard.commit(mesh)
+
+	# Surface 3: Blue Luminescent Power Conduits
+	var st_glow := SurfaceTool.new()
+	st_glow.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_box(st_glow, Vector3(0, 1.5, -0.46), Vector3(2.8, 0.04, 0.02))
+	_add_box(st_glow, Vector3(-1.0, 1.5, -0.47), Vector3(0.10, 0.10, 0.03))
+	_add_box(st_glow, Vector3(1.0, 1.5, -0.47), Vector3(0.10, 0.10, 0.03))
+	st_glow.generate_normals()
+	st_glow.generate_tangents()
+	st_glow.set_material(mat_blue_glow)
+	st_glow.commit(mesh)
+
+	mesh = normalize_mesh_ground(mesh)
+	ResourceSaver.save(mesh, WALL_MESH_PATH)
+	print("[ModelGenerator] Saved: ", WALL_MESH_PATH)
+
+	wall_mesh_inst.mesh = mesh
+	root.add_child(wall_mesh_inst)
+
+	# AnimationPlayer
+	var ap := AnimationPlayer.new()
+	ap.name = "AnimationPlayer"
+	root.add_child(ap)
+
+	var lib := AnimationLibrary.new()
+
+	var anim_idle := Animation.new()
+	anim_idle.length = 2.0
+	anim_idle.loop_mode = Animation.LOOP_LINEAR
+	_add_pos_track(anim_idle, "WallMesh:position", [0.0, 1.0, 2.0], [Vector3.ZERO, Vector3(0, 0.003, 0), Vector3.ZERO])
+	lib.add_animation("idle", anim_idle)
+
+	var anim_death := Animation.new()
+	anim_death.length = 1.2
+	anim_death.loop_mode = Animation.LOOP_NONE
+	_add_pos_track(anim_death, "WallMesh:position", [0.0, 0.6, 1.2], [Vector3.ZERO, Vector3(0, -0.3, 0), Vector3(0, -0.8, 0)])
+	lib.add_animation("death", anim_death)
+
+	ap.add_animation_library("", lib)
+	_export_scene_to_glb(root, WALL_GLB_PATH)
 	root.free()

@@ -20,6 +20,7 @@ var skipped_tests: int = 0
 var failure_messages: Array[String] = []
 
 func _init() -> void:
+	SFE_TestBase.runner_tree = self
 	print(ANSI_CYAN + ANSI_BOLD + "==========================================================" + ANSI_RESET)
 	print(ANSI_CYAN + ANSI_BOLD + "=== SFE5 GODOT 4.7.2 COMPREHENSIVE HEADLESS TEST SUITE ===" + ANSI_RESET)
 	print(ANSI_CYAN + ANSI_BOLD + "==========================================================" + ANSI_RESET)
@@ -47,6 +48,10 @@ func _run_all_suites() -> void:
 	_run_suite("Phase 2 Tier 2: Boundary & Corner Cases", preload("res://tests/test_p2_e2e_tier2.gd").new())
 	_run_suite("Phase 2 Tier 3: Cross-Feature Combinations", preload("res://tests/test_p2_e2e_tier3.gd").new())
 	_run_suite("Phase 2 Tier 4: Real-World Scenarios", preload("res://tests/test_p2_e2e_tier4.gd").new())
+	_run_suite("Phase 3: Heroes Catalog, VisualRoot & 3D VFX", preload("res://tests/test_p3_heroes_catalog_and_vfx.gd").new())
+	_run_suite("Phase 3: Wave Progression, Strains & Bosses", preload("res://tests/test_p3_waves_strains_and_bosses.gd").new())
+	_run_suite("Phase 3: Armory Terminal & Auto-Turrets Runtime", preload("res://tests/test_p3_armory_and_turrets_runtime.gd").new())
+	_run_suite("Phase 3: SFXManager & 7-Bus Audio Layout Runtime", preload("res://tests/test_p3_sfx_and_audio_bus_runtime.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

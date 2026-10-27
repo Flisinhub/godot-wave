@@ -26,6 +26,7 @@ const CombatVFXPool = preload("res://core/vfx/combat_vfx_pool.gd")
 const SFEStartModal = preload("res://ui/sfe_start_modal.gd")
 const BankManager = preload("res://core/persistence/bank_manager.gd")
 const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
+const BossHealthBarUI = preload("res://ui/boss_health_bar_ui.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -54,6 +55,7 @@ const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 @onready var start_wave_btn: Button = get_node_or_null("UI/WavePanel/MarginContainer/VBoxContainer/StartWaveBtn")
 @onready var game_over_panel: PanelContainer = get_node_or_null("UI/GameOverPanel")
 @onready var restart_btn: Button = get_node_or_null("UI/GameOverPanel/MarginContainer/VBoxContainer/RestartBtn")
+var boss_health_bar_ui: BossHealthBarUI = null
 
 # Active Hero Entity & Modal State
 var active_hero: HeroUnit3D = null
@@ -83,13 +85,16 @@ func _ready() -> void:
 	# 6. Global Signal Listeners
 	_setup_event_listeners()
 
+	# 7. Boss Health Bar UI & Spawning Setup
+	_setup_boss_health_bar_ui()
+
 	if game_over_panel:
 		game_over_panel.visible = false
 
-	# 7. Milestone 6 Startup Diagnostics
+	# 8. Milestone 6 Startup Diagnostics
 	_log_milestone_6_diagnostics()
 
-	# 8. SFE5 Pre-Mission Modal (Difficulty + Hero Selection + Player Profile)
+	# 9. SFE5 Pre-Mission Modal (Difficulty + Hero Selection + Player Profile)
 	_setup_start_modal()
 
 
@@ -377,6 +382,59 @@ func _setup_event_listeners() -> void:
 		restart_btn.pressed.connect(_on_restart_pressed)
 
 
+func _setup_boss_health_bar_ui() -> void:
+	var existing = get_node_or_null("BossHealthBarUI")
+	if existing is BossHealthBarUI:
+		boss_health_bar_ui = existing
+	else:
+		var boss_ui_scene: PackedScene = load("res://ui/boss_health_bar_ui.tscn")
+		if boss_ui_scene:
+			boss_health_bar_ui = boss_ui_scene.instantiate() as BossHealthBarUI
+			boss_health_bar_ui.name = "BossHealthBarUI"
+			add_child(boss_health_bar_ui)
+		else:
+			boss_health_bar_ui = BossHealthBarUI.new()
+			boss_health_bar_ui.name = "BossHealthBarUI"
+			add_child(boss_health_bar_ui)
+
+	if boss_health_bar_ui:
+		boss_health_bar_ui.add_to_group("boss_ui")
+
+	if wave_manager and not wave_manager.boss_spawn_requested.is_connected(_on_boss_spawn_requested):
+		wave_manager.boss_spawn_requested.connect(_on_boss_spawn_requested)
+
+
+func _on_boss_spawn_requested(boss_scene: PackedScene, spawn_pos: Vector3) -> void:
+	# Ensure boss is bound to boss health bar UI
+	var target_boss: Node3D = null
+	var bosses: Array[Node] = get_tree().get_nodes_in_group("bosses")
+	for b in bosses:
+		if is_instance_valid(b) and b is Node3D and not (b is BossOmegaUltralisk3D):
+			target_boss = b as Node3D
+			break
+
+	if not target_boss and boss_scene:
+		target_boss = boss_scene.instantiate() as Node3D
+		add_child(target_boss)
+		target_boss.global_position = spawn_pos
+
+	if target_boss and boss_health_bar_ui:
+		boss_health_bar_ui.bind_boss(target_boss)
+
+	if state_label and target_boss:
+		var b_name: String = target_boss.get("boss_name") if "boss_name" in target_boss else "JEFE"
+		state_label.text = "¡ALERTA! ¡%s HA ENTRADO EN EL COMBATE!" % b_name.to_upper()
+		state_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
+
+
+func _play_sfx_3d(sfx_name: StringName, pos: Vector3) -> void:
+	var sfx = Engine.get_singleton("SFXManager") if Engine.has_singleton("SFXManager") else null
+	if not sfx and has_node("/root/SFXManager"):
+		sfx = get_node("/root/SFXManager")
+	if sfx and sfx.has_method("play_sfx_3d"):
+		sfx.play_sfx_3d(sfx_name, pos)
+
+
 func _physics_process(delta: float) -> void:
 	_swarm_combat_accumulator += delta
 	# Process swarm combat checks every ~100ms for high performance
@@ -406,7 +464,7 @@ func _process_swarm_combat(dt: float) -> void:
 	var structures: Array[Node] = get_tree().get_nodes_in_group("structures")
 	var allies: Array[Node] = get_tree().get_nodes_in_group("allies")
 
-	# 1. Swarm Units Melee Assault on Perimeter & Base
+	# 1. Swarm Units Assault on Perimeter & Base (Zergling, Roach, Baneling, Hydralisk)
 	var active_limit: int = sdata.active_count
 	var processed: int = 0
 
@@ -414,60 +472,136 @@ func _process_swarm_combat(dt: float) -> void:
 		if alive[i] == 0:
 			continue
 
-		atk_tmr[i] = maxf(0.0, atk_tmr[i] - dt)
-		if atk_tmr[i] <= 0.0:
-			var unit_pos := Vector3(px[i], 0.0, pz[i])
-			var range_val: float = atk_rng[i]
-			var hit_target: Node3D = null
-			var hit_struct_type: int = CombatTypes.StructureType.NONE
+		var arch_id: int = sdata.archetype_ids[i]
+		var unit_pos := Vector3(px[i], 0.0, pz[i])
 
-			# Check structures
-			for node in structures:
-				if not is_instance_valid(node) or not (node is Node3D):
+		# Strain 1: Baneling (Archetype 2) Kamikaze Detonation
+		if arch_id == 2:
+			var detonated: bool = false
+			# Proximity check: within 1.4m of hero, marine, wall, bunker, CC
+			for s in structures:
+				if not is_instance_valid(s) or not (s is Node3D):
 					continue
-				var s: Node3D = node as Node3D
-				var struct_radius: float = 2.0
+				var s_rad: float = 2.0
 				if s is CommandCenter:
-					struct_radius = 4.0
-				elif s is GateStructure:
-					struct_radius = 2.5
-				elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
-					struct_radius = 2.5
-
-				if unit_pos.distance_to(s.global_position) <= (range_val + struct_radius):
-					hit_target = s
-					if s is WallSegment:
-						hit_struct_type = CombatTypes.StructureType.WALL_REINFORCED
-					elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
-						hit_struct_type = CombatTypes.StructureType.BUNKER
+					s_rad = 4.0
+				elif s is GateStructure or s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+					s_rad = 2.5
+				if unit_pos.distance_to((s as Node3D).global_position) <= (1.4 + s_rad):
+					detonated = true
 					break
 
-			# Check allies if no structure hit
-			if not hit_target:
-				for node in allies:
-					if not is_instance_valid(node) or not (node is Node3D):
+			if not detonated:
+				for a in allies:
+					if not is_instance_valid(a) or not (a is Node3D):
 						continue
-					var a: Node3D = node as Node3D
-					if unit_pos.distance_to(a.global_position) <= (range_val + 0.6):
-						hit_target = a
+					if unit_pos.distance_to((a as Node3D).global_position) <= (1.4 + 0.6):
+						detonated = true
 						break
 
-			# Execute physical attack strike through SFECombatEngine
-			if hit_target:
-				atk_tmr[i] = atk_cd[i]
-				var raw_dmg: float = atk_dmg[i]
-				var res = SFECombatEngine.calculate_damage(
-					raw_dmg,
-					CombatTypes.DamageType.PHYSICAL,
-					0.0,
-					0,
-					hit_struct_type,
-					hit_target is HeroUnit3D
-				)
-				if hit_target.has_method("take_damage_context"):
-					hit_target.take_damage_context(raw_dmg, CombatTypes.DamageType.PHYSICAL, false, 0)
-				elif hit_target.has_method("take_damage"):
-					hit_target.take_damage(res.damage_dealt)
+			if detonated:
+				_execute_baneling_detonation(unit_pos, i, structures, allies)
+				processed += 1
+				if processed >= active_limit:
+					break
+				continue
+
+		# Strain 2: Hydralisk (Archetype 3) Ranged Artillery Attack (Range 9.0m)
+		elif arch_id == 3:
+			atk_tmr[i] = maxf(0.0, atk_tmr[i] - dt)
+			if atk_tmr[i] <= 0.0:
+				var hydra_range: float = atk_rng[i] if atk_rng[i] > 0.0 else 9.0
+				var hit_target: Node3D = null
+				var hit_struct_type: int = CombatTypes.StructureType.NONE
+
+				for s in structures:
+					if not is_instance_valid(s) or not (s is Node3D):
+						continue
+					var s_rad: float = 2.0
+					if s is CommandCenter:
+						s_rad = 4.0
+					elif s is GateStructure or s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+						s_rad = 2.5
+					if unit_pos.distance_to((s as Node3D).global_position) <= (hydra_range + s_rad):
+						hit_target = s as Node3D
+						if s is WallSegment:
+							hit_struct_type = CombatTypes.StructureType.WALL_REINFORCED
+						elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+							hit_struct_type = CombatTypes.StructureType.BUNKER
+						break
+
+				if not hit_target:
+					for a in allies:
+						if not is_instance_valid(a) or not (a is Node3D):
+							continue
+						if unit_pos.distance_to((a as Node3D).global_position) <= (hydra_range + 0.6):
+							hit_target = a as Node3D
+							break
+
+				if hit_target:
+					atk_tmr[i] = atk_cd[i] if atk_cd[i] > 0.0 else 0.85
+					_execute_hydralisk_artillery_attack(unit_pos, hit_target, hit_struct_type, structures, allies)
+
+			processed += 1
+			if processed >= active_limit:
+				break
+			continue
+
+		# Standard Strain: Zergling (0) & Roach (1) Melee
+		else:
+			atk_tmr[i] = maxf(0.0, atk_tmr[i] - dt)
+			if atk_tmr[i] <= 0.0:
+				var range_val: float = atk_rng[i]
+				var hit_target: Node3D = null
+				var hit_struct_type: int = CombatTypes.StructureType.NONE
+
+				# Check structures
+				for node in structures:
+					if not is_instance_valid(node) or not (node is Node3D):
+						continue
+					var s: Node3D = node as Node3D
+					var struct_radius: float = 2.0
+					if s is CommandCenter:
+						struct_radius = 4.0
+					elif s is GateStructure:
+						struct_radius = 2.5
+					elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+						struct_radius = 2.5
+
+					if unit_pos.distance_to(s.global_position) <= (range_val + struct_radius):
+						hit_target = s
+						if s is WallSegment:
+							hit_struct_type = CombatTypes.StructureType.WALL_REINFORCED
+						elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+							hit_struct_type = CombatTypes.StructureType.BUNKER
+						break
+
+				# Check allies if no structure hit
+				if not hit_target:
+					for node in allies:
+						if not is_instance_valid(node) or not (node is Node3D):
+							continue
+						var a: Node3D = node as Node3D
+						if unit_pos.distance_to(a.global_position) <= (range_val + 0.6):
+							hit_target = a
+							break
+
+				# Execute physical attack strike through SFECombatEngine
+				if hit_target:
+					atk_tmr[i] = atk_cd[i]
+					var raw_dmg: float = atk_dmg[i]
+					var res = SFECombatEngine.calculate_damage(
+						raw_dmg,
+						CombatTypes.DamageType.PHYSICAL,
+						0.0,
+						0,
+						hit_struct_type,
+						hit_target is HeroUnit3D
+					)
+					if hit_target.has_method("take_damage_context"):
+						hit_target.take_damage_context(raw_dmg, CombatTypes.DamageType.PHYSICAL, false, 0)
+					elif hit_target.has_method("take_damage"):
+						hit_target.take_damage(res.damage_dealt)
 
 		processed += 1
 		if processed >= active_limit:
@@ -499,15 +633,7 @@ func _process_swarm_combat(dt: float) -> void:
 					combat_vfx_pool.spawn_tracer(ally.global_position + Vector3(0.0, 1.1, 0.0), target_pos)
 				var killed: bool = swarm_simulation.apply_damage_to_unit(target_idx, ally_dmg)
 				if killed:
-					if combat_vfx_pool:
-						combat_vfx_pool.spawn_acid_burst(target_pos)
-					var bounty: int = award_kill_bounty(null, ally, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
-					FloatingTextManager.spawn_text(self, target_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
-					if active_hero:
-						active_hero.gain_experience(15)
-					session_kills += 1
-					if wave_manager:
-						wave_manager.on_swarm_unit_died(5)
+					_on_swarm_unit_killed(target_idx, ally, target_pos, 5)
 
 	# 3. Fortified Bunkers Automated Defense Firing
 	for s_node in structures:
@@ -525,15 +651,224 @@ func _process_swarm_combat(dt: float) -> void:
 						combat_vfx_pool.spawn_tracer(b_node.global_position + Vector3(0.0, 1.8, 0.0), b_target_pos)
 					var b_killed: bool = swarm_simulation.apply_damage_to_unit(b_target_idx, 16.0)
 					if b_killed:
-						if combat_vfx_pool:
-							combat_vfx_pool.spawn_acid_burst(b_target_pos)
-						var b_bounty: int = award_kill_bounty(null, b_node, 5, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
-						FloatingTextManager.spawn_text(self, b_target_pos, "+%d Minerals" % b_bounty, Color(0.2, 0.95, 1.0))
-						if active_hero:
-							active_hero.gain_experience(10)
-						session_kills += 1
-						if wave_manager:
-							wave_manager.on_swarm_unit_died(5)
+						_on_swarm_unit_killed(b_target_idx, b_node, b_target_pos, 5)
+
+
+## Baneling Instantaneous Kamikaze Detonation: 40 AoE unit dmg, 140 structural dmg (3.5x), despawn, SFX
+func _execute_baneling_detonation(detonation_pos: Vector3, unit_idx: int, structures: Array[Node], allies: Array[Node]) -> void:
+	_play_sfx_3d(&"baneling_explode", detonation_pos)
+	if combat_vfx_pool:
+		combat_vfx_pool.spawn_acid_burst(detonation_pos)
+
+	# 40.0 Unit AoE Damage in 1.4m radius
+	for a in allies:
+		if is_instance_valid(a) and a is Node3D:
+			if detonation_pos.distance_to((a as Node3D).global_position) <= (1.4 + 0.6):
+				var res = SFECombatEngine.calculate_damage(
+					40.0,
+					CombatTypes.DamageType.PHYSICAL,
+					a.get("flat_armor") if "flat_armor" in a else 1.0,
+					0,
+					CombatTypes.StructureType.NONE,
+					a is HeroUnit3D,
+					true
+				)
+				if a.has_method("take_damage_context"):
+					a.take_damage_context(40.0, CombatTypes.DamageType.PHYSICAL, a is HeroUnit3D, 0)
+				elif a.has_method("take_damage"):
+					a.take_damage(res.damage_dealt)
+
+	# 140.0 Structural Damage (3.5x multiplier against walls/bunkers/CC)
+	for s in structures:
+		if is_instance_valid(s) and s is Node3D:
+			var s_rad: float = 2.0
+			var s_type: int = CombatTypes.StructureType.NONE
+			if s is CommandCenter:
+				s_rad = 4.0
+			elif s is GateStructure:
+				s_rad = 2.5
+			elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+				s_rad = 2.5
+				s_type = CombatTypes.StructureType.BUNKER
+			elif s is WallSegment:
+				s_type = CombatTypes.StructureType.WALL_REINFORCED
+
+			if detonation_pos.distance_to((s as Node3D).global_position) <= (1.4 + s_rad):
+				var res = SFECombatEngine.calculate_damage(
+					140.0,
+					CombatTypes.DamageType.PHYSICAL,
+					0.0,
+					0,
+					s_type,
+					false,
+					true
+				)
+				if s.has_method("take_damage_context"):
+					s.take_damage_context(140.0, CombatTypes.DamageType.PHYSICAL, false, 0)
+				elif s.has_method("take_damage"):
+					s.take_damage(res.damage_dealt)
+
+	# Despawn from Swarm Simulation SoA & Notify Wave Manager
+	if swarm_simulation:
+		swarm_simulation.despawn_unit(unit_idx)
+	if wave_manager:
+		wave_manager.on_swarm_unit_died(8)
+
+
+## Baneling Premature Pop (Slain before reaching target): 50% damage in 2.0m splash radius
+func _execute_baneling_premature_pop(pop_pos: Vector3) -> void:
+	_play_sfx_3d(&"baneling_explode", pop_pos)
+	if combat_vfx_pool:
+		combat_vfx_pool.spawn_acid_burst(pop_pos)
+
+	var allies: Array[Node] = get_tree().get_nodes_in_group("allies")
+	var structures: Array[Node] = get_tree().get_nodes_in_group("structures")
+
+	for a in allies:
+		if is_instance_valid(a) and a is Node3D:
+			if pop_pos.distance_to((a as Node3D).global_position) <= (2.0 + 0.6):
+				var res = SFECombatEngine.calculate_damage(
+					20.0,
+					CombatTypes.DamageType.PHYSICAL,
+					a.get("flat_armor") if "flat_armor" in a else 1.0,
+					0,
+					CombatTypes.StructureType.NONE,
+					a is HeroUnit3D,
+					true
+				)
+				if a.has_method("take_damage"):
+					a.take_damage(res.damage_dealt)
+
+	for s in structures:
+		if is_instance_valid(s) and s is Node3D:
+			var s_rad: float = 2.0
+			var s_type: int = CombatTypes.StructureType.NONE
+			if s is CommandCenter:
+				s_rad = 4.0
+			elif s is GateStructure:
+				s_rad = 2.5
+			elif s.name.to_lower().contains("bunker") or s.is_in_group("bunkers"):
+				s_rad = 2.5
+				s_type = CombatTypes.StructureType.BUNKER
+			elif s is WallSegment:
+				s_type = CombatTypes.StructureType.WALL_REINFORCED
+
+			if pop_pos.distance_to((s as Node3D).global_position) <= (2.0 + s_rad):
+				var res = SFECombatEngine.calculate_damage(
+					70.0,
+					CombatTypes.DamageType.PHYSICAL,
+					0.0,
+					0,
+					s_type,
+					false,
+					true
+				)
+				if s.has_method("take_damage"):
+					s.take_damage(res.damage_dealt)
+
+
+## Hydralisk Ranged Artillery: 28 m/s piercing spines dealing 16 primary dmg & penetrating 8 secondary dmg
+func _execute_hydralisk_artillery_attack(
+	origin: Vector3,
+	primary_target: Node3D,
+	primary_struct_type: int,
+	structures: Array[Node],
+	allies: Array[Node]
+) -> void:
+	var raw_primary: float = 16.0
+	var primary_armor: float = primary_target.get("flat_armor") if "flat_armor" in primary_target else 1.0
+	if primary_target.is_in_group("structures") or primary_struct_type != CombatTypes.StructureType.NONE:
+		primary_armor = 0.0
+
+	var res_primary = SFECombatEngine.calculate_damage(
+		raw_primary,
+		CombatTypes.DamageType.PHYSICAL,
+		primary_armor,
+		0,
+		primary_struct_type,
+		primary_target is HeroUnit3D
+	)
+
+	if primary_target.has_method("take_damage_context"):
+		primary_target.take_damage_context(raw_primary, CombatTypes.DamageType.PHYSICAL, primary_target is HeroUnit3D, 0)
+	elif primary_target.has_method("take_damage"):
+		primary_target.take_damage(res_primary.damage_dealt)
+
+	_play_sfx_3d(&"hydra_spine", origin)
+	if combat_vfx_pool:
+		combat_vfx_pool.spawn_tracer(origin + Vector3(0.0, 1.2, 0.0), primary_target.global_position + Vector3(0.0, 0.8, 0.0))
+
+	# Secondary Target Penetration (50% = 8.0 damage to unit/structure in line behind)
+	var spine_dir: Vector3 = (primary_target.global_position - origin)
+	spine_dir.y = 0.0
+	if spine_dir.length_squared() > 0.01:
+		spine_dir = spine_dir.normalized()
+		var secondary_target: Node3D = null
+		var secondary_struct_type: int = CombatTypes.StructureType.NONE
+		var best_dist: float = INF
+
+		var candidates: Array[Node] = []
+		candidates.append_array(allies)
+		candidates.append_array(structures)
+
+		for c in candidates:
+			if not is_instance_valid(c) or not (c is Node3D) or c == primary_target:
+				continue
+			var to_cand: Vector3 = (c as Node3D).global_position - primary_target.global_position
+			to_cand.y = 0.0
+			var dist: float = to_cand.length()
+			if dist > 0.3 and dist <= 6.5:
+				var dot: float = spine_dir.dot(to_cand.normalized())
+				if dot > 0.55 and dist < best_dist:
+					best_dist = dist
+					secondary_target = c as Node3D
+					if c is WallSegment:
+						secondary_struct_type = CombatTypes.StructureType.WALL_REINFORCED
+					elif c.name.to_lower().contains("bunker") or c.is_in_group("bunkers"):
+						secondary_struct_type = CombatTypes.StructureType.BUNKER
+
+		if secondary_target:
+			var raw_secondary: float = 8.0
+			var sec_armor: float = secondary_target.get("flat_armor") if "flat_armor" in secondary_target else 1.0
+			if secondary_target.is_in_group("structures") or secondary_struct_type != CombatTypes.StructureType.NONE:
+				sec_armor = 0.0
+
+			var res_secondary = SFECombatEngine.calculate_damage(
+				raw_secondary,
+				CombatTypes.DamageType.PHYSICAL,
+				sec_armor,
+				0,
+				secondary_struct_type,
+				secondary_target is HeroUnit3D
+			)
+			if secondary_target.has_method("take_damage_context"):
+				secondary_target.take_damage_context(raw_secondary, CombatTypes.DamageType.PHYSICAL, secondary_target is HeroUnit3D, 0)
+			elif secondary_target.has_method("take_damage"):
+				secondary_target.take_damage(res_secondary.damage_dealt)
+
+			if combat_vfx_pool:
+				combat_vfx_pool.spawn_tracer(primary_target.global_position + Vector3(0.0, 0.8, 0.0), secondary_target.global_position + Vector3(0.0, 0.8, 0.0))
+
+
+## Centralized handler for swarm unit death from allied attacks, bunkers, and skills
+func _on_swarm_unit_killed(unit_idx: int, killer: Node, pos: Vector3, bounty_val: int = 5) -> void:
+	var sdata = swarm_simulation.swarm_data
+	var arch_id: int = sdata.archetype_ids[unit_idx]
+
+	if combat_vfx_pool:
+		combat_vfx_pool.spawn_acid_burst(pos)
+
+	# 50% premature pop mechanic for Banelings killed before reaching target
+	if arch_id == 2:
+		_execute_baneling_premature_pop(pos)
+
+	var bounty: int = award_kill_bounty(null, killer, bounty_val, EconomyTypes.Faction.ALLIED, CombatTypes.DamageType.PHYSICAL)
+	FloatingTextManager.spawn_text(self, pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
+	if active_hero:
+		active_hero.gain_experience(15)
+	session_kills += 1
+	if wave_manager:
+		wave_manager.on_swarm_unit_died(bounty_val)
 
 
 ## Awards mineral kill bounty honoring the strict Crossfire Nullification Rule (Requirement R3).
@@ -558,7 +893,7 @@ func _on_hero_skill_cast(skill: Variant, target: Variant) -> void:
 
 	var radius: float = skill.area_radius if "area_radius" in skill else 0.0
 	var power: float = skill.base_power if "base_power" in skill else 0.0
-	var dmg_type: int = skill.damage_type if "damage_type" in skill else CombatTypes.DamageType.SPELL
+	var _dmg_type: int = skill.damage_type if "damage_type" in skill else CombatTypes.DamageType.SPELL
 
 	if radius <= 0.0 or power <= 0.0:
 		return
@@ -575,15 +910,7 @@ func _on_hero_skill_cast(skill: Variant, target: Variant) -> void:
 				0.35,
 				swarm_simulation.swarm_data.pos_z[unit_idx]
 			)
-			if combat_vfx_pool:
-				combat_vfx_pool.spawn_acid_burst(victim_pos)
-			var bounty: int = award_kill_bounty(null, active_hero, 5, EconomyTypes.Faction.ALLIED, dmg_type)
-			FloatingTextManager.spawn_text(self, victim_pos, "+%d Minerals" % bounty, Color(0.2, 0.95, 1.0))
-			if active_hero:
-				active_hero.gain_experience(15)
-			session_kills += 1
-			if wave_manager:
-				wave_manager.on_swarm_unit_died(5)
+			_on_swarm_unit_killed(unit_idx, active_hero, victim_pos, 5)
 
 
 func _on_secret_boss_invoked(boss_scene: PackedScene, spawn_transform: Transform3D) -> void:

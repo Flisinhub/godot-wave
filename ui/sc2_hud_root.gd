@@ -10,11 +10,13 @@ extends CanvasLayer
 
 const SC2CommandCard = preload("res://ui/sc2_command_card.gd")
 const SC2StatPanel = preload("res://ui/sc2_stat_panel.gd")
+const ArmoryModal = preload("res://ui/armory_modal.gd")
 
 var bottom_console: HBoxContainer
 var minimap_box: PanelContainer
 var stat_panel: SC2StatPanel
 var command_card: SC2CommandCard
+var armory_modal: ArmoryModal = null
 
 # Top Bar Elements
 var top_bar: PanelContainer
@@ -31,6 +33,7 @@ func _init() -> void:
 func _ready() -> void:
 	_build_hud_layout()
 	_connect_signal_bus()
+	_connect_armory_terminals()
 
 func _build_hud_layout() -> void:
 	if bottom_console != null:
@@ -222,6 +225,81 @@ func _attach_to_bus(bus: Node) -> void:
 		bus.connect("units_selected", _on_units_selected)
 	if bus.has_signal("units_deselected"):
 		bus.connect("units_deselected", _on_units_deselected)
+	if bus.has_signal("armory_terminal_opened"):
+		bus.connect("armory_terminal_opened", func(t: Node = null) -> void:
+			open_armory_modal(t)
+		)
+
+
+func _ensure_armory_modal() -> void:
+	if armory_modal != null and is_instance_valid(armory_modal):
+		return
+	var modal_scene: PackedScene = load("res://ui/armory_modal.tscn") as PackedScene
+	if modal_scene != null:
+		armory_modal = modal_scene.instantiate() as ArmoryModal
+	if armory_modal == null:
+		armory_modal = ArmoryModal.new()
+	armory_modal.name = "ArmoryModal"
+	armory_modal.visible = false
+	add_child(armory_modal)
+	if not armory_modal.modal_closed.is_connected(_on_armory_modal_closed):
+		armory_modal.modal_closed.connect(_on_armory_modal_closed)
+
+
+func open_armory_modal(terminal: Node = null) -> void:
+	_ensure_armory_modal()
+	if armory_modal != null:
+		armory_modal.open_modal(terminal)
+
+
+func close_armory_modal() -> void:
+	if armory_modal != null and armory_modal.visible:
+		armory_modal.close_modal()
+
+
+func _on_armory_modal_closed() -> void:
+	pass
+
+
+func _connect_armory_terminals() -> void:
+	var terminals: Array = []
+	if is_inside_tree():
+		var tree: SceneTree = get_tree()
+		if tree != null:
+			terminals = tree.get_nodes_in_group("armory")
+			if not tree.node_added.is_connected(_on_tree_node_added):
+				tree.node_added.connect(_on_tree_node_added)
+	var p: Node = get_parent()
+	while p != null:
+		for ch in p.get_children():
+			if ch.is_in_group("armory") and not terminals.has(ch):
+				terminals.append(ch)
+		p = p.get_parent()
+	for term in terminals:
+		_bind_armory_terminal(term)
+
+
+func _on_tree_node_added(node: Node) -> void:
+	if node != null and (node.is_in_group("armory") or node.has_signal("terminal_opened")):
+		_bind_armory_terminal(node)
+
+
+func _bind_armory_terminal(term: Node) -> void:
+	if term == null or not is_instance_valid(term):
+		return
+	if term.has_signal("terminal_opened") and not term.terminal_opened.is_connected(_on_terminal_opened.bind(term)):
+		term.terminal_opened.connect(_on_terminal_opened.bind(term))
+	if term.has_signal("terminal_closed") and not term.terminal_closed.is_connected(_on_terminal_closed):
+		term.terminal_closed.connect(_on_terminal_closed)
+
+
+func _on_terminal_opened(terminal: Node = null) -> void:
+	open_armory_modal(terminal)
+
+
+func _on_terminal_closed() -> void:
+	if armory_modal != null and armory_modal.visible:
+		close_armory_modal()
 
 func _on_units_selected(units: Array) -> void:
 	if units.is_empty():
