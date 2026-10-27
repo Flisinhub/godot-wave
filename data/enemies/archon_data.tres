@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = &"archon"
+unit_name = "Archon"
+race = "protoss"
+category = "elite"
+max_health = 800.0
+move_speed = 5.5
+attack_damage = 45.0
+attack_range = 3.5
+attack_cooldown = 1.25
+kill_reward = 180
+body_color = Color(0.3, 0.7, 1.0, 1)
+accent_color = Color(1.0, 1.0, 1.0, 1)
+mesh_scale = Vector3(1.6, 1.8, 1.6)
+tags = ["psionic", "protoss", "splash"]

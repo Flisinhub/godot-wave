@@ -1213,6 +1213,11 @@ func _create_enemy_income_params(enemy: Node) -> IncomeParams:
 		p.category_multiplier = 1.0
 	else:
 		return null
+
+	var sess := _get_game_session()
+	if sess and sess.pedestal_bonus_active:
+		p.pedestal_bonus = 25
+
 	return p
 
 
@@ -1278,8 +1283,11 @@ func _on_pedestal_puzzle_solved(reward_data: Dictionary) -> void:
 	var bonus_minerals: int = reward_data.get("minerals", 2500)
 	if economy_manager:
 		economy_manager.add_minerals(bonus_minerals, "Pedestal Puzzle Solved")
+	var sess := _get_game_session()
+	if sess:
+		sess.pedestal_bonus_active = true
 	if state_label:
-		state_label.text = "¡PUZZLE DE PEDESTALES RESUELTO!"
+		state_label.text = "¡PUZZLE DE PEDESTALES RESUELTO (+25 BONO DE BOTÍN)!"
 		state_label.add_theme_color_override("font_color", Color(0.2, 0.9, 1.0))
 
 

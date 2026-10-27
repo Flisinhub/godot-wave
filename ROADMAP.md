@@ -533,27 +533,27 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 **HJ:** progreso a través de fases (Protoss 1, Protoss 2 con cristales Xel'Naga) y resuelvo el puzzle de los pedestales para obtener un bono permanente.
 
 ### Tareas — Fases de historia
-- [ ] **9.1** `StoryPhaseManager`: estados (Zerg → Protoss 1 → Protoss 2 → Jefes cúspide). `L`
-- [ ] **9.2** Disparadores de cada fase (engendradores destruidos, hitos). `M`
-- [ ] **9.3** Enemigos Protoss y sus familias de engendradores. `L`
-- [ ] **9.4** **Cristales Xel'Naga** (Fase Protoss 2): comportamiento y ritual. `M`
-- [ ] **9.5** Cambios ambientales por fase (iluminación, sonido, efectos). `M`
+- [x] **9.1** `StoryPhaseManager`: estados (Zerg → Protoss 1 → Protoss 2 → Jefes cúspide). `L`
+- [x] **9.2** Disparadores de cada fase (engendradores destruidos, hitos). `M`
+- [x] **9.3** Enemigos Protoss y sus familias de engendradores. `L`
+- [x] **9.4** **Cristales Xel'Naga** (Fase Protoss 2): comportamiento y ritual. `M`
+- [x] **9.5** Cambios ambientales por fase (iluminación, sonido, efectos). `M`
 
 ### Tareas — Puzzle de pedestales
 Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos vecinos adyacentes**.
-- [ ] **9.6** `PedestalPuzzleManager`: estado de 8 bits, toggle con vecinos, detección de resolución. `M`
-- [ ] **9.7** **Solucionador en F₂:** resolver `A·x = b` sobre el cuerpo de 2 elementos (eliminación gaussiana con XOR; matriz circulante). `M`
-- [ ] **9.8** Modo "ayuda" en depuración: resalta qué pedestales pulsar. `S`
-- [ ] **9.9** Recompensa: activa el `BonoPedestal` plano en la fórmula de ingresos. `S`
-- [ ] **9.10** Generación del estado inicial del puzzle por seed (siempre resoluble). `S`
-- [ ] **9.11** Tests: todas las 2⁸ configuraciones → determinar cuáles son resolubles y verificar el solver. `S`
+- [x] **9.6** `PedestalPuzzleManager`: estado de 8 bits, toggle con vecinos, detección de resolución. `M`
+- [x] **9.7** **Solucionador en F₂:** resolver `A·x = b` sobre el cuerpo de 2 elementos (eliminación gaussiana con XOR; matriz circulante). `M`
+- [x] **9.8** Modo "ayuda" en depuración: resalta qué pedestales pulsar. `S`
+- [x] **9.9** Recompensa: activa el `BonoPedestal` plano en la fórmula de ingresos. `S`
+- [x] **9.10** Generación del estado inicial del puzzle por seed (siempre resoluble). `S`
+- [x] **9.11** Tests: todas las 2⁸ configuraciones → determinar cuáles son resolubles y verificar el solver. `S`
 
 ### Tareas — Eventos y secretos
-- [ ] **9.12** **Cajas de cartón (Mystery Boxes)** y lagartos (*Lucky Lizard*) distribuidos por seed. `M`
-- [ ] **9.13** Secreto *Outhouse* (+10 supply a todos). `S`
-- [ ] **9.14** Evento de la Estación de Gas ("Fueling Up"). `M`
-- [ ] **9.15** Eventos de Mengsk (silla/estatua), Voice of the Abyss y antena SR-04 (se enlazan con rituales de jefes, Fase 10). `M`
-- [ ] **9.16** Lector de código de partida (equivalente a `/match`): mostrar seed y su contenido. `M`
+- [x] **9.12** **Cajas de cartón (Mystery Boxes)** y lagartos (*Lucky Lizard*) distribuidos por seed. `M`
+- [x] **9.13** Secreto *Outhouse* (+10 supply a todos). `S`
+- [x] **9.14** Evento de la Estación de Gas ("Fueling Up"). `M`
+- [x] **9.15** Eventos de Mengsk (silla/estatua), Voice of the Abyss y antena SR-04 (se enlazan con rituales de jefes, Fase 10). `M`
+- [x] **9.16** Lector de código de partida (equivalente a `/match`): mostrar seed y su contenido. `M`
 
 ### CdH
 - Resuelvo el puzzle con ayuda del solver y observo el bono en el ingreso.

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = &"zealot"
+unit_name = "Zealot"
+race = "protoss"
+category = "normal"
+max_health = 150.0
+move_speed = 6.0
+attack_damage = 16.0
+attack_range = 1.5
+attack_cooldown = 0.86
+kill_reward = 25
+body_color = Color(0.2, 0.45, 0.85, 1)
+accent_color = Color(0.95, 0.8, 0.2, 1)
+mesh_scale = Vector3(1.1, 1.1, 1.1)
+tags = ["light", "protoss", "melee"]

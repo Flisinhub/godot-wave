@@ -12,16 +12,20 @@ signal puzzle_solved(reward_data: Dictionary)
 signal c8_state_changed(new_state: PackedByteArray)
 signal pedestal_state_updated(pedestal_id: int, is_active: bool)
 
+const F2Solver = preload("res://core/puzzles/f2_solver.gd")
+
 enum PuzzleMode { SEQUENCE_OCTAGRAM, LIGHTS_OUT_C8 }
 
-@export var mode: PuzzleMode = PuzzleMode.SEQUENCE_OCTAGRAM
+@export var mode: PuzzleMode = PuzzleMode.LIGHTS_OUT_C8
 @export var ring_radius: float = 8.0
 @export var target_sequence: Array[int] = [0, 3, 6, 1, 4, 7, 2, 5]
+@export var match_seed: int = 123456
 
 var current_step_index: int = 0
 var c8_state: PackedByteArray = PackedByteArray([0, 0, 0, 0, 0, 0, 0, 0])
 var is_solved: bool = false
 var pedestals: Array[Node3D] = []
+var debug_hint_mode: bool = false
 
 
 func _ready() -> void:
@@ -102,8 +106,37 @@ func _process_c8_toggle(pedestal_id: int) -> void:
 		puzzle_solved.emit({
 			"reward_type": "ANCIENT_CACHE",
 			"minerals": 5000,
+			"pedestal_bonus": 25,
 			"unlocked_achievement": "ach_c8_mastery"
 		})
+
+
+## Sets up a guaranteed solvable initial state using deterministic seed (Task 9.10).
+func setup_deterministic_initial_state(p_seed: int = 123456) -> void:
+	match_seed = p_seed
+	var rng := RandomNumberGenerator.new()
+	rng.seed = match_seed
+	var solvable: Array[int] = F2Solver.generate_solvable_state(rng, 2)
+	for i in range(8):
+		c8_state[i] = solvable[i]
+	is_solved = false
+	_update_c8_visuals()
+
+
+## Computes the minimal sequence of pedestal indices to solve current state (Task 9.8).
+func get_solver_hints() -> Array[int]:
+	var current: Array = []
+	for val in c8_state:
+		current.append(val)
+	var res: Dictionary = F2Solver.solve_c8(current)
+	var hints: Array[int] = []
+	if res.get("solvable", false):
+		var sol: Array = res.get("solution", [])
+		for i in range(sol.size()):
+			if sol[i] == 1:
+				hints.append(i)
+	return hints
+
 
 
 func toggle_c8(pedestal_id: int) -> void:
