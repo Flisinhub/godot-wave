@@ -36,6 +36,7 @@ const MapSeed = preload("res://core/map/map_seed.gd")
 const MapGenerator = preload("res://core/map/map_generator.gd")
 const SFEGameOverModal = preload("res://ui/sfe_game_over_modal.gd")
 const PlanetaryFortress = preload("res://entities/structures/planetary_fortress.gd")
+const PlayerConsole = preload("res://ui/player_console.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -86,6 +87,9 @@ var match_timer: float = 0.0
 var spawners_destroyed_count: int = 0
 var is_game_over: bool = false
 
+# SFE5 Player RPG Console (Fase 4)
+var player_console: PlayerConsole = null
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -120,6 +124,17 @@ func _ready() -> void:
 
 	# 9. SFE5 Pre-Mission Modal (Difficulty + Hero Selection + Player Profile)
 	_setup_start_modal()
+
+	# 10. SFE5 Player RPG Console (Alt+C)
+	_setup_player_console()
+
+
+func _setup_player_console() -> void:
+	player_console = PlayerConsole.new()
+	player_console.name = "PlayerConsole"
+	add_child(player_console)
+	if active_hero:
+		player_console.target_unit = active_hero
 
 
 func _process(delta: float) -> void:
@@ -220,6 +235,8 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 			var bus := _get_signal_bus()
 			if bus and bus.has_signal("units_selected"):
 				bus.units_selected.emit([active_hero])
+		if player_console:
+			player_console.target_unit = active_hero
 
 	# 4. Update SC2 Top Bar
 	if sc2_hud_root:

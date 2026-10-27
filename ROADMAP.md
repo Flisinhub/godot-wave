@@ -361,18 +361,18 @@ Mejoras propias de la unidad  →  Mejoras raciales primarias (~500)  →  Bufos
 ```
 
 ### 4.3 Tareas — Consola
-- [ ] **4.1** `PlayerConsole` (UI): pestañas *Unidad / Raza / Bufos / Atributos*. Atajo **Alt+C**. `L`
-- [ ] **4.2** Selección de la unidad objetivo de la compra (heredada de la selección actual). `S`
-- [ ] **4.3** Previsualización de coste y efecto antes de comprar. `M`
-- [ ] **4.4** Tooltips con valor actual → valor tras compra. `S`
-- [ ] **4.5** Soporte Shift (gastar todo) y Ctrl (comprar ×5, opcional). `S`
+- [x] **4.1** `PlayerConsole` (UI): pestañas *Unidad / Raza / Bufos / Atributos*. Atajo **Alt+C**. `L`
+- [x] **4.2** Selección de la unidad objetivo de la compra (heredada de la selección actual). `S`
+- [x] **4.3** Previsualización de coste y efecto antes de comprar. `M`
+- [x] **4.4** Tooltips con valor actual → valor tras compra. `S`
+- [x] **4.5** Soporte Shift (gastar todo) y Ctrl (comprar ×5, opcional). `S`
 
 ### 4.4 Tareas — Atributos y mejoras
-- [ ] **4.6** `StatsComponent`: base + atributos + mejoras + bufos → estadística efectiva; caché con invalidación por señal. `L`
-- [ ] **4.7** Curva de coste por atributo (progresiva) en `GameConfig`. `S`
-- [ ] **4.8** Mejoras raciales: 5 categorías (daño, armadura, vida, energía, vel. ataque) × 3 razas × N niveles. Generar `.tres` desde plantilla (tarea 2.9). `L`
+- [x] **4.6** `StatsComponent`: base + atributos + mejoras + bufos → estadística efectiva; caché con invalidación por señal. `L`
+- [x] **4.7** Curva de coste por atributo (progresiva) en `GameConfig`. `S`
+- [x] **4.8** Mejoras raciales: 5 categorías (daño, armadura, vida, energía, vel. ataque) × 3 razas × N niveles. Generar `.tres` desde plantilla (tarea 2.9). `L`
 - [ ] **4.9** Mejoras específicas de unidad (baratas y críticas) para cada héroe/unidad inicial. `L`
-- [ ] **4.10** *Neutron Armor* como mejora independiente. `S`
+- [x] **4.10** *Neutron Armor* como mejora independiente. `S`
 
 ### 4.5 Tareas — Bufos por tier
 Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + supremos).
@@ -387,18 +387,18 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 | 6 | Posicionamiento | **Bulwark/Braced** (+5 % acumulable hasta quieto) |
 | 7 | Maestría | Amplificación porcentual de raza + vida masiva |
 
-- [ ] **4.11** Motor de condiciones de bufo (quieto, en movimiento, sin daño en N s, energía al 100 %, en combate). `M`
-- [ ] **4.12** Bufos T1–T2. `M`
-- [ ] **4.13** Bufos T3 (Momentum, Predator). `M`
-- [ ] **4.14** Bufos T4 (Static Charge, Quantum Field, Enhanced Regeneration). `M`
-- [ ] **4.15** Bufos T5–T7. `L`
-- [ ] **4.16** Restricción: un bufo por tier por unidad; reemplazo con reembolso parcial configurable. `S`
+- [x] **4.11** Motor de condiciones de bufo (quieto, en movimiento, sin daño en N s, energía al 100 %, en combate). `M`
+- [x] **4.12** Bufos T1–T2. `M`
+- [x] **4.13** Bufos T3 (Momentum, Predator). `M`
+- [x] **4.14** Bufos T4 (Static Charge, Quantum Field, Enhanced Regeneration). `M`
+- [x] **4.15** Bufos T5–T7. `L`
+- [x] **4.16** Restricción: un bufo por tier por unidad; reemplazo con reembolso parcial configurable. `S`
 - [ ] **4.17** HUD: iconos de bufos activos con acumulaciones y temporizadores. `M`
 
 ### 4.6 Tareas — Bufos supremos
-- [ ] **4.18** **Ace (As):** se compra o se gana al matar colosos (Reinas, Brutaliscos, Jefes). Invulnerabilidad total en soporte/visión; mejoras grandes en combatientes. `M`
-- [ ] **4.19** **Demiurge:** evita una muerte fatal (cheat-death), reutilización 180 s. `M`
-- [ ] **4.20** **Máxima Experiencia (nivel 100):** 75.000 minerales; reembolsa 750 por cada nivel ya poseído. `S`
+- [x] **4.18** **Ace (As):** se compra o se gana al matar colosos (Reinas, Brutaliscos, Jefes). Invulnerabilidad total en soporte/visión; mejoras grandes en combatientes. `M`
+- [x] **4.19** **Demiurge:** evita una muerte fatal (cheat-death), reutilización 180 s. `M`
+- [x] **4.20** **Máxima Experiencia (nivel 100):** 75.000 minerales; reembolsa 750 por cada nivel ya poseído. `S`
 
 ### 4.7 Daño y calculadora
 - [ ] **4.21** Pipeline de daño: base → mejoras primarias → bufos estáticos → bufos de postura → debufos del objetivo (p. ej. Ghost EMP) → auras → stacks de élite. `L`
@@ -406,11 +406,11 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 - [ ] **4.23** Debufos y auras: sistema genérico `AuraComponent` / `DebuffComponent`. `M`
 
 ### 4.8 Tests
-- [ ] **4.T1** Momentum: acumula 5 stacks moviéndose, se disipa al parar.
-- [ ] **4.T2** Un bufo por tier: comprar otro del mismo tier lo reemplaza.
-- [ ] **4.T3** Demiurge evita la muerte y entra en 180 s de enfriamiento.
-- [ ] **4.T4** Nivel 100: coste y reembolso correctos para varios niveles iniciales.
-- [ ] **4.T5** Pipeline de daño: casos de referencia contra calculadora de la wiki.
+- [x] **4.T1** Momentum: acumula 5 stacks moviéndose, se disipa al parar.
+- [x] **4.T2** Un bufo por tier: comprar otro del mismo tier lo reemplaza.
+- [x] **4.T3** Demiurge evita la muerte y entra en 180 s de enfriamiento.
+- [x] **4.T4** Nivel 100: coste y reembolso correctos para varios niveles iniciales.
+- [x] **4.T5** Pipeline de daño: casos de referencia contra calculadora de la wiki.
 
 ### CdH
 - Un marine con 3 bufos y mejoras duplica su DPS de forma medible y visible.
