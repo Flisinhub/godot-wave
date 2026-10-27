@@ -691,26 +691,26 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 **HJ:** el juego se ve, suena y se siente cuidado.
 
 ### UI/UX
-- [ ] **14.1** Menú principal, selección de modo y ajustes. `M`
-- [ ] **14.2** Menú de pausa (Esc) con volumen por canal y opciones gráficas. `M`
-- [ ] **14.3** Pantalla de victoria/derrota con desglose (tiempo, bajas, minerales, nivel de veteranía). `M`
-- [ ] **14.4** Tutorial interactivo (3 pasos: mover, comprar, matar spawner). `L`
-- [ ] **14.5** Accesibilidad: daltonismo (paleta alternativa de categorías), escalado de UI, remapeo de teclas. `M`
-- [ ] **14.6** Localización: ES/EN con `TranslationServer` y `.po`. `M`
-- [ ] **14.7** Notificaciones y alertas (base atacada, jefe invocado, evento próximo). `S`
+- [x] **14.1** Menú principal, selección de modo y ajustes. `M`
+- [x] **14.2** Menú de pausa (Esc) con volumen por canal y opciones gráficas. `M`
+- [x] **14.3** Pantalla de victoria/derrota con desglose (tiempo, bajas, minerales, nivel de veteranía). `M`
+- [x] **14.4** Tutorial interactivo (3 pasos: mover, comprar, matar spawner). `L`
+- [x] **14.5** Accesibilidad: daltonismo (paleta alternativa de categorías), escalado de UI, remapeo de teclas. `M`
+- [x] **14.6** Localización: ES/EN con `TranslationServer` y `.po`. `M`
+- [x] **14.7** Notificaciones y alertas (base atacada, jefe invocado, evento próximo). `S`
 
 ### Audio (retomar tras el bucle de juego)
-- [ ] **14.8** `SFXManager` (autoload): pool de 24 reproductores 3D + 8 2D, polifonía máxima por id, variación de tono. `M`
-- [ ] **14.9** Layout de buses (Master, Music, Voice, Ambience, SFX, Weapons, Swarm) y *ducking* por voz. `S`
-- [ ] **14.10** Biblioteca mínima de efectos (disparos, impactos, muertes zerg, habilidades, UI). `L`
-- [ ] **14.11** Alertas del Adjutant ("Base under attack", "Insufficient minerals", "Wave incoming"). `S`
+- [x] **14.8** `SFXManager` (autoload): pool de 24 reproductores 3D + 8 2D, polifonía máxima por id, variación de tono. `M`
+- [x] **14.9** Layout de buses (Master, Music, Voice, Ambience, SFX, Weapons, Swarm) y *ducking* por voz. `S`
+- [x] **14.10** Biblioteca mínima de efectos (disparos, impactos, muertes zerg, habilidades, UI). `L`
+- [x] **14.11** Alertas del Adjutant ("Base under attack", "Insufficient minerals", "Wave incoming"). `S`
 - [ ] **14.12** Música adaptativa (calma/combate/jefe). `M`
 
 ### Pulido visual
 - [ ] **14.13** Sustitución progresiva de placeholders por modelos finales (prioridad: héroes, spawners, jefes). `XL`
 - [ ] **14.14** VFX de habilidades y de estados de bufo. `L`
 - [ ] **14.15** Post-proceso, iluminación por fase de historia. `M`
-- [ ] **14.16** Animaciones y feedback de golpe (hit-stop sutil, números de daño). `M`
+- [x] **14.16** Animaciones y feedback de golpe (hit-stop sutil, números de daño). `M`
 
 ### CdH
 - Un jugador nuevo entiende el juego en 5 min con el tutorial.
