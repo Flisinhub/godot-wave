@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://core/data/upgrade_data.gd" id="1_1idar"]
+
+[resource]
+script = ExtResource("1_1idar")
+id = &"terran_infantry_armor"
+upgrade_name = "Infantry Armor"
+category = "armor"
+description = "Increases Terran infantry flat armor mitigation by +1 per level."
+max_level = 30
+base_cost = 120
+flat_effect_per_level = 1.0
+multiplier_effect_per_level = 0.0

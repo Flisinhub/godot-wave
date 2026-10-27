@@ -1,0 +1,9 @@
+id,name,category,race,max_level,base_cost,cost_growth,flat_effect,multiplier_effect,description
+terran_infantry_weapons,Infantry Weapons,damage,terran,30,100,1.15,3.0,0.0,Increases Terran infantry weapon damage by +3 per level.
+terran_infantry_armor,Infantry Armor,armor,terran,30,120,1.15,1.0,0.0,Increases Terran infantry flat armor mitigation by +1 per level.
+terran_combat_vitality,Combat Vitality,health,terran,20,150,1.20,50.0,0.0,Increases maximum hero and unit health by +50 HP per level.
+terran_plasma_optics,Plasma Optics,energy,terran,15,200,1.20,25.0,0.05,Increases maximum energy by +25 and regeneration by +5% per level.
+zerg_melee_attacks,Melee Attacks,damage,zerg,30,100,1.15,2.5,0.0,Increases Zerg melee damage by +2.5 per level.
+zerg_carapace,Carapace Armor,armor,zerg,30,120,1.15,1.0,0.0,Increases Zerg carapace armor by +1 per level.
+protoss_ground_weapons,Ground Weapons,damage,protoss,30,150,1.18,4.0,0.0,Increases Protoss plasma strike power by +4 per level.
+protoss_plasma_shields,Plasma Shields,armor,protoss,30,150,1.18,1.0,0.0,Increases Protoss shield capacity and absorption by +1 per level.

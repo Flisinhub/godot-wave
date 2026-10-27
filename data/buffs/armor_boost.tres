@@ -6,6 +6,8 @@
 script = ExtResource("1_buff_def")
 buff_id = &"armor_boost"
 display_name = "Armor Boost"
+tier = 1
+mineral_cost = 500
 default_duration = 12.0
 default_max_stacks = 2
 is_invulnerable = false

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = &"banshee"
+enemy_name = "Banshee"
+unit_name = "Banshee"
+race = "terran"
+category = "normal"
+max_health = 140.0
+max_shield = 0.0
+flat_armor = 0.0
+move_speed = 5.8
+attack_damage = 24.0
+attack_range = 6.0
+attack_cooldown = 1.25
+kill_reward = 25
+body_color = Color(0.2, 0.25, 0.3, 1)
+accent_color = Color(0.2, 0.8, 1.0, 1)
+mesh_scale = Vector3(1.4, 0.8, 1.5)
+tags = ["light", "mechanical", "flying", "cloaked"]

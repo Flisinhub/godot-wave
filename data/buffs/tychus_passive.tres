@@ -6,6 +6,8 @@
 script = ExtResource("1_buff_def")
 buff_id = &"tychus_passive"
 display_name = "Tychus Minigun Passive"
+tier = 1
+mineral_cost = 800
 default_duration = 4.0
 default_max_stacks = 20
 is_invulnerable = false

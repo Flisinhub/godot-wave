@@ -6,6 +6,8 @@
 script = ExtResource("1_buff_def")
 buff_id = &"frenzy"
 display_name = "Frenzy"
+tier = 2
+mineral_cost = 1200
 default_duration = 8.0
 default_max_stacks = 2
 is_invulnerable = false

@@ -276,15 +276,15 @@ mínimo garantizado: 1
 | `ModeData` | reglas activables (sin bufos, sin protoss, split income, nightmare…) |
 
 ### Tareas
-- [ ] **2.1** Definir las clases `Resource` con `class_name`, tipado estricto y `@export` documentados. `M`
-- [ ] **2.2** `DataCatalog` (autoload): carga recursiva de `res://data/**/*.tres`, índices por id, validación al arranque. `M`
-- [ ] **2.3** Validador de datos (herramienta de editor): detecta ids duplicados, referencias rotas, valores fuera de rango. `M`
-- [ ] **2.4** Migrar `data/heroes/*.tres` (12) y `data/skills/*.tres` (23) a los nuevos esquemas. `M`
-- [ ] **2.5** Migrar `data/enemies/` (zergling, roach) y añadir banshee, hydralisk, baneling, ultralisk como datos. `M`
-- [ ] **2.6** Migrar `data/buffs/` (5) al nuevo `BuffData` con tiers. `S`
-- [ ] **2.7** Documento `docs/DATA_GUIDE.md`: cómo añadir una unidad, un bufo, un engendrador. `S`
-- [ ] **2.8** Test: el catálogo carga sin errores y todos los ids son únicos. `S`
-- [ ] **2.9** Script de importación opcional CSV→`.tres` para generar masivamente mejoras (preparación de Fase 4). `M`
+- [x] **2.1** Definir las clases `Resource` con `class_name`, tipado estricto y `@export` documentados. `M`
+- [x] **2.2** `DataCatalog` (autoload): carga recursiva de `res://data/**/*.tres`, índices por id, validación al arranque. `M`
+- [x] **2.3** Validador de datos (herramienta de editor): detecta ids duplicados, referencias rotas, valores fuera de rango. `M`
+- [x] **2.4** Migrar `data/heroes/*.tres` (12) y `data/skills/*.tres` (23) a los nuevos esquemas. `M`
+- [x] **2.5** Migrar `data/enemies/` (zergling, roach) y añadir banshee, hydralisk, baneling, ultralisk como datos. `M`
+- [x] **2.6** Migrar `data/buffs/` (5) al nuevo `BuffData` con tiers. `S`
+- [x] **2.7** Documento `docs/DATA_GUIDE.md`: cómo añadir una unidad, un bufo, un engendrador. `S`
+- [x] **2.8** Test: el catálogo carga sin errores y todos los ids son únicos. `S`
+- [x] **2.9** Script de importación opcional CSV→`.tres` para generar masivamente mejoras (preparación de Fase 4). `M`
 
 ### CdH
 - Añadir un enemigo nuevo solo con un `.tres` + escena (sin tocar `.gd` del motor).

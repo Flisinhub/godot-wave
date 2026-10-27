@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://core/data/upgrade_data.gd" id="1_2rnch"]
+
+[resource]
+script = ExtResource("1_2rnch")
+id = &"protoss_plasma_shields"
+upgrade_name = "Plasma Shields"
+category = "armor"
+race = "protoss"
+description = "Increases Protoss shield capacity and absorption by +1 per level."
+max_level = 30
+base_cost = 150
+cost_growth_multiplier = 1.18
+flat_effect_per_level = 1.0
+multiplier_effect_per_level = 0.0

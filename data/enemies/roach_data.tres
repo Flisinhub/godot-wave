@@ -4,7 +4,11 @@
 
 [resource]
 script = ExtResource("1_enemy_data")
+id = &"roach"
 enemy_name = "Roach"
+unit_name = "Roach"
+race = "zerg"
+category = "normal"
 max_health = 110.0
 move_speed = 4.2
 attack_damage = 14.0

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://core/data/upgrade_data.gd" id="1_tq6m6"]
+
+[resource]
+script = ExtResource("1_tq6m6")
+id = &"terran_combat_vitality"
+upgrade_name = "Combat Vitality"
+category = "health"
+description = "Increases maximum hero and unit health by +50 HP per level."
+max_level = 20
+base_cost = 150
+cost_growth_multiplier = 1.2
+flat_effect_per_level = 50.0
+multiplier_effect_per_level = 0.0

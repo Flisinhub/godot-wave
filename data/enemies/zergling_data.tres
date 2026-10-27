@@ -4,7 +4,11 @@
 
 [resource]
 script = ExtResource("1_enemy_data")
+id = &"zergling"
 enemy_name = "Zergling"
+unit_name = "Zergling"
+race = "zerg"
+category = "normal"
 max_health = 35.0
 move_speed = 7.2
 attack_damage = 5.0

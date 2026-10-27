@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = &"baneling"
+enemy_name = "Baneling"
+unit_name = "Baneling"
+race = "zerg"
+category = "normal"
+max_health = 30.0
+max_shield = 0.0
+flat_armor = 0.0
+move_speed = 6.8
+attack_damage = 20.0
+attack_range = 1.8
+attack_cooldown = 0.8
+kill_reward = 8
+body_color = Color(0.15, 0.35, 0.1, 1)
+accent_color = Color(0.4, 1.0, 0.1, 1)
+mesh_scale = Vector3(0.85, 0.8, 0.85)

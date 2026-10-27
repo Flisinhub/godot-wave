@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://core/data/upgrade_data.gd" id="1_x5ea7"]
+
+[resource]
+script = ExtResource("1_x5ea7")
+id = &"terran_plasma_optics"
+upgrade_name = "Plasma Optics"
+category = "energy"
+description = "Increases maximum energy by +25 and regeneration by +5% per level."
+max_level = 15
+base_cost = 200
+cost_growth_multiplier = 1.2
+flat_effect_per_level = 25.0
