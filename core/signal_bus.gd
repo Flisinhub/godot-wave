@@ -22,6 +22,13 @@ signal wave_enemy_count_changed(alive_count: int)
 signal enemy_died(enemy: Node, reward: int)
 signal base_destroyed()
 
+# Timed Events & External Pressure (Fase 8)
+signal scheduled_attack_warned(wave_index: int, leader_name: String, seconds_left: float, direction: Vector3)
+signal scheduled_attack_started(wave_index: int, leader_data: Dictionary)
+signal drop_pod_incoming(target_position: Vector3, delay: float)
+signal drop_pod_impacted(target_position: Vector3)
+signal nydus_tremor_alert(crater_index: int, position: Vector3, tier_name: String)
+
 # Structures Signals
 signal gate_state_changed(gate: Node, is_open: bool)
 signal structure_damaged(structure: Node, current_hp: float, max_hp: float)

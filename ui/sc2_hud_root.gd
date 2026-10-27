@@ -28,6 +28,12 @@ var top_minerals_label: Label
 var top_supply_label: Label
 var top_vet_label: Label
 
+# Tactical Alert Banner & Minimap Indicator (Fase 8)
+var alert_banner: PanelContainer
+var alert_label: Label
+var minimap_arrow: Label
+var _alert_timer: float = 0.0
+
 func _init() -> void:
 	_build_hud_layout()
 
@@ -117,6 +123,17 @@ func _build_hud_layout() -> void:
 	minimap_label.add_theme_color_override("font_color", Color(0.35, 0.85, 1.0, 0.9))
 	minimap_label.add_theme_font_size_override("font_size", 13)
 	minimap_box.add_child(minimap_label)
+
+	minimap_arrow = Label.new()
+	minimap_arrow.name = "MinimapAlertArrow"
+	minimap_arrow.text = "▲"
+	minimap_arrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	minimap_arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	minimap_arrow.visible = false
+	minimap_arrow.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2, 0.95))
+	minimap_arrow.add_theme_font_size_override("font_size", 22)
+	minimap_box.add_child(minimap_arrow)
+
 	bottom_console.add_child(minimap_box)
 
 	# 2. Bottom-Center: Unit Stat Console
@@ -213,6 +230,36 @@ func _build_hud_layout() -> void:
 
 	root_control.add_child(top_bar)
 
+	# 5. Tactical Threat Alert Banner (Fase 8)
+	alert_banner = PanelContainer.new()
+	alert_banner.name = "AlertBanner"
+	alert_banner.anchor_left = 0.5
+	alert_banner.anchor_right = 0.5
+	alert_banner.offset_left = -260.0
+	alert_banner.offset_right = 260.0
+	alert_banner.offset_top = 46.0
+	alert_banner.offset_bottom = 86.0
+	alert_banner.visible = false
+
+	var alert_style := StyleBoxFlat.new()
+	alert_style.bg_color = Color(0.12, 0.02, 0.03, 0.92)
+	alert_style.border_width_bottom = 2
+	alert_style.border_width_top = 2
+	alert_style.border_color = Color(1.0, 0.25, 0.2, 0.9)
+	alert_style.corner_radius_bottom_left = 6
+	alert_style.corner_radius_bottom_right = 6
+	alert_banner.add_theme_stylebox_override("panel", alert_style)
+
+	alert_label = Label.new()
+	alert_label.name = "AlertLabel"
+	alert_label.text = "⚠ ALERTA DE AMENAZA"
+	alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	alert_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	alert_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	alert_label.add_theme_font_size_override("font_size", 14)
+	alert_banner.add_child(alert_label)
+	root_control.add_child(alert_banner)
+
 func _connect_signal_bus() -> void:
 	# Check if running headless with dummy display server
 	var is_headless: bool = DisplayServer.get_name() == "headless"
@@ -235,6 +282,18 @@ func _attach_to_bus(bus: Node) -> void:
 	if bus.has_signal("armory_terminal_opened"):
 		bus.connect("armory_terminal_opened", func(t: Node = null) -> void:
 			open_armory_modal(t)
+		)
+	if bus.has_signal("scheduled_attack_warned"):
+		bus.connect("scheduled_attack_warned", func(w: int, l: String, s: float, d: Vector3) -> void:
+			show_attack_countdown(w, l, s, d)
+		)
+	if bus.has_signal("drop_pod_incoming"):
+		bus.connect("drop_pod_incoming", func(_pos: Vector3, delay: float) -> void:
+			show_drop_pod_alert(delay)
+		)
+	if bus.has_signal("nydus_tremor_alert"):
+		bus.connect("nydus_tremor_alert", func(c: int, _p: Vector3, t: String) -> void:
+			show_threat_alert("⚠ [TEMBLOR SUBTERRÁNEO] ¡%s emergiendo en Cráter %d!" % [t, c + 1], 4.0, Color(0.9, 0.35, 1.0))
 		)
 
 
@@ -425,3 +484,51 @@ func _pan_camera_to_minimap_pos(local_pos: Vector2) -> void:
 		else:
 			cam_rig.global_position.x = world_x
 			cam_rig.global_position.z = world_z
+
+
+func _process(delta: float) -> void:
+	if _alert_timer > 0.0:
+		_alert_timer -= delta
+		if _alert_timer <= 0.0:
+			if alert_banner:
+				alert_banner.visible = false
+			if minimap_arrow:
+				minimap_arrow.visible = false
+
+
+func show_threat_alert(text: String, duration: float = 4.0, color: Color = Color(1.0, 0.85, 0.3)) -> void:
+	if alert_banner and alert_label:
+		alert_label.text = text
+		alert_label.add_theme_color_override("font_color", color)
+		alert_banner.visible = true
+	_alert_timer = duration
+
+
+func show_attack_countdown(wave_index: int, leader_name: String, seconds_left: float, direction: Vector3) -> void:
+	var dir_str: String = "NORTE"
+	if direction.x > 0.3 and direction.z < -0.3:
+		dir_str = "NORESTE (Colmena)"
+	elif direction.x > 0.3:
+		dir_str = "ESTE"
+	elif direction.z < -0.3:
+		dir_str = "NORTE"
+	elif direction.x < -0.3:
+		dir_str = "OESTE"
+	elif direction.z > 0.3:
+		dir_str = "SUR"
+
+	var msg: String = "⚠ [ALERTA DE ASALTO] ¡Oleada %d (%s) en %ds desde el %s!" % [wave_index, leader_name, int(seconds_left), dir_str]
+	show_threat_alert(msg, minf(seconds_left, 5.0), Color(1.0, 0.25, 0.2))
+
+	if minimap_arrow:
+		minimap_arrow.visible = true
+		if direction.x > 0.0:
+			minimap_arrow.text = "↗"
+		else:
+			minimap_arrow.text = "↖"
+
+
+func show_drop_pod_alert(time_left: float) -> void:
+	var msg: String = "⚠ [DROP POD ORBITAL] ¡Impacto inminente en %0.1fs fuera de la base!" % time_left
+	show_threat_alert(msg, time_left + 1.0, Color(1.0, 0.5, 0.1))
+

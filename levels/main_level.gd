@@ -37,6 +37,10 @@ const MapGenerator = preload("res://core/map/map_generator.gd")
 const SFEGameOverModal = preload("res://ui/sfe_game_over_modal.gd")
 const PlanetaryFortress = preload("res://entities/structures/planetary_fortress.gd")
 const PlayerConsole = preload("res://ui/player_console.gd")
+const TimedEventSchedule = preload("res://core/events/timed_event_schedule.gd")
+const DropPodManager = preload("res://core/events/drop_pod_manager.gd")
+const NydusCraterManager = preload("res://core/events/nydus_crater_manager.gd")
+const ScheduledAttackManager = preload("res://core/events/scheduled_attack_manager.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -90,6 +94,12 @@ var is_game_over: bool = false
 # SFE5 Player RPG Console (Fase 4)
 var player_console: PlayerConsole = null
 
+# SFE5 Timed Events & External Pressure (Fase 8)
+var timed_schedule: TimedEventSchedule = null
+var drop_pod_manager: DropPodManager = null
+var nydus_crater_manager: NydusCraterManager = null
+var scheduled_attack_manager: ScheduledAttackManager = null
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -128,6 +138,9 @@ func _ready() -> void:
 	# 10. SFE5 Player RPG Console (Alt+C)
 	_setup_player_console()
 
+	# 11. SFE5 Timed Events & Scheduled Attacks (Fase 8)
+	_setup_timed_events_and_pressure()
+
 
 func _setup_player_console() -> void:
 	player_console = PlayerConsole.new()
@@ -137,13 +150,79 @@ func _setup_player_console() -> void:
 		player_console.target_unit = active_hero
 
 
+func _setup_timed_events_and_pressure() -> void:
+	var seed_val: int = 123456
+	var sess := _get_game_session()
+	if sess and "match_seed" in sess:
+		seed_val = int(sess.match_seed)
+
+	timed_schedule = TimedEventSchedule.new(seed_val)
+	drop_pod_manager = DropPodManager.new()
+	nydus_crater_manager = NydusCraterManager.new(timed_schedule)
+	scheduled_attack_manager = ScheduledAttackManager.new(timed_schedule)
+
+	# Wire internal signals to SignalBus for decoupled presentation
+	timed_schedule.drop_pod_due.connect(_on_drop_pod_due)
+	scheduled_attack_manager.attack_warning_received.connect(_on_scheduled_attack_warning)
+	scheduled_attack_manager.wave_attack_dispatched.connect(_on_scheduled_attack_dispatched)
+	nydus_crater_manager.crater_tremor_started.connect(_on_nydus_tremor_started)
+
+
 func _process(delta: float) -> void:
 	if not is_game_over:
 		match_timer += delta
+		_process_timed_events(delta)
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
 	if debug_telemetry_panel and debug_telemetry_panel.visible:
 		_update_debug_telemetry()
+
+
+func _process_timed_events(delta: float) -> void:
+	if timed_schedule == null:
+		return
+
+	timed_schedule.advance_time(delta)
+
+	var allies: Array = get_tree().get_nodes_in_group("allies") if get_tree() else []
+	if drop_pod_manager:
+		drop_pod_manager.process_strikes(delta, allies)
+
+	if nydus_crater_manager:
+		nydus_crater_manager.process_craters(delta)
+
+
+func _on_drop_pod_due(_pod_index: int, _game_time: float) -> void:
+	if drop_pod_manager == null:
+		return
+	var allies: Array = get_tree().get_nodes_in_group("allies") if get_tree() else []
+	var valid_units: Array = drop_pod_manager.find_valid_targets(allies)
+	if not valid_units.is_empty():
+		var target_pos: Vector3 = (valid_units[0] as Node3D).global_position
+		drop_pod_manager.schedule_strike(target_pos)
+		if SignalBus.has_signal("drop_pod_incoming"):
+			SignalBus.drop_pod_incoming.emit(target_pos, drop_pod_manager.warning_delay)
+
+
+func _on_scheduled_attack_warning(wave_index: int, leader_name: String, seconds_left: float, dir: Vector3) -> void:
+	if SignalBus.has_signal("scheduled_attack_warned"):
+		SignalBus.scheduled_attack_warned.emit(wave_index, leader_name, seconds_left, dir)
+
+
+func _on_scheduled_attack_dispatched(wave_index: int, leader_data: Dictionary, _hive: Vector3, _base: Vector3) -> void:
+	if SignalBus.has_signal("scheduled_attack_started"):
+		SignalBus.scheduled_attack_started.emit(wave_index, leader_data)
+	if state_label:
+		state_label.text = "¡ASALTO DE LA COLMENA: %s EN CAMINO!" % leader_data.get("leader_name", "Líder")
+		state_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
+
+
+func _on_nydus_tremor_started(crater_index: int, pos: Vector3, _delay: float) -> void:
+	var tier_data: Dictionary = timed_schedule.get_nydus_tier(spawners_destroyed_count)
+	var tier_name: String = tier_data.get("tier_name", "Nydus Worm")
+	if SignalBus.has_signal("nydus_tremor_alert"):
+		SignalBus.nydus_tremor_alert.emit(crater_index, pos, tier_name)
+
 
 
 func _unhandled_input(event: InputEvent) -> void:

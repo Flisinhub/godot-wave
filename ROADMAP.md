@@ -514,14 +514,14 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 **HJ:** la partida tiene pulso: no puedo quedarme quieto, me llegan amenazas externas y ataques cada 5 minutos.
 
 ### Tareas
-- [ ] **8.1** **Drop Pods:** cada 45 s (tras 120 s de tregua) caen cápsulas sobre unidades del jugador fuera de la base. `M`
-- [ ] **8.2** **Nydus Worms:** emergen de 12 cráteres fijos a partir de la Fase Protoss 1; potencia escalada (Minor → Ultra Nydus) con el nivel de engendrador. `L`
-- [ ] **8.3** **Ataques programados** cada 300 s desde la Colmena hacia la base. `M`
-- [ ] **8.4** Secuencia de líderes de oleada: 1 Infested General → 3 Rageling → 5 Hellbringer → 7 Brood Emperor → 9 Hybrid Viper → 11 Hybrid Lenkus → 13 Ferocious Brutes. `L`
-- [ ] **8.5** Tras vencer la oleada 13, el tiempo de invocación de jefes se divide entre 3. `S`
-- [ ] **8.6** Avisos en HUD con cuenta atrás y dirección (flechas en minimapa). `M`
-- [ ] **8.7** Estructura de datos `TimedEventSchedule` para registrar todos los eventos cronometrados. `M`
-- [ ] **8.8** Tests: calendario de eventos determinista según seed. `S`
+- [x] **8.1** **Drop Pods:** cada 45 s (tras 120 s de tregua) caen cápsulas sobre unidades del jugador fuera de la base. `M`
+- [x] **8.2** **Nydus Worms:** emergen de 12 cráteres fijos a partir de la Fase Protoss 1; potencia escalada (Minor → Ultra Nydus) con el nivel de engendrador. `L`
+- [x] **8.3** **Ataques programados** cada 300 s desde la Colmena hacia la base. `M`
+- [x] **8.4** Secuencia de líderes de oleada: 1 Infested General → 3 Rageling → 5 Hellbringer → 7 Brood Emperor → 9 Hybrid Viper → 11 Hybrid Lenkus → 13 Ferocious Brutes. `L`
+- [x] **8.5** Tras vencer la oleada 13, el tiempo de invocación de jefes se divide entre 3. `S`
+- [x] **8.6** Avisos en HUD con cuenta atrás y dirección (flechas en minimapa). `M`
+- [x] **8.7** Estructura de datos `TimedEventSchedule` para registrar todos los eventos cronometrados. `M`
+- [x] **8.8** Tests: calendario de eventos determinista según seed. `S`
 
 ### CdH
 - 20 minutos de partida con drop pods, 3 ataques programados y un nydus.
