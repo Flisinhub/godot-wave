@@ -11,6 +11,11 @@ signal session_ended(victory: bool, elapsed_seconds: float)
 signal story_phase_changed(phase_name: String)
 
 var map_seed: int = 1337
+var active_seed: int:
+	get:
+		return map_seed
+	set(v):
+		map_seed = v
 var difficulty_tier: int = 1 # Normal by default
 var player_count: int = 1
 var split_income_mode: bool = false
@@ -26,10 +31,22 @@ var spawners_destroyed: int = 0
 var is_active: bool = false
 
 
+## Parses command line user arguments for --seed=XXXX
+static func parse_cli_seed() -> int:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			return int(arg.get_slice("=", 1))
+	return 0
+
+
 func start_new_session(p_difficulty: int = 1, p_players: int = 1, p_seed: int = 0) -> void:
 	difficulty_tier = p_difficulty
 	player_count = maxi(1, p_players)
-	map_seed = p_seed if p_seed != 0 else randi()
+	var effective_seed: int = p_seed
+	if effective_seed == 0:
+		var cli_seed := parse_cli_seed()
+		effective_seed = cli_seed if cli_seed != 0 else randi()
+	map_seed = effective_seed
 	session_elapsed_time = 0.0
 	total_minerals_earned = 0
 	total_kills = 0

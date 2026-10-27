@@ -110,11 +110,22 @@ func toggle_gate() -> void:
 	_update_status_light()
 
 
+func _get_signal_bus() -> Node:
+	if Engine.has_singleton("SignalBus"):
+		return Engine.get_singleton("SignalBus")
+	var tree := get_tree()
+	if tree and tree.root and tree.root.has_node("SignalBus"):
+		return tree.root.get_node("SignalBus")
+	return null
+
+
 func open_gate(_manual: bool = false) -> void:
 	current_state = GateState.OPEN
 	_target_door_y = _door_open_y
 	_update_status_light()
-	SignalBus.gate_state_changed.emit(self, true)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("gate_state_changed"):
+		bus.gate_state_changed.emit(self, true)
 
 
 func close_gate(_manual: bool = false) -> void:
@@ -123,7 +134,9 @@ func close_gate(_manual: bool = false) -> void:
 	if door_collision:
 		door_collision.disabled = false
 	_update_status_light()
-	SignalBus.gate_state_changed.emit(self, false)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("gate_state_changed"):
+		bus.gate_state_changed.emit(self, false)
 
 
 func _update_status_light() -> void:
@@ -165,7 +178,10 @@ func take_damage(amount: float) -> void:
 	current_health = max(0.0, current_health - amount)
 	if health_bar:
 		health_bar.update_health(current_health, max_health)
-	SignalBus.structure_damaged.emit(self, current_health, max_health)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("structure_damaged"):
+		bus.structure_damaged.emit(self, current_health, max_health)
 	if current_health <= 0.0:
-		SignalBus.structure_destroyed.emit(self)
+		if bus and bus.has_signal("structure_destroyed"):
+			bus.structure_destroyed.emit(self)
 		queue_free()

@@ -21,7 +21,9 @@ var armory_modal: ArmoryModal = null
 # Top Bar Elements
 var top_bar: PanelContainer
 var top_diff_badge: Label
+var top_seed_label: Label
 var top_hive_label: Label
+var enemy_budget_label: Label
 var top_wave_label: Label
 var top_cc_hp_label: Label
 var top_minerals_label: Label
@@ -32,6 +34,8 @@ var top_vet_label: Label
 var alert_banner: PanelContainer
 var alert_label: Label
 var minimap_arrow: Label
+var minimap_overlay: Control
+var spawner_markers: Array = []
 var _alert_timer: float = 0.0
 
 func _init() -> void:
@@ -134,6 +138,13 @@ func _build_hud_layout() -> void:
 	minimap_arrow.add_theme_font_size_override("font_size", 22)
 	minimap_box.add_child(minimap_arrow)
 
+	minimap_overlay = Control.new()
+	minimap_overlay.name = "MinimapOverlay"
+	minimap_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	minimap_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	minimap_overlay.draw.connect(_on_minimap_draw)
+	minimap_box.add_child(minimap_overlay)
+
 	bottom_console.add_child(minimap_box)
 
 	# 2. Bottom-Center: Unit Stat Console
@@ -180,6 +191,12 @@ func _build_hud_layout() -> void:
 	top_diff_badge.add_theme_font_size_override("font_size", 13)
 	top_hbox.add_child(top_diff_badge)
 
+	top_seed_label = Label.new()
+	top_seed_label.text = "SEED: 12345"
+	top_seed_label.add_theme_color_override("font_color", Color(0.65, 0.72, 0.85))
+	top_seed_label.add_theme_font_size_override("font_size", 11)
+	top_hbox.add_child(top_seed_label)
+
 	top_hive_label = Label.new()
 	top_hive_label.text = "HIVE LVL 0 (Next: 120s)"
 	top_hive_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.95))
@@ -190,6 +207,13 @@ func _build_hud_layout() -> void:
 	var spacer1 := Control.new()
 	spacer1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_hbox.add_child(spacer1)
+
+	# Center: Enemy Budget & Objective / Wave info
+	enemy_budget_label = Label.new()
+	enemy_budget_label.text = "ENEMIGOS: 0 / 300"
+	enemy_budget_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
+	enemy_budget_label.add_theme_font_size_override("font_size", 12)
+	top_hbox.add_child(enemy_budget_label)
 
 	# Center: Wave info & Command Center Integrity
 	top_wave_label = Label.new()
@@ -408,6 +432,20 @@ func update_difficulty(diff_name: String, diff_tier: int = 1) -> void:
 		top_diff_badge.add_theme_color_override("font_color", color)
 
 
+func update_seed(seed_value: int) -> void:
+	if top_seed_label:
+		top_seed_label.text = "SEED: %d" % seed_value
+
+
+func update_enemy_budget(living: int, max_budget: int = 300, saturated: bool = false) -> void:
+	if enemy_budget_label:
+		enemy_budget_label.text = "ENEMIGOS: %d / %d" % [living, max_budget]
+		enemy_budget_label.add_theme_color_override(
+			"font_color", Color(1.0, 0.25, 0.25) if saturated else Color(0.9, 0.9, 0.9)
+		)
+
+
+
 func update_hive_evolution(lvl: int, time_remaining: float) -> void:
 	if top_hive_label:
 		top_hive_label.text = "HIVE LVL %d (Next: %ds)" % [lvl, int(ceilf(time_remaining))]
@@ -484,6 +522,38 @@ func _pan_camera_to_minimap_pos(local_pos: Vector2) -> void:
 		else:
 			cam_rig.global_position.x = world_x
 			cam_rig.global_position.z = world_z
+
+
+func update_spawner_markers(markers: Array) -> void:
+	spawner_markers = markers
+	if minimap_overlay:
+		minimap_overlay.queue_redraw()
+
+
+func _on_minimap_draw() -> void:
+	if not minimap_overlay:
+		return
+	var box_size: Vector2 = minimap_overlay.size
+	if box_size.x <= 0.0 or box_size.y <= 0.0:
+		return
+
+	var map_half_extent: float = 50.0
+	for m in spawner_markers:
+		var world_pos: Vector3 = m.get("position", Vector3.ZERO)
+		var state: int = m.get("state", 0)
+		var nx: float = clampf((world_pos.x + map_half_extent) / (map_half_extent * 2.0), 0.08, 0.92)
+		var ny: float = clampf((world_pos.z + map_half_extent) / (map_half_extent * 2.0), 0.08, 0.92)
+		var draw_pos := Vector2(nx * box_size.x, ny * box_size.y)
+
+		var color := Color(0.6, 0.6, 0.6) # Gris = Bloqueado (LOCKED)
+		if state == 1: # ACTIVE
+			color = Color(1.0, 0.2, 0.2) # Rojo = Activo
+		elif state == 2: # DESTROYED
+			color = Color(0.2, 0.95, 0.3) # Verde = Destruido
+
+		minimap_overlay.draw_circle(draw_pos, 5.0, color)
+		minimap_overlay.draw_arc(draw_pos, 6.0, 0, TAU, 16, Color(0.05, 0.08, 0.12), 1.5)
+
 
 
 func _process(delta: float) -> void:

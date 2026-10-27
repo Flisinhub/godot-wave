@@ -11,6 +11,7 @@ var total_minerals: int = 0
 var spawners_cleared: int = 0
 var total_spawners: int = 0
 var difficulty_name: String = "Normal"
+var match_seed: int = 0
 
 signal restart_requested()
 
@@ -22,7 +23,8 @@ func setup(
 	p_minerals: int,
 	p_spawners_cleared: int,
 	p_total_spawners: int,
-	p_diff: String
+	p_diff: String,
+	p_seed: int = 0
 ) -> void:
 	is_victory = p_victory
 	elapsed_time_sec = p_time_sec
@@ -31,6 +33,7 @@ func setup(
 	spawners_cleared = p_spawners_cleared
 	total_spawners = p_total_spawners
 	difficulty_name = p_diff
+	match_seed = p_seed
 
 
 func _ready() -> void:
@@ -109,6 +112,8 @@ func _build_ui() -> void:
 	
 	_add_stat_row(grid, "Tiempo de Partida:", time_str)
 	_add_stat_row(grid, "Dificultad:", difficulty_name)
+	if match_seed != 0:
+		_add_stat_row(grid, "Semilla (Seed):", str(match_seed))
 	_add_stat_row(grid, "Engendradores Erradicados:", "%d / %d" % [spawners_cleared, total_spawners])
 	_add_stat_row(grid, "Bajas Enemigas Totales:", str(total_kills))
 	_add_stat_row(grid, "Minerales Acumulados:", "%d 💎" % total_minerals)
@@ -116,11 +121,15 @@ func _build_ui() -> void:
 	var sep2 := HSeparator.new()
 	vbox.add_child(sep2)
 	
-	# Action Button
+	# Action Buttons
+	var btn_box := HBoxContainer.new()
+	btn_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_box.add_theme_constant_override("separation", 16)
+	vbox.add_child(btn_box)
+
 	var btn := Button.new()
 	btn.text = "REINICIAR MISIÓN"
-	btn.custom_minimum_size = Vector2(220, 44)
-	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.custom_minimum_size = Vector2(180, 44)
 	
 	var btn_style := StyleBoxFlat.new()
 	btn_style.bg_color = Color(0.12, 0.22, 0.35)
@@ -128,8 +137,18 @@ func _build_ui() -> void:
 	btn_style.set_border_width_all(2)
 	btn_style.set_corner_radius_all(4)
 	btn.add_theme_stylebox_override("normal", btn_style)
-	
 	btn.pressed.connect(_on_restart_pressed)
+	btn_box.add_child(btn)
+
+	if match_seed != 0:
+		var copy_btn := Button.new()
+		copy_btn.text = "COPIAR SEED"
+		copy_btn.custom_minimum_size = Vector2(140, 44)
+		copy_btn.pressed.connect(func():
+			DisplayServer.clipboard_set(str(match_seed))
+			copy_btn.text = "¡COPIADA!"
+		)
+		btn_box.add_child(copy_btn)
 	vbox.add_child(btn)
 
 

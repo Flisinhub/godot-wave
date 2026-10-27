@@ -73,6 +73,7 @@ var boss_health_bar_ui: BossHealthBarUI = null
 
 # Active Hero Entity & Modal State
 var active_hero: HeroUnit3D = null
+var is_waves_mode: bool = false
 var start_modal: SFEStartModal = null
 var session_kills: int = 0
 
@@ -129,6 +130,13 @@ func _ready() -> void:
 	if game_over_panel:
 		game_over_panel.visible = false
 
+	if not is_waves_mode:
+		if start_wave_btn:
+			start_wave_btn.visible = false
+		var wp := get_node_or_null("UI/WavePanel")
+		if wp:
+			wp.visible = false
+
 	# 8. Milestone 6 Startup Diagnostics
 	_log_milestone_6_diagnostics()
 
@@ -174,6 +182,8 @@ func _process(delta: float) -> void:
 		_process_timed_events(delta)
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
+		if budget_manager:
+			sc2_hud_root.update_enemy_budget(budget_manager.get_living_count(), 300, budget_manager.is_saturated())
 	if debug_telemetry_panel and debug_telemetry_panel.visible:
 		_update_debug_telemetry()
 
@@ -345,9 +355,16 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	start_modal = null
 
 	# SFE5 Gameplay Loop Activation (Task 3.9)
-	var is_waves_mode: bool = false
+	is_waves_mode = false
 	if sess and "active_mode" in sess and sess.active_mode and "use_waves_mode" in sess.active_mode:
 		is_waves_mode = sess.active_mode.use_waves_mode
+
+	if not is_waves_mode:
+		if start_wave_btn:
+			start_wave_btn.visible = false
+		var wp := get_node_or_null("UI/WavePanel")
+		if wp:
+			wp.visible = false
 
 	var t := _get_tree_safe()
 	if is_waves_mode:
@@ -475,19 +492,46 @@ func _setup_spawner_network() -> void:
 		budget_manager.set_simulation(swarm_simulation)
 	
 	var sess := _get_game_session()
-	var seed_val = sess.active_seed if sess and "active_seed" in sess else 12345
+	var seed_val: int = 0
+	if sess and "map_seed" in sess and sess.map_seed != 0:
+		seed_val = sess.map_seed
+	else:
+		var cli_seed := GameSession.parse_cli_seed() if GameSession != null else 0
+		if cli_seed != 0:
+			seed_val = cli_seed
+		else:
+			seed_val = GameConfigScript.DEFAULT_SEED
+			push_warning("main_level: No active GameSession map_seed found, using fallback seed %d" % seed_val)
 	var map_seed := MapSeed.new(seed_val)
 	map_generator = MapGenerator.new(map_seed)
 	
-	var layout_plan := map_generator.generate_layout_plan(3)
+	var spawner_count: int = GameConfigScript.SPAWNER_COUNT_DEFAULT
+	var layout_plan := map_generator.generate_layout_plan(spawner_count)
 	spawner_chain = map_generator.spawn_spawner_chain(self, layout_plan, budget_manager, swarm_simulation)
 	
 	spawner_chain.spawner_unlocked.connect(_on_spawner_unlocked)
 	spawner_chain.spawner_chain_step_completed.connect(_on_spawner_step_completed)
 	spawner_chain.all_spawners_destroyed.connect(_on_all_spawners_cleared)
+	if sc2_hud_root:
+		sc2_hud_root.update_seed(seed_val)
+	_update_spawner_minimap()
+
+
+func _update_spawner_minimap() -> void:
+	if not sc2_hud_root or not spawner_chain:
+		return
+	var markers: Array = []
+	for sp in spawner_chain.spawners:
+		if is_instance_valid(sp):
+			markers.append({
+				"position": sp.global_position,
+				"state": sp.current_state
+			})
+	sc2_hud_root.update_spawner_markers(markers)
 
 
 func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
+	_update_spawner_minimap()
 	if sc2_hud_root and sc2_hud_root.top_wave_label:
 		sc2_hud_root.top_wave_label.text = "¡OBJETIVO: DESTRUYE %s!" % spawner.spawner_name.to_upper()
 		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
@@ -495,6 +539,7 @@ func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
 
 func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 	spawners_destroyed_count += 1
+	_update_spawner_minimap()
 	if sc2_hud_root and sc2_hud_root.top_wave_label:
 		if remaining > 0:
 			sc2_hud_root.top_wave_label.text = "¡ENGENDRADOR DESTRUIDO! Quedan %d engendradores." % remaining
@@ -504,24 +549,37 @@ func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.3))
 
 
-func _on_all_spawners_cleared() -> void:
+func _end_game(victory: bool) -> void:
 	if is_game_over:
 		return
 	is_game_over = true
-	_save_bank_progress(false)
+	_save_bank_progress(!victory)
 	
-	var total_min := economy_manager.current_minerals if economy_manager else 0
+	if is_waves_mode and not victory and game_over_panel:
+		game_over_panel.visible = true
+	
+	var total_min: int = economy_manager.total_minerals_earned if economy_manager else 0
+	var cleared: int = spawners_destroyed_count if not victory else (spawner_chain.get_total_spawner_count() if spawner_chain else 3)
+	var total_sp: int = spawner_chain.get_total_spawner_count() if spawner_chain else 3
+	var sess := _get_game_session()
+	var current_seed: int = sess.map_seed if sess and "map_seed" in sess else 0
+
 	var modal := SFEGameOverModal.new()
 	modal.setup(
-		true,
+		victory,
 		match_timer,
 		session_kills,
 		total_min,
-		spawner_chain.get_total_spawner_count() if spawner_chain else 3,
-		spawner_chain.get_total_spawner_count() if spawner_chain else 3,
-		SFEDifficultyManager.get_difficulty_name()
+		cleared,
+		total_sp,
+		SFEDifficultyManager.get_difficulty_name(),
+		current_seed
 	)
 	add_child(modal)
+
+
+func _on_all_spawners_cleared() -> void:
+	_end_game(true)
 
 
 func _register_all_perimeter_obstacles() -> void:
@@ -1327,6 +1385,8 @@ func _on_structure_damaged(structure: Node, current_hp: float, max_hp: float) ->
 
 
 func _on_wave_started(wave_number: int, total_enemies: int) -> void:
+	if not is_waves_mode:
+		return
 	if round_label:
 		round_label.text = "Ronda Actual: %d" % wave_number
 	if state_label:
@@ -1339,6 +1399,8 @@ func _on_wave_started(wave_number: int, total_enemies: int) -> void:
 
 
 func _on_wave_enemy_count_changed(alive_count: int) -> void:
+	if not is_waves_mode:
+		return
 	if state_label and wave_manager and wave_manager.is_wave_in_progress:
 		state_label.text = "¡OLEADA EN CURSO! (Hostiles: %d)" % alive_count
 	if sc2_hud_root:
@@ -1347,6 +1409,8 @@ func _on_wave_enemy_count_changed(alive_count: int) -> void:
 
 
 func _on_wave_completed(wave_number: int) -> void:
+	if not is_waves_mode:
+		return
 	if round_label:
 		round_label.text = "Ronda %d Completada" % wave_number
 	if state_label:
@@ -1502,35 +1566,17 @@ func _update_minerals_ui(amount: int) -> void:
 
 
 func _on_start_wave_pressed() -> void:
+	if not is_waves_mode:
+		return
 	if wave_manager:
 		wave_manager.start_next_wave()
 
 
 func _on_base_destroyed() -> void:
-	if is_game_over:
-		return
-	is_game_over = true
-	_save_bank_progress(true)
-	if game_over_panel:
-		game_over_panel.visible = true
-	
-	var total_min := economy_manager.current_minerals if economy_manager else 0
-	var cleared := spawners_destroyed_count
-	var total_sp := spawner_chain.get_total_spawner_count() if spawner_chain else 3
-	var modal := SFEGameOverModal.new()
-	modal.setup(
-		false,
-		match_timer,
-		session_kills,
-		total_min,
-		cleared,
-		total_sp,
-		SFEDifficultyManager.get_difficulty_name()
-	)
-	add_child(modal)
+	_end_game(false)
 
 
-func _save_bank_progress(is_game_over: bool) -> void:
+func _save_bank_progress(is_loss: bool) -> void:
 	var bank: Dictionary = BankManager.load_bank()
 	var prev_kills: int = bank.get("total_kills", 0)
 	var new_total_kills: int = prev_kills + session_kills
@@ -1539,7 +1585,7 @@ func _save_bank_progress(is_game_over: bool) -> void:
 	var new_vet: int = maxi(1, 1 + int(new_total_kills / 100))
 	bank["veterancy_level"] = new_vet
 
-	if is_game_over:
+	if is_loss:
 		bank["losses"] = bank.get("losses", 0) + 1
 	else:
 		bank["highest_wave"] = maxi(bank.get("highest_wave", 0), wave_manager.current_wave if wave_manager else 1)

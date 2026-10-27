@@ -189,7 +189,10 @@ func spawn_spawner_chain(
 		node.swarm_simulation = swarm_sim
 		
 		parent_node.add_child(node)
-		node.global_position = spec["position"]
+		if node.is_inside_tree():
+			node.global_position = spec["position"]
+		else:
+			node.position = spec["position"]
 		
 		chain.register_spawner(node, spec["required_spawner_id"])
 		

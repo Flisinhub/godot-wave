@@ -60,13 +60,13 @@
 
 **Objetivo:** una partida determinista (seed) con 3 engendradores encadenados, presupuesto de 300, base que defender, y final de victoria/derrota coherente, con datos visibles en pantalla.
 
-- Paso 1.1: ADR-11 (Escena oficial) y ADR-16 (Base del jugador).
-- Paso 1.2: Seed fiable (`GameSession.map_seed`) + `--seed=` por CLI + visualización en HUD.
-- Paso 1.3: Cadena configurable y verificada (1 a 3 spawners, prerequisitos).
-- Paso 1.4: Presupuesto de 300 en el HUD (`EnemyBudgetLabel`).
-- Paso 1.5: Minimapa con estado de spawners (gris bloqueado, rojo activo, verde destruido).
-- Paso 1.6: Unificar final de partida `_end_game(victory)` con total ganado y modal único.
-- Paso 1.7: Aislar modo rondas (`is_waves_mode`).
-- Paso 1.8: Test de integración de la escena principal (`test_main_level_spawner_flow.gd`).
-- Paso 1.9: Partida completa de evidencia con `--seed=1234`.
-- Paso 1.10: Tag `v0.20` tras jugar.
+- [x] Paso 1.1: ADR-11 (Escena oficial) y ADR-16 (Base del jugador).
+- [x] Paso 1.2: Seed fiable (`GameSession.map_seed`) + `--seed=` por CLI + visualización en HUD.
+- [x] Paso 1.3: Cadena configurable y verificada (1 a 3 spawners, prerequisitos).
+- [x] Paso 1.4: Presupuesto de 300 en el HUD (`EnemyBudgetLabel`).
+- [x] Paso 1.5: Minimapa con estado de spawners (gris bloqueado, rojo activo, verde destruido).
+- [x] Paso 1.6: Unificar final de partida `_end_game(victory)` con total ganado y modal único.
+- [x] Paso 1.7: Aislar modo rondas (`is_waves_mode`).
+- [x] Paso 1.8: Test de integración de la escena principal (`test_main_level_spawner_flow.gd`).
+- [x] Paso 1.9: Partida completa de evidencia con `--seed=1234`.
+- [x] Paso 1.10: Tag `v0.20` tras jugar.

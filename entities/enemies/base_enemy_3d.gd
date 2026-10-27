@@ -239,11 +239,23 @@ func take_damage(amount: float) -> void:
 		die()
 
 
+func _get_signal_bus() -> Node:
+	if Engine.has_singleton("SignalBus"):
+		return Engine.get_singleton("SignalBus")
+	var t := get_tree()
+	if t and t.root and t.root.has_node("SignalBus"):
+		return t.root.get_node("SignalBus")
+	return null
+
+
 func die() -> void:
 	if acid_splash_scene:
 		var splash: Node3D = acid_splash_scene.instantiate() as Node3D
-		get_tree().current_scene.add_child(splash)
-		splash.global_position = global_position + Vector3(0.0, 0.4, 0.0)
+		if get_tree() and get_tree().current_scene:
+			get_tree().current_scene.add_child(splash)
+			splash.global_position = global_position + Vector3(0.0, 0.4, 0.0)
 
-	SignalBus.enemy_died.emit(self, kill_reward)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("enemy_died"):
+		bus.enemy_died.emit(self, kill_reward)
 	queue_free()

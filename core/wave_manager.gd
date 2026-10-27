@@ -30,12 +30,23 @@ var _spawn_timer: float = 0.0
 var _current_spawner_index: int = 0
 
 
+func _get_signal_bus() -> Node:
+	if Engine.has_singleton("SignalBus"):
+		return Engine.get_singleton("SignalBus")
+	var t := get_tree()
+	if t and t.root and t.root.has_node("SignalBus"):
+		return t.root.get_node("SignalBus")
+	return null
+
+
 func _init() -> void:
 	_init_strain_enemy_data()
 
 
 func _ready() -> void:
-	SignalBus.enemy_died.connect(_on_enemy_died)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("enemy_died"):
+		bus.enemy_died.connect(_on_enemy_died)
 	_init_strain_enemy_data()
 
 
@@ -79,8 +90,12 @@ func start_next_wave() -> void:
 	if current_wave == 5 or current_wave == 10:
 		_spawn_wave_boss(current_wave)
 
-	SignalBus.wave_started.emit(current_wave, total_enemies_in_wave)
-	SignalBus.wave_enemy_count_changed.emit(enemies_alive)
+	var bus := _get_signal_bus()
+	if bus:
+		if bus.has_signal("wave_started"):
+			bus.wave_started.emit(current_wave, total_enemies_in_wave)
+		if bus.has_signal("wave_enemy_count_changed"):
+			bus.wave_enemy_count_changed.emit(enemies_alive)
 
 
 func _build_wave_queue(wave: int) -> void:
@@ -199,7 +214,9 @@ func _spawn_wave_boss(wave: int) -> void:
 				# Increment wave counts to track boss
 				total_enemies_in_wave += 1
 				enemies_alive += 1
-				SignalBus.wave_enemy_count_changed.emit(enemies_alive)
+				var b := _get_signal_bus()
+				if b and b.has_signal("wave_enemy_count_changed"):
+					b.wave_enemy_count_changed.emit(enemies_alive)
 
 				if boss_node.has_signal("boss_died"):
 					boss_node.boss_died.connect(func(): on_swarm_unit_died(boss_node.get("kill_reward") if "kill_reward" in boss_node else 2500))
@@ -258,11 +275,14 @@ func on_swarm_unit_died(_reward: int = 5) -> void:
 		return
 
 	enemies_alive = max(0, enemies_alive - 1)
-	SignalBus.wave_enemy_count_changed.emit(enemies_alive)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("wave_enemy_count_changed"):
+		bus.wave_enemy_count_changed.emit(enemies_alive)
 
 	if enemies_alive == 0 and _spawn_queue.is_empty():
 		is_wave_in_progress = false
-		SignalBus.wave_completed.emit(current_wave)
+		if bus and bus.has_signal("wave_completed"):
+			bus.wave_completed.emit(current_wave)
 
 
 func _on_enemy_died(_enemy: Node, _reward: int) -> void:
@@ -270,8 +290,11 @@ func _on_enemy_died(_enemy: Node, _reward: int) -> void:
 		return
 
 	enemies_alive = max(0, enemies_alive - 1)
-	SignalBus.wave_enemy_count_changed.emit(enemies_alive)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("wave_enemy_count_changed"):
+		bus.wave_enemy_count_changed.emit(enemies_alive)
 
 	if enemies_alive == 0 and _spawn_queue.is_empty():
 		is_wave_in_progress = false
-		SignalBus.wave_completed.emit(current_wave)
+		if bus and bus.has_signal("wave_completed"):
+			bus.wave_completed.emit(current_wave)
