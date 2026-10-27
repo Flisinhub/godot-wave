@@ -56,6 +56,10 @@ func _setup_visual_root() -> void:
 	add_child(root)
 
 
+func take_damage_context(amount: float, _dt: int = 0, is_spell: bool = false, _al: int = 0) -> void:
+	take_damage(amount, is_spell)
+
+
 ## Applies incoming damage through the SFE5 mitigation pipeline.
 func take_damage(amount: float, is_spell: bool = false) -> float:
 	if is_dead or is_invulnerable or amount <= 0.0:

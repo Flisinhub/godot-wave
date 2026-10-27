@@ -47,6 +47,11 @@ const BossHybrid3D = preload("res://entities/enemies/boss_hybrid_3d.gd")
 const BossNydus3D = preload("res://entities/enemies/boss_nydus_3d.gd")
 const DebugConsole = preload("res://core/modes/debug_console.gd")
 const SecretManager = preload("res://core/events/secret_manager.gd")
+const PinnacleBossCatalog = preload("res://core/bosses/pinnacle_boss_catalog.gd")
+const PinnacleBossBase = preload("res://core/bosses/pinnacle_boss_base.gd")
+const SummoningRitual = preload("res://core/bosses/summoning_ritual.gd")
+const BossRewardManager = preload("res://core/bosses/boss_reward_manager.gd")
+const AchievementSystem = preload("res://core/meta/achievement_system.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -126,6 +131,25 @@ var _lucky_lizard_node: Node3D = null
 var nydus_spawn_timer: float = 0.0
 var xelnaga_crystals: Array[Node3D] = []
 var final_pinnacle_boss: Node3D = null
+
+# Sprint C: Secrets, Teleport & Pinnacle Altars
+var _fueling_station_node: Node3D = null
+var _fueling_hold_timer: float = 0.0
+
+var _base_recall_pad: Node3D = null
+var _forward_bridge_pad: Node3D = null
+var _is_forward_bridge_unlocked: bool = false
+var _teleport_cooldown: float = 0.0
+
+var _oracle_orb_node: Node3D = null
+var _last_oracle_hint_time: int = 0
+
+var _pinnacle_altar_odin: Node3D = null
+var _pinnacle_altar_gorgon: Node3D = null
+var _pinnacle_altar_kerrigan: Node3D = null
+var _odin_beacons: Array[Node3D] = []
+var _odin_beacons_active: int = 0
+var _gorgon_hold_timer: float = 0.0
 
 
 func _ready() -> void:
@@ -221,7 +245,8 @@ func _process(delta: float) -> void:
 	if not is_game_over:
 		match_timer += delta
 		_process_timed_events(delta)
-		_check_secret_proximities()
+		_check_secret_proximities(delta)
+		_process_altars_and_teleports(delta)
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
 		if budget_manager:
@@ -568,6 +593,8 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	if sc2_hud_root:
 		var current_seed: int = sess.map_seed if sess and "map_seed" in sess and sess.map_seed != 0 else 12345
 		sc2_hud_root.update_seed(current_seed)
+		if pedestal_puzzle:
+			pedestal_puzzle.setup_deterministic_initial_state(current_seed)
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
 		_refresh_phase_hud()
 		if economy_manager:
@@ -1092,8 +1119,49 @@ func _spawn_map_secrets() -> void:
 	_lucky_lizard_node.add_child(l_lbl)
 	add_child(_lucky_lizard_node)
 
+	# 4. Fueling Station (awards 4000 minerals, ach_fueling_up)
+	_fueling_station_node = FuelingStation3D.new()
+	_fueling_station_node.name = "FuelingStation"
+	_fueling_station_node.position = Vector3(18.0, 0.0, 30.0)
+	_fueling_station_node.main_level_ref = self
+	_fueling_station_node.add_to_group("structures")
+	_fueling_station_node.add_to_group("secrets")
 
-func _check_secret_proximities() -> void:
+	var f_col := CollisionShape3D.new()
+	var f_cyl_col := CylinderShape3D.new()
+	f_cyl_col.radius = 2.0
+	f_cyl_col.height = 3.0
+	f_col.shape = f_cyl_col
+	f_col.position = Vector3(0.0, 1.5, 0.0)
+	_fueling_station_node.add_child(f_col)
+
+	var f_mesh := MeshInstance3D.new()
+	var f_cyl := CylinderMesh.new()
+	f_cyl.top_radius = 1.6
+	f_cyl.bottom_radius = 1.8
+	f_cyl.height = 2.6
+	f_mesh.mesh = f_cyl
+	f_mesh.position = Vector3(0.0, 1.3, 0.0)
+
+	var f_mat := StandardMaterial3D.new()
+	f_mat.albedo_color = Color(0.85, 0.55, 0.1)
+	f_mat.emission_enabled = true
+	f_mat.emission = Color(1.0, 0.7, 0.1) * 0.5
+	f_mesh.material_override = f_mat
+	_fueling_station_node.add_child(f_mesh)
+
+	var f_lbl := Label3D.new()
+	f_lbl.name = "Label3D"
+	f_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	f_lbl.position = Vector3(0.0, 3.4, 0.0)
+	f_lbl.font_size = 22
+	f_lbl.modulate = Color(1.0, 0.8, 0.2)
+	f_lbl.text = "⛽ ESTACIÓN DE COMBUSTIBLE\n[Permanece 5s para repostar]"
+	_fueling_station_node.add_child(f_lbl)
+	add_child(_fueling_station_node)
+
+
+func _check_secret_proximities(delta: float = 0.0) -> void:
 	if not active_hero or not is_instance_valid(active_hero) or not secret_manager:
 		return
 	var hero_pos: Vector3 = active_hero.global_position
@@ -1109,6 +1177,23 @@ func _check_secret_proximities() -> void:
 		if box and is_instance_valid(box) and not secret_manager.boxes_opened.has(i):
 			if hero_pos.distance_to(box.global_position) <= 3.0:
 				_trigger_mystery_box_interaction(box, i)
+
+	# Check Fueling Station Proximity (5s hold time)
+	if _fueling_station_node and is_instance_valid(_fueling_station_node) and not secret_manager.fueling_completed:
+		if hero_pos.distance_to(_fueling_station_node.global_position) <= 4.5:
+			_fueling_hold_timer += delta
+			var pct: int = mini(100, int((_fueling_hold_timer / 5.0) * 100))
+			var f_lbl: Label3D = _fueling_station_node.get_node_or_null("Label3D") as Label3D
+			if f_lbl:
+				f_lbl.text = "⛽ ESTACIÓN DE COMBUSTIBLE\nRepostando: %d%%" % pct
+			if _fueling_hold_timer >= 5.0:
+				_trigger_fueling_station_complete(_fueling_station_node)
+		else:
+			if _fueling_hold_timer > 0.0:
+				_fueling_hold_timer = 0.0
+				var f_lbl: Label3D = _fueling_station_node.get_node_or_null("Label3D") as Label3D
+				if f_lbl and not secret_manager.fueling_completed:
+					f_lbl.text = "⛽ ESTACIÓN DE COMBUSTIBLE\n[Permanece 5s para repostar]"
 
 
 func _trigger_outhouse_interaction(node: Node3D) -> void:
@@ -1162,6 +1247,525 @@ func _trigger_lucky_lizard_death(lizard: Node3D) -> void:
 		if active_hero:
 			active_hero.gain_experience(1000)
 		lizard.queue_free()
+
+
+func _trigger_fueling_station_complete(node: Node3D) -> void:
+	if not secret_manager or secret_manager.fueling_completed:
+		return
+	var reward: int = secret_manager.complete_fueling_station()
+	if reward <= 0:
+		reward = 4000
+	_play_sfx_3d(&"upgrade_complete", node.global_position)
+	FloatingTextManager.spawn_text(self, node.global_position + Vector3(0.0, 3.0, 0.0), "+4000 MINERALES (ESTACIÓN REPOSTADA)", Color(0.2, 1.0, 0.4))
+	if economy_manager:
+		economy_manager.add_minerals(reward, "Fueling Station Completed")
+	AchievementSystem.unlock_achievement(&"ach_fueling_up")
+	var lbl: Label3D = node.get_node_or_null("Label3D") as Label3D
+	if lbl:
+		lbl.text = "⛽ ESTACIÓN DE COMBUSTIBLE\n[REPOSTE COMPLETO: +4000 💎]"
+		lbl.modulate = Color(0.2, 1.0, 0.5)
+
+
+func _process_altars_and_teleports(delta: float) -> void:
+	if _teleport_cooldown > 0.0:
+		_teleport_cooldown = maxf(0.0, _teleport_cooldown - delta)
+
+	if not active_hero or not is_instance_valid(active_hero):
+		return
+	var hero_pos: Vector3 = active_hero.global_position
+
+	# 1. Forward Bridge Pad unlock check (approaching with 500 minerals)
+	if _forward_bridge_pad and is_instance_valid(_forward_bridge_pad) and not _is_forward_bridge_unlocked:
+		if hero_pos.distance_to(_forward_bridge_pad.global_position) <= 3.5:
+			if economy_manager and economy_manager.current_minerals >= 500:
+				economy_manager.spend_minerals(500, "Forward Bridge Pad Unlock")
+				_unlock_forward_bridge()
+
+	# 2. Gorgon Altar hold-zone timer (5s)
+	if _pinnacle_altar_gorgon and is_instance_valid(_pinnacle_altar_gorgon):
+		var altar_gorgon_completed: bool = _pinnacle_altar_gorgon.get_meta("is_completed", false)
+		if not altar_gorgon_completed:
+			if hero_pos.distance_to(_pinnacle_altar_gorgon.global_position) <= 4.5:
+				_gorgon_hold_timer += delta
+				var pct: int = mini(100, int((_gorgon_hold_timer / 5.0) * 100))
+				var g_lbl: Label3D = _pinnacle_altar_gorgon.get_node_or_null("Label3D") as Label3D
+				if g_lbl:
+					g_lbl.text = "ALTAR DE INVOCACIÓN: GORGON (ANTENA SR-04)\nSintonizando: %d%%" % pct
+				if _gorgon_hold_timer >= 5.0:
+					_pinnacle_altar_gorgon.set_meta("is_completed", true)
+					if g_lbl:
+						g_lbl.text = "ANTENA SR-04\n[¡GORGON INVOCADO!]"
+					_spawn_pinnacle_boss(&"gorgon", Vector3(30.0, 0.0, 30.0))
+			else:
+				if _gorgon_hold_timer > 0.0:
+					_gorgon_hold_timer = 0.0
+					var g_lbl: Label3D = _pinnacle_altar_gorgon.get_node_or_null("Label3D") as Label3D
+					if g_lbl and not altar_gorgon_completed:
+						g_lbl.text = "ALTAR DE INVOCACIÓN: GORGON (ANTENA SR-04)\n[Mantén la zona 5s para emitir baliza orbital]"
+
+
+func _unlock_forward_bridge() -> void:
+	_is_forward_bridge_unlocked = true
+	if _forward_bridge_pad and is_instance_valid(_forward_bridge_pad):
+		var mesh: MeshInstance3D = _forward_bridge_pad.get_node_or_null("Mesh") as MeshInstance3D
+		if mesh:
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = Color(0.2, 0.9, 1.0)
+			mat.emission_enabled = true
+			mat.emission = Color(0.2, 0.9, 1.0) * 0.8
+			mesh.material_override = mat
+		var lbl: Label3D = _forward_bridge_pad.get_node_or_null("Label3D") as Label3D
+		if lbl:
+			lbl.text = "🌀 PORTAL DE AVANZADA [ACTIVO]\n[Destino: Base Terran]"
+			lbl.modulate = Color(0.3, 0.95, 1.0)
+		_play_sfx_3d(&"upgrade_complete", _forward_bridge_pad.global_position)
+		FloatingTextManager.spawn_text(self, _forward_bridge_pad.global_position + Vector3(0.0, 2.5, 0.0), "¡PUENTE EINSTEIN-ROSEN ACTIVADO!", Color(0.3, 0.95, 1.0))
+
+
+func _spawn_teleport_network() -> void:
+	# 1. Base Recall Pad (-18, 0, 22) near Armory
+	_base_recall_pad = Area3D.new()
+	_base_recall_pad.name = "BaseRecallPad"
+	_base_recall_pad.position = Vector3(-18.0, 0.0, 22.0)
+	_base_recall_pad.collision_layer = 0
+	_base_recall_pad.collision_mask = 2
+
+	var b_col := CollisionShape3D.new()
+	var b_cyl_col := CylinderShape3D.new()
+	b_cyl_col.radius = 2.0
+	b_cyl_col.height = 0.5
+	b_col.shape = b_cyl_col
+	b_col.position = Vector3(0.0, 0.25, 0.0)
+	_base_recall_pad.add_child(b_col)
+
+	var b_mesh := MeshInstance3D.new()
+	b_mesh.name = "Mesh"
+	var b_cyl := CylinderMesh.new()
+	b_cyl.top_radius = 1.8
+	b_cyl.bottom_radius = 2.0
+	b_cyl.height = 0.15
+	b_mesh.mesh = b_cyl
+	b_mesh.position = Vector3(0.0, 0.08, 0.0)
+	var b_mat := StandardMaterial3D.new()
+	b_mat.albedo_color = Color(0.15, 0.7, 0.95)
+	b_mat.emission_enabled = true
+	b_mat.emission = Color(0.2, 0.8, 1.0) * 0.8
+	b_mesh.material_override = b_mat
+	_base_recall_pad.add_child(b_mesh)
+
+	var b_lbl := Label3D.new()
+	b_lbl.name = "Label3D"
+	b_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	b_lbl.position = Vector3(0.0, 1.8, 0.0)
+	b_lbl.font_size = 20
+	b_lbl.modulate = Color(0.3, 0.85, 1.0)
+	b_lbl.text = "🌀 PORTAL BASE (PUENTE EINSTEIN-ROSEN)\n[Destino: Centro del Mapa]"
+	_base_recall_pad.add_child(b_lbl)
+
+	_base_recall_pad.body_entered.connect(func(body: Node3D):
+		if _is_forward_bridge_unlocked and _teleport_cooldown <= 0.0:
+			if body.is_in_group("allies") or body.is_in_group("heroes"):
+				_teleport_cooldown = 2.0
+				body.global_position = Vector3(0.0, 0.5, 0.0)
+				_play_sfx_3d(&"upgrade_complete", Vector3(0.0, 0.5, 0.0))
+				FloatingTextManager.spawn_text(self, Vector3(0.0, 2.5, 0.0), "TELETRANSPORTE A AVANZADA", Color(0.2, 0.9, 1.0))
+	)
+	add_child(_base_recall_pad)
+
+	# 2. Forward Bridge Pad (0, 0, 0) Center of Map
+	_forward_bridge_pad = Area3D.new()
+	_forward_bridge_pad.name = "ForwardBridgePad"
+	_forward_bridge_pad.position = Vector3(0.0, 0.0, 0.0)
+	_forward_bridge_pad.collision_layer = 0
+	_forward_bridge_pad.collision_mask = 2
+
+	var f_col := CollisionShape3D.new()
+	var f_cyl_col := CylinderShape3D.new()
+	f_cyl_col.radius = 2.2
+	f_cyl_col.height = 0.5
+	f_col.shape = f_cyl_col
+	f_col.position = Vector3(0.0, 0.25, 0.0)
+	_forward_bridge_pad.add_child(f_col)
+
+	var f_mesh := MeshInstance3D.new()
+	f_mesh.name = "Mesh"
+	var f_cyl := CylinderMesh.new()
+	f_cyl.top_radius = 2.0
+	f_cyl.bottom_radius = 2.2
+	f_cyl.height = 0.15
+	f_mesh.mesh = f_cyl
+	f_mesh.position = Vector3(0.0, 0.08, 0.0)
+	var f_mat := StandardMaterial3D.new()
+	f_mat.albedo_color = Color(0.8, 0.5, 0.1)
+	f_mat.emission_enabled = true
+	f_mat.emission = Color(1.0, 0.6, 0.1) * 0.5
+	f_mesh.material_override = f_mat
+	_forward_bridge_pad.add_child(f_mesh)
+
+	var f_lbl := Label3D.new()
+	f_lbl.name = "Label3D"
+	f_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	f_lbl.position = Vector3(0.0, 1.8, 0.0)
+	f_lbl.font_size = 20
+	f_lbl.modulate = Color(1.0, 0.75, 0.2)
+	f_lbl.text = "🌀 PORTAL DE AVANZADA\n[500 💎 PARA ACTIVAR]"
+	_forward_bridge_pad.add_child(f_lbl)
+
+	_forward_bridge_pad.body_entered.connect(func(body: Node3D):
+		if _is_forward_bridge_unlocked and _teleport_cooldown <= 0.0:
+			if body.is_in_group("allies") or body.is_in_group("heroes"):
+				_teleport_cooldown = 2.0
+				body.global_position = Vector3(-18.0, 0.5, 22.0)
+				_play_sfx_3d(&"upgrade_complete", Vector3(-18.0, 0.5, 22.0))
+				FloatingTextManager.spawn_text(self, Vector3(-18.0, 2.5, 22.0), "TELETRANSPORTE A BASE", Color(0.2, 0.9, 1.0))
+	)
+	add_child(_forward_bridge_pad)
+
+
+func _on_recall_base_requested() -> void:
+	if active_hero and is_instance_valid(active_hero):
+		var target_pos := Vector3(-20.0, 0.5, 20.0)
+		active_hero.global_position = target_pos
+		_play_sfx_3d(&"upgrade_complete", target_pos)
+		FloatingTextManager.spawn_text(self, target_pos + Vector3(0.0, 2.5, 0.0), "¡RECALL TÁCTICO A BASE!", Color(0.2, 0.95, 1.0))
+		if rts_controller:
+			var units: Array = rts_controller.get_selected_units()
+			for u in units:
+				if is_instance_valid(u) and u != active_hero:
+					u.global_position = target_pos + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0))
+
+
+func _spawn_oracle_orb() -> void:
+	_oracle_orb_node = Area3D.new()
+	_oracle_orb_node.name = "OracleOrbXelNaga"
+	_oracle_orb_node.position = Vector3(24.0, 0.0, 24.0)
+	_oracle_orb_node.collision_layer = 0
+	_oracle_orb_node.collision_mask = 2
+
+	var col := CollisionShape3D.new()
+	var sphere_col := SphereShape3D.new()
+	sphere_col.radius = 3.5
+	col.shape = sphere_col
+	_oracle_orb_node.add_child(col)
+
+	var mesh_inst := MeshInstance3D.new()
+	var s_mesh := SphereMesh.new()
+	s_mesh.radius = 0.65
+	s_mesh.height = 1.3
+	mesh_inst.mesh = s_mesh
+	mesh_inst.position = Vector3(0.0, 1.2, 0.0)
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.84, 0.0)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.84, 0.0)
+	mat.emission_energy_multiplier = 3.5
+	mesh_inst.material_override = mat
+	_oracle_orb_node.add_child(mesh_inst)
+
+	var lbl := Label3D.new()
+	lbl.name = "Label3D"
+	lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	lbl.position = Vector3(0.0, 2.3, 0.0)
+	lbl.font_size = 22
+	lbl.modulate = Color(1.0, 0.9, 0.3)
+	lbl.text = "🔮 ORBE ORÁCULO XEL'NAGA\n[Acércate para recibir pista]"
+	_oracle_orb_node.add_child(lbl)
+
+	_oracle_orb_node.body_entered.connect(func(body: Node3D):
+		if body.is_in_group("allies") or body.is_in_group("heroes"):
+			_trigger_oracle_hint(_oracle_orb_node)
+	)
+
+	add_child(_oracle_orb_node)
+
+
+func _trigger_oracle_hint(orb: Node3D) -> void:
+	var now: int = Time.get_ticks_msec()
+	if now - _last_oracle_hint_time < 3500:
+		return
+	_last_oracle_hint_time = now
+
+	if not pedestal_puzzle:
+		return
+	var hints: Array[int] = pedestal_puzzle.get_solver_hints()
+	if hints.is_empty():
+		FloatingTextManager.spawn_text(self, orb.global_position + Vector3(0.0, 2.5, 0.0), "ORÁCULO: ¡EL PUZZLE YA ESTÁ RESUELTO!", Color(0.2, 1.0, 0.4))
+		return
+
+	var next_ped: int = hints[0]
+	if next_ped >= 0 and next_ped < pedestal_puzzle.pedestals.size():
+		var ped_node: Node3D = pedestal_puzzle.pedestals[next_ped]
+		if is_instance_valid(ped_node) and ped_node.has_method("flash_hint"):
+			ped_node.flash_hint(4.0)
+
+	FloatingTextManager.spawn_text(self, orb.global_position + Vector3(0.0, 2.5, 0.0), "ORÁCULO XEL'NAGA: Pisa el Pedestal [%d]" % next_ped, Color(1.0, 0.84, 0.0))
+	_play_sfx_3d(&"upgrade_complete", orb.global_position)
+
+
+func _spawn_pinnacle_altars() -> void:
+	# 1. Altar 1 — Odin, Titan of Armageddon (-20, 0, -20)
+	_pinnacle_altar_odin = Area3D.new()
+	_pinnacle_altar_odin.name = "AltarOdin"
+	_pinnacle_altar_odin.position = Vector3(-20.0, 0.0, -20.0)
+	_pinnacle_altar_odin.collision_layer = 0
+	_pinnacle_altar_odin.collision_mask = 2
+
+	var o_col := CollisionShape3D.new()
+	var o_cyl_col := CylinderShape3D.new()
+	o_cyl_col.radius = 3.5
+	o_cyl_col.height = 0.5
+	o_col.shape = o_cyl_col
+	_pinnacle_altar_odin.add_child(o_col)
+
+	var o_mesh := MeshInstance3D.new()
+	var o_cyl := CylinderMesh.new()
+	o_cyl.top_radius = 3.2
+	o_cyl.bottom_radius = 3.5
+	o_cyl.height = 0.2
+	o_mesh.mesh = o_cyl
+	var o_mat := StandardMaterial3D.new()
+	o_mat.albedo_color = Color(0.85, 0.3, 0.1)
+	o_mat.emission_enabled = true
+	o_mat.emission = Color(1.0, 0.35, 0.1) * 0.7
+	o_mesh.material_override = o_mat
+	_pinnacle_altar_odin.add_child(o_mesh)
+
+	var o_lbl := Label3D.new()
+	o_lbl.name = "Label3D"
+	o_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	o_lbl.position = Vector3(0.0, 2.5, 0.0)
+	o_lbl.font_size = 22
+	o_lbl.modulate = Color(1.0, 0.45, 0.15)
+	o_lbl.text = "ALTAR DE INVOCACIÓN: ODIN, TITAN OF ARMAGEDDON\n[3 Balizas Tácticas: 0/3]"
+	_pinnacle_altar_odin.add_child(o_lbl)
+	add_child(_pinnacle_altar_odin)
+
+	# 3 Odin Beacons along NW-SE diagonal
+	_odin_beacons.clear()
+	_odin_beacons_active = 0
+	var beacon_coords := [Vector3(-24.0, 0.0, -24.0), Vector3(-20.0, 0.0, -20.0), Vector3(-16.0, 0.0, -16.0)]
+	for bi in range(beacon_coords.size()):
+		var b_pos: Vector3 = beacon_coords[bi]
+		var b_area := Area3D.new()
+		b_area.name = "OdinBeacon_%d" % (bi + 1)
+		b_area.position = b_pos
+		b_area.collision_layer = 0
+		b_area.collision_mask = 2
+
+		var b_c := CollisionShape3D.new()
+		var b_cy := CylinderShape3D.new()
+		b_cy.radius = 1.8
+		b_cy.height = 0.4
+		b_c.shape = b_cy
+		b_area.add_child(b_c)
+
+		var b_m := MeshInstance3D.new()
+		b_m.name = "Mesh"
+		var b_cm := CylinderMesh.new()
+		b_cm.top_radius = 1.4
+		b_cm.bottom_radius = 1.6
+		b_cm.height = 0.1
+		b_m.mesh = b_cm
+		var b_mt := StandardMaterial3D.new()
+		b_mt.albedo_color = Color(0.5, 0.2, 0.1)
+		b_mt.emission_enabled = true
+		b_mt.emission = Color(0.8, 0.3, 0.1) * 0.4
+		b_m.material_override = b_mt
+		b_area.add_child(b_m)
+
+		b_area.body_entered.connect(func(body: Node3D):
+			if not b_area.get_meta("is_active", false) and (body.is_in_group("allies") or body.is_in_group("heroes")):
+				b_area.set_meta("is_active", true)
+				_odin_beacons_active += 1
+				var mesh_inst: MeshInstance3D = b_area.get_node_or_null("Mesh") as MeshInstance3D
+				if mesh_inst and mesh_inst.material_override is StandardMaterial3D:
+					var m: StandardMaterial3D = mesh_inst.material_override as StandardMaterial3D
+					m.albedo_color = Color(1.0, 0.84, 0.0)
+					m.emission = Color(1.0, 0.84, 0.0) * 0.9
+				_play_sfx_3d(&"upgrade_complete", b_area.global_position)
+				FloatingTextManager.spawn_text(self, b_area.global_position + Vector3(0.0, 2.0, 0.0), "Baliza Táctica Activa (%d/3)" % _odin_beacons_active, Color(1.0, 0.85, 0.2))
+				if o_lbl:
+					o_lbl.text = "ALTAR DE INVOCACIÓN: ODIN, TITAN OF ARMAGEDDON\n[3 Balizas Tácticas: %d/3]" % _odin_beacons_active
+				if _odin_beacons_active >= 3 and not _pinnacle_altar_odin.get_meta("is_summoned", false):
+					_pinnacle_altar_odin.set_meta("is_summoned", true)
+					if o_lbl:
+						o_lbl.text = "ALTAR DE ODIN\n[¡TITÁN DESPERTADO!]"
+					_spawn_pinnacle_boss(&"odin", Vector3(-20.0, 0.0, -20.0))
+		)
+		add_child(b_area)
+		_odin_beacons.append(b_area)
+
+	# 2. Altar 2 — Gorgon, the Skycleaver (30, 0, 30) Antena SR-04
+	_pinnacle_altar_gorgon = Area3D.new()
+	_pinnacle_altar_gorgon.name = "AltarGorgon"
+	_pinnacle_altar_gorgon.position = Vector3(30.0, 0.0, 30.0)
+	_pinnacle_altar_gorgon.collision_layer = 0
+	_pinnacle_altar_gorgon.collision_mask = 2
+
+	var g_col := CollisionShape3D.new()
+	var g_cyl_col := CylinderShape3D.new()
+	g_cyl_col.radius = 4.0
+	g_cyl_col.height = 0.5
+	g_col.shape = g_cyl_col
+	_pinnacle_altar_gorgon.add_child(g_col)
+
+	var g_mesh := MeshInstance3D.new()
+	var g_cyl := CylinderMesh.new()
+	g_cyl.top_radius = 3.6
+	g_cyl.bottom_radius = 4.0
+	g_cyl.height = 0.2
+	g_mesh.mesh = g_cyl
+	var g_mat := StandardMaterial3D.new()
+	g_mat.albedo_color = Color(0.2, 0.65, 0.95)
+	g_mat.emission_enabled = true
+	g_mat.emission = Color(0.25, 0.75, 1.0) * 0.7
+	g_mesh.material_override = g_mat
+	_pinnacle_altar_gorgon.add_child(g_mesh)
+
+	var g_lbl := Label3D.new()
+	g_lbl.name = "Label3D"
+	g_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	g_lbl.position = Vector3(0.0, 2.5, 0.0)
+	g_lbl.font_size = 22
+	g_lbl.modulate = Color(0.3, 0.85, 1.0)
+	g_lbl.text = "ALTAR DE INVOCACIÓN: GORGON (ANTENA SR-04)\n[Mantén la zona 5s para emitir baliza orbital]"
+	_pinnacle_altar_gorgon.add_child(g_lbl)
+	add_child(_pinnacle_altar_gorgon)
+
+	# 3. Altar 3 — Celestial Kerrigan (12, 0, -25) Altar Slayn
+	_pinnacle_altar_kerrigan = Area3D.new()
+	_pinnacle_altar_kerrigan.name = "AltarKerrigan"
+	_pinnacle_altar_kerrigan.position = Vector3(12.0, 0.0, -25.0)
+	_pinnacle_altar_kerrigan.collision_layer = 0
+	_pinnacle_altar_kerrigan.collision_mask = 2
+
+	var k_col := CollisionShape3D.new()
+	var k_cyl_col := CylinderShape3D.new()
+	k_cyl_col.radius = 3.5
+	k_cyl_col.height = 0.5
+	k_col.shape = k_cyl_col
+	_pinnacle_altar_kerrigan.add_child(k_col)
+
+	var k_mesh := MeshInstance3D.new()
+	var k_cyl := CylinderMesh.new()
+	k_cyl.top_radius = 3.2
+	k_cyl.bottom_radius = 3.5
+	k_cyl.height = 0.2
+	k_mesh.mesh = k_cyl
+	var k_mat := StandardMaterial3D.new()
+	k_mat.albedo_color = Color(0.75, 0.15, 0.9)
+	k_mat.emission_enabled = true
+	k_mat.emission = Color(0.85, 0.2, 1.0) * 0.8
+	k_mesh.material_override = k_mat
+	_pinnacle_altar_kerrigan.add_child(k_mesh)
+
+	var k_lbl := Label3D.new()
+	k_lbl.name = "Label3D"
+	k_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	k_lbl.position = Vector3(0.0, 2.5, 0.0)
+	k_lbl.font_size = 22
+	k_lbl.modulate = Color(0.9, 0.35, 1.0)
+	k_lbl.text = "ALTAR SLAYN: CELESTIAL KERRIGAN\n[Acércate para despertar el Renacer Celestial]"
+	_pinnacle_altar_kerrigan.add_child(k_lbl)
+
+	_pinnacle_altar_kerrigan.body_entered.connect(func(body: Node3D):
+		if not _pinnacle_altar_kerrigan.get_meta("is_summoned", false) and (body.is_in_group("allies") or body.is_in_group("heroes")):
+			_pinnacle_altar_kerrigan.set_meta("is_summoned", true)
+			if k_lbl:
+				k_lbl.text = "ALTAR SLAYN\n[¡CELESTIAL KERRIGAN DESPERTADA!]"
+			_spawn_pinnacle_boss(&"celestial_kerrigan", Vector3(12.0, 0.0, -25.0))
+	)
+	add_child(_pinnacle_altar_kerrigan)
+
+
+func _spawn_pinnacle_boss(boss_id: StringName, spawn_pos: Vector3) -> PinnacleBossBase:
+	var info: Dictionary = PinnacleBossCatalog.get_boss_info(boss_id)
+	if info.is_empty():
+		return null
+
+	var boss := PinnacleBossBase.new()
+	boss.name = "PinnacleBoss_" + str(boss_id).capitalize()
+	boss.boss_id = boss_id
+	boss.boss_name = str(info.get("name", "Pinnacle Boss"))
+	boss.max_health = float(info.get("hp", 16000.0))
+	boss.current_health = boss.max_health
+	boss.flat_armor = float(info.get("armor", 18.0))
+	boss.attack_damage = float(info.get("damage", 120.0))
+	boss.reward_minerals = 100000
+	boss.reward_rank_points = 300
+	boss.secret_unit_unlocked = info.get("secret_unit", &"")
+	boss.position = spawn_pos
+
+	var col := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = 2.0
+	cyl.height = 4.0
+	col.shape = cyl
+	col.position = Vector3(0.0, 2.0, 0.0)
+	boss.add_child(col)
+	boss.collision_layer = 4
+	boss.collision_mask = 1 | 2
+
+	var mesh_inst := MeshInstance3D.new()
+	var b_mesh := CylinderMesh.new()
+	b_mesh.top_radius = 1.6
+	b_mesh.bottom_radius = 2.0
+	b_mesh.height = 3.6
+	mesh_inst.mesh = b_mesh
+	mesh_inst.position = Vector3(0.0, 1.8, 0.0)
+
+	var b_mat := StandardMaterial3D.new()
+	match boss_id:
+		&"odin":
+			b_mat.albedo_color = Color(0.9, 0.25, 0.1)
+			b_mat.emission_enabled = true
+			b_mat.emission = Color(1.0, 0.3, 0.1) * 0.8
+		&"gorgon":
+			b_mat.albedo_color = Color(0.2, 0.7, 1.0)
+			b_mat.emission_enabled = true
+			b_mat.emission = Color(0.2, 0.8, 1.0) * 0.8
+		&"celestial_kerrigan":
+			b_mat.albedo_color = Color(0.85, 0.15, 0.95)
+			b_mat.emission_enabled = true
+			b_mat.emission = Color(0.9, 0.2, 1.0) * 0.9
+	mesh_inst.material_override = b_mat
+	boss.add_child(mesh_inst)
+
+	boss.boss_defeated_rewards.connect(func(mins: int, r_pts: int, sec_unit: StringName):
+		_on_pinnacle_boss_defeated(boss_id, mins, r_pts, sec_unit, boss.global_position)
+	)
+
+	add_child(boss)
+
+	if boss_health_bar_ui:
+		boss_health_bar_ui.bind_boss(boss)
+
+	if sc2_hud_root and sc2_hud_root.alert_label:
+		sc2_hud_root.trigger_alert("¡ALERTA CÚSPIDE! %s HA ENTRADO EN COMBATE" % boss.boss_name.to_upper(), 7.0)
+
+	return boss
+
+
+func _on_pinnacle_boss_defeated(boss_id: StringName, _minerals: int, _rank_pts: int, secret_unit: StringName, pos: Vector3) -> void:
+	var sess := _get_game_session()
+	var diff_tier: int = sess.difficulty_tier if sess and "difficulty_tier" in sess else 1
+	var _summary := BossRewardManager.process_pinnacle_victory(boss_id, economy_manager, diff_tier, secret_unit)
+
+	match boss_id:
+		&"odin":
+			AchievementSystem.unlock_achievement(&"ach_odin_slayer")
+		&"gorgon":
+			AchievementSystem.unlock_achievement(&"ach_gorgon_slayer")
+		&"celestial_kerrigan":
+			AchievementSystem.unlock_achievement(&"ach_kerrigan_slayer")
+
+	session_kills += 1
+	if active_hero:
+		active_hero.gain_experience(15000)
+
+	FloatingTextManager.spawn_text(self, pos + Vector3(0.0, 3.0, 0.0), "+100.000 💎 | +300 RANGO (%s DERROTADO)" % str(boss_id).to_upper(), Color(1.0, 0.85, 0.2))
+	_play_sfx_3d(&"zerg_death", pos)
 
 
 func _end_game(victory: bool) -> void:
@@ -1306,8 +1910,18 @@ func _setup_spatial_events_and_puzzles() -> void:
 			hells_gate_zone.hells_gate_opened.connect(_on_hells_gate_opened)
 
 	if pedestal_puzzle:
+		var sess := _get_game_session()
+		var seed_val: int = sess.map_seed if sess and "map_seed" in sess and sess.map_seed != 0 else 12345
+		pedestal_puzzle.setup_deterministic_initial_state(seed_val)
 		if not pedestal_puzzle.puzzle_solved.is_connected(_on_pedestal_puzzle_solved):
 			pedestal_puzzle.puzzle_solved.connect(_on_pedestal_puzzle_solved)
+
+	_spawn_oracle_orb()
+	_spawn_pinnacle_altars()
+	_spawn_teleport_network()
+
+	if sc2_hud_root and not sc2_hud_root.recall_base_requested.is_connected(_on_recall_base_requested):
+		sc2_hud_root.recall_base_requested.connect(_on_recall_base_requested)
 
 
 func _setup_event_listeners() -> void:
@@ -2376,3 +2990,14 @@ class LuckyLizard3D extends CharacterBody3D:
 		if current_health <= 0.0:
 			if main_level_ref and main_level_ref.has_method("_trigger_lucky_lizard_death"):
 				main_level_ref._trigger_lucky_lizard_death(self)
+
+
+class FuelingStation3D extends StaticBody3D:
+	var main_level_ref: Node = null
+
+	func take_damage_context(amount: float, _dt: int = 0, _aoe: bool = false, _al: int = 0) -> void:
+		take_damage(amount)
+
+	func take_damage(_amount: float) -> void:
+		if main_level_ref and main_level_ref.has_method("_trigger_fueling_station_complete"):
+			main_level_ref._trigger_fueling_station_complete(self)

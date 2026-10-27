@@ -164,10 +164,25 @@ func _build_ui_layout() -> void:
 	panel_style.content_margin_bottom = 8.0
 	add_theme_stylebox_override("panel", panel_style)
 
+	var v_main := VBoxContainer.new()
+	v_main.add_theme_constant_override("separation", 3)
+	add_child(v_main)
+
+	# Dedicated horizontal bar atop the SC2StatPanel for Active Console Buffs (Task 4.17)
+	active_buffs_scroll = ScrollContainer.new()
+	active_buffs_scroll.custom_minimum_size = Vector2(460, 24)
+	active_buffs_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	active_buffs_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	
+	active_buffs_container = HBoxContainer.new()
+	active_buffs_container.add_theme_constant_override("separation", 5)
+	active_buffs_scroll.add_child(active_buffs_container)
+	v_main.add_child(active_buffs_scroll)
+
 	var h_split := HBoxContainer.new()
-	h_split.custom_minimum_size = Vector2(460, 164)
+	h_split.custom_minimum_size = Vector2(460, 140)
 	h_split.add_theme_constant_override("separation", 12)
-	add_child(h_split)
+	v_main.add_child(h_split)
 
 	# Left: Wireframe / Portrait Box
 	var left_box := VBoxContainer.new()
@@ -233,17 +248,6 @@ func _build_ui_layout() -> void:
 	energy_bar.add_theme_stylebox_override("background", _trough_style)
 	energy_bar.add_theme_stylebox_override("fill", _energy_fill_style)
 	center_box.add_child(energy_bar)
-
-	# Active Buffs Row (Task 4.17)
-	active_buffs_scroll = ScrollContainer.new()
-	active_buffs_scroll.custom_minimum_size = Vector2(190, 36)
-	active_buffs_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	active_buffs_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	
-	active_buffs_container = HBoxContainer.new()
-	active_buffs_container.add_theme_constant_override("separation", 4)
-	active_buffs_scroll.add_child(active_buffs_container)
-	center_box.add_child(active_buffs_scroll)
 
 	h_split.add_child(center_box)
 
@@ -617,30 +621,43 @@ func _refresh_active_buffs(buff_comp: BuffComponent) -> void:
 	if not buff_comp:
 		return
 
-	# 1. Tier 1 to 7 active buffs
+	# 1. Tier 1 to 7 active buffs (including Predator)
 	for tier in buff_comp.active_tier_buffs.keys():
 		var b_data: Dictionary = buff_comp.active_tier_buffs[tier]
 		var b_name: String = b_data.get("name", "Buff")
-		_create_buff_badge("T%d: %s" % [tier, b_name.left(8)], Color(0.25, 0.85, 1.0), "Tier %d: %s" % [tier, b_name])
+		var b_id: String = b_data.get("id", "")
+		if b_name.to_lower().contains("predator") or b_id.to_lower().contains("predator"):
+			_create_buff_badge("Predator", Color(1.0, 0.35, 0.2), "Predator: +100% Daño contra Jefes y Élite")
+		else:
+			_create_buff_badge("T%d: %s" % [tier, b_name.left(8)], Color(0.25, 0.85, 1.0), "Tier %d: %s" % [tier, b_name])
 
-	# 2. Supreme Buffs
+	# 2. Supreme Buffs (Ace, Demiurge, Max XP)
 	if buff_comp.supreme_buffs.get("ace", false) or buff_comp.is_ace_active:
-		_create_buff_badge("⭐ ACE", Color(1.0, 0.82, 0.15), "Ace Supremo: +50% Daño Total")
+		_create_buff_badge("★ ACE", Color(1.0, 0.82, 0.15), "Ace Supremo: +50% Daño Total")
 	if buff_comp.supreme_buffs.get("demiurge", false):
-		var cd_text := "LISTO" if buff_comp.demiurge_cooldown_timer <= 0.0 else "CD: %ds" % int(ceilf(buff_comp.demiurge_cooldown_timer))
-		_create_buff_badge("⭐ DEMI [%s]" % cd_text, Color(0.2, 0.95, 0.7), "Demiurge: Previene muerte (180s CD)")
+		var cd_text := "Listo" if buff_comp.demiurge_cooldown_timer <= 0.0 else "CD: %ds" % int(ceilf(buff_comp.demiurge_cooldown_timer))
+		_create_buff_badge("★ DEMIURGE [%s]" % cd_text, Color(0.2, 0.95, 0.7), "Demiurge: Previene muerte (180s CD)")
 	if buff_comp.supreme_buffs.get("maxima_experiencia", false):
-		_create_buff_badge("⭐ MAX XP", Color(0.85, 0.45, 1.0), "Máxima Experiencia: Nivel 100")
+		_create_buff_badge("★ MAX XP", Color(0.85, 0.45, 1.0), "Máxima Experiencia: Nivel 100")
 
-	# 3. Dynamic Condition Stacks
-	if buff_comp.momentum_stacks > 0:
-		_create_buff_badge("MOM x%d" % buff_comp.momentum_stacks, Color(0.3, 0.95, 0.4), "Momentum: %d stacks (+%d%% Daño)" % [buff_comp.momentum_stacks, buff_comp.momentum_stacks * 5])
-	if buff_comp.static_charge_stacks > 0:
-		_create_buff_badge("STAT x%d" % buff_comp.static_charge_stacks, Color(1.0, 0.9, 0.25), "Static Charge: %d stacks" % buff_comp.static_charge_stacks)
-	if buff_comp.bulwark_stacks > 0:
-		_create_buff_badge("BULW x%d" % buff_comp.bulwark_stacks, Color(0.4, 0.75, 1.0), "Bulwark: %d stacks (-%d%% Daño)" % [buff_comp.bulwark_stacks, buff_comp.bulwark_stacks * 5])
+	# 3. Dynamic Condition Stacks & Stances
 	if buff_comp.is_camouflaged:
-		_create_buff_badge("CAMUFLADO", Color(0.65, 0.4, 1.0), "Optical Lens: Camuflaje táctico activo")
+		_create_buff_badge("Optical Lens [Camuflado]", Color(0.65, 0.4, 1.0), "Optical Lens: Camuflaje táctico activo")
+	if buff_comp.momentum_stacks > 0:
+		_create_buff_badge("Momentum [x%d]" % buff_comp.momentum_stacks, Color(0.3, 0.95, 0.4), "Momentum: %d stacks (+%d%% Daño)" % [buff_comp.momentum_stacks, buff_comp.momentum_stacks * 5])
+	if buff_comp.static_charge_stacks > 0:
+		_create_buff_badge("Static Charge [x%d]" % buff_comp.static_charge_stacks, Color(1.0, 0.9, 0.25), "Static Charge: %d stacks" % buff_comp.static_charge_stacks)
+	if buff_comp.bulwark_stacks > 0:
+		_create_buff_badge("Bulwark [x%d]" % buff_comp.bulwark_stacks, Color(0.4, 0.75, 1.0), "Bulwark: %d stacks (-%d%% Daño)" % [buff_comp.bulwark_stacks, buff_comp.bulwark_stacks * 5])
+
+
+func get_active_buff_texts() -> Array[String]:
+	var result: Array[String] = []
+	if active_buffs_container:
+		for child in active_buffs_container.get_children():
+			if child is Label:
+				result.append(child.text)
+	return result
 
 
 func _create_buff_badge(text: String, border_color: Color, tooltip: String) -> void:

@@ -19,6 +19,7 @@ var command_card: SC2CommandCard
 var armory_modal: ArmoryModal = null
 
 signal console_open_requested(tab_index: int)
+signal recall_base_requested()
 
 # Top Bar Elements
 var top_bar: PanelContainer
@@ -495,6 +496,8 @@ func _on_command_card_command_triggered(cmd_id: String, _payload: Variant) -> vo
 		console_open_requested.emit(3)
 	elif cmd_id == "open_armory":
 		open_armory_modal()
+	elif cmd_id == "recall_base":
+		recall_base_requested.emit()
 
 
 func update_story_phase(phase_title: String, bounty_info: int) -> void:

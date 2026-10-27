@@ -25,6 +25,7 @@ var slot_buttons: Array[Button] = []
 var slot_data: Array[Dictionary] = [] # stores {type: "order"|"skill", id: String, data: Variant}
 
 var bound_unit: Node = null
+var recall_cooldown: float = 0.0
 
 var _btn_normal_style: StyleBoxFlat
 var _btn_hover_style: StyleBoxFlat
@@ -151,7 +152,9 @@ func _apply_slot_button_style(btn: Button) -> void:
 	btn.add_theme_font_size_override("font_size", 10)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if recall_cooldown > 0.0:
+		recall_cooldown = maxf(0.0, recall_cooldown - delta)
 	if bound_unit == null or not is_instance_valid(bound_unit):
 		return
 	_update_slot_states()
@@ -212,6 +215,9 @@ func _populate_hero_card(hero: Node) -> void:
 			"hotkey": hotkey
 		}
 
+	# Slot 4: [T] Recall a Base (CD: 30s)
+	_bind_order_button(4, "RECALL", "T", "Recall a Base (T)\nTeletransporta instantáneamente al héroe y tropas al punto de reunión de la base (CD: 30s).")
+
 	# Row 1: Standard RTS Orders (Slots 5..8: Attack, Stop, Hold, Patrol)
 	_bind_order_button(5, "ATTACK", "A", "Attack (A)\nOrder unit to attack-move to destination.")
 	_bind_order_button(6, "STOP", "S", "Stop (S)\nHalt current action immediately.")
@@ -226,6 +232,7 @@ func _populate_hero_card(hero: Node) -> void:
 
 
 func _populate_standard_unit_card(_unit: Node) -> void:
+	_bind_order_button(4, "RECALL", "T", "Recall a Base (T)\nTeletransporta instantáneamente al héroe y tropas al punto de reunión de la base (CD: 30s).")
 	_bind_order_button(5, "ATTACK", "A", "Attack (A)")
 	_bind_order_button(6, "STOP", "S", "Stop (S)")
 	_bind_order_button(7, "HOLD", "H", "Hold Position (H)")
@@ -276,6 +283,14 @@ func _update_slot_states() -> void:
 			else:
 				btn.disabled = false
 				btn.text = "[%s]\n%s" % [hotkey, skill.skill_name.left(6)]
+		elif info.get("type") == "order" and info.get("id") == "RECALL":
+			var btn: Button = slot_buttons[i]
+			if recall_cooldown > 0.0:
+				btn.disabled = true
+				btn.text = "[T]\n[%.0f]" % ceilf(recall_cooldown)
+			else:
+				btn.disabled = false
+				btn.text = "[T]\nRecall"
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -327,6 +342,11 @@ func _on_slot_pressed(slot_idx: int) -> void:
 			return
 		elif order_id == "ARMERÍA":
 			command_triggered.emit("open_armory", null)
+			return
+		elif order_id == "RECALL":
+			if recall_cooldown <= 0.0:
+				recall_cooldown = 30.0
+				command_triggered.emit("recall_base", null)
 			return
 		if bound_unit and is_instance_valid(bound_unit):
 			if (order_id == "STOP" or order_id == "HOLD") and bound_unit.has_method("stop_action"):
