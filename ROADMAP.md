@@ -571,11 +571,11 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 - En Torment desbloquean unidades secretas de forma permanente.
 
 ### Tareas — Infraestructura
-- [ ] **10.1** `PinnacleBoss` base: fases, habilidades, barra de vida (reaprovechar UI de jefe), recompensas. `L`
-- [ ] **10.2** `SummoningRitual` (Resource + nodo): tipos de ritual reutilizables (pisar balizas, construir N estructuras, destruir objetivos, mantener posición, meter N unidades en zona). `L`
-- [ ] **10.3** Barra de vida cinematográfica con muescas de fase y barra de canalización. `M`
-- [ ] **10.4** Sistema de recompensas de jefe y de puntos de rango. `S`
-- [ ] **10.5** Tests de ritual: simulación de cumplimiento y de fallo. `M`
+- [x] **10.1** `PinnacleBoss` base: fases, habilidades, barra de vida (reaprovechar UI de jefe), recompensas. `L`
+- [x] **10.2** `SummoningRitual` (Resource + nodo): tipos de ritual reutilizables (pisar balizas, construir N estructuras, destruir objetivos, mantener posición, meter N unidades en zona). `L`
+- [x] **10.3** Barra de vida cinematográfica con muescas de fase y barra de canalización. `M`
+- [x] **10.4** Sistema de recompensas de jefe y de puntos de rango. `S`
+- [x] **10.5** Tests de ritual: simulación de cumplimiento y de fallo. `M`
 
 ### Tareas — Los 11 jefes (uno por uno, en este orden sugerido)
 | # | Jefe | Ritual | Complejidad |
@@ -592,10 +592,10 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 | 10 | **Celestial Kerrigan** | Activar el Elemental Slayn → la Reina de Espadas renace celestial | L |
 | 11 | **Narud, Servant of Amon** | Destruir 4 Vestigios Antiguos (5 clics rápidos para romper invulnerabilidad). **Concluye la partida.** | L |
 
-- [ ] **10.6–10.16** Un jefe por tarea, con: datos (`BossData`), escena provisional, 2–3 habilidades, ritual, recompensa, test. Cada una `M`–`L`.
-- [ ] **10.17** Reutilizar `boss_nydus_3d` y `boss_omega_ultralisk_3d` existentes como base para jefes de prueba. `S`
-- [ ] **10.18** Desbloqueo de unidades secretas tras vencer a cada jefe (permanente en Torment; solo sesión en inferiores). `M`
-- [ ] **10.19** Jefes invocados (×2) y jefes principales (×6) con multiplicadores de mineral correctos. `S`
+- [x] **10.6–10.16** Un jefe por tarea, con: datos (`BossData`), escena provisional, 2–3 habilidades, ritual, recompensa, test. Cada una `M`–`L`.
+- [x] **10.17** Reutilizar `boss_nydus_3d` y `boss_omega_ultralisk_3d` existentes como base para jefes de prueba. `S`
+- [x] **10.18** Desbloqueo de unidades secretas tras vencer a cada jefe (permanente en Torment; solo sesión en inferiores). `M`
+- [x] **10.19** Jefes invocados (×2) y jefes principales (×6) con multiplicadores de mineral correctos. `S`
 - [ ] **10.20** Rebalanceo global de jefes con hoja de equilibrado. `L`
 
 ### CdH
