@@ -178,6 +178,6 @@ func test_simulated_network_latency_and_loss_tolerance() -> void:
 			received_packets += 1
 
 	var arrival_rate: float = float(received_packets) / float(total_packets)
-	_assert_true(arrival_rate >= 0.95, "Client buffer received >= 95% of packets under 3% simulated loss (got %d%%)" % int(arrival_rate * 100.0))
+	_assert_true(arrival_rate >= 0.95, "Client buffer received >= 95% of packets under 3% simulated loss (got " + str(int(arrival_rate * 100.0)) + "%)")
 	_assert_true(simulated_latency_ms == 200.0, "Interpolation buffer accommodates 200ms target latency window")
 

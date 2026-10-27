@@ -1,17 +1,19 @@
 # Changelog — Special Forces Elite 5 (Godot 4.7.2)
 
+> **Nota metodológica (Línea base R0):** Hasta completar las fases de juego extremo a extremo (R1..R13), las versiones describen capas y sistemas *arquitectónicamente implementados y verificados con pruebas automatizadas*, no necesariamente *jugables de principio a fin sin ajustes de diseño*. Las pruebas de saturación prolongada (soak test de 2 horas) se encuentran marcadas como *pendientes de verificación completa en R13*.
+
 Todos los cambios notables de este proyecto están documentados en este archivo, siguiendo el formato [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/) y las versiones de [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
-## [1.0.0] — 2026-10-27
-### Fase 15 y Fase 16: Rendimiento, QA, Extras y Lanzamiento Final
+## [0.20.0-estructura] — 2026-10-27
+### Capa Estructural 15 y 16: Rendimiento, QA, Extras y Presupuestos
 - **Añadido:**
-  - `core/qa/performance_benchmarks.gd`: Suite integral de benchmarking y pruebas de estrés para CPU, simulación de enjambre (1.500 unidades a > 60 FPS / ~10 ms por frame), rendimiento de cálculo de daño (> 300.000 operaciones/s), empaquetado de red en 10 bytes y pruebas de saturación de memoria libre de fugas.
+  - `core/qa/performance_benchmarks.gd`: Suite integral de benchmarking y pruebas de estrés para CPU, simulación de enjambre (1.500 unidades a > 60 FPS / ~14.3 ms de cálculo de simulación en CPU), rendimiento de cálculo de daño (> 260.000–300.000 operaciones/s), empaquetado de red en 10 bytes y reciclaje de memoria SoA sin fugas. *(Nota R0: Soak test continuo de 2 h marcado como pendiente R13)*.
   - `core/meta/secret_hero_manager.gd`: Mecánica de activación de héroes secretos según probabilidad `(6 - dificultad)%`, requisito de $\ge 3000$ puntos de logro y catálogo de 6 héroes originales de ciencia ficción (ADR-06).
   - `core/events/calendar_event_manager.gd`: Eventos de calendario real (Navidad, Año Nuevo, April Fools, Halloween) con temas visuales y modificadores ambientales.
-  - `export_presets.cfg`: Presets de exportación para Windows Desktop (D3D12/Vulkan) y Linux/X11 con PCK embebido.
-  - `tests/unit/test_performance_and_qa.gd` y `tests/unit/test_secret_heroes_and_calendar.gd`: Tests automatizados integrados en el test runner principal (244/244 tests pasando en verde).
+  - `export_presets.cfg`: Presets de exportación para Windows Desktop (D3D12/Vulkan) y Linux/X11 con PCK embebido (versionado en repositorio).
+  - `tests/unit/test_performance_and_qa.gd` y `tests/unit/test_secret_heroes_and_calendar.gd`: Tests automatizados integrados en el test runner dinámico (245/245 tests pasando en verde).
   - `docs/LEGAL.md`: Declaración de descargo de responsabilidad y propiedad intelectual respecto a StarCraft II y Blizzard Entertainment.
 
 ## [0.13.0] — 2026-10-27

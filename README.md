@@ -14,6 +14,15 @@ Para fundamentos de diseño y fórmulas de referencia contrastadas con la wiki d
 
 ---
 
+## 🚀 Cómo ejecutar
+- **Requisitos:** Godot 4.7.x (Forward+ / Jolt Physics 3D)
+- **Jugar:** Abrir el proyecto en Godot y presionar F5 (o ejecutar `godot --path .`)
+- **Tests automatizados:** `godot --headless --path . -s tests/test_runner.gd`
+- **Benchmarks:** Ver [`docs/STATE_REAL.md`](./docs/STATE_REAL.md)
+- **Seed fija por CLI:** `godot --path . -- --seed=1234` (activo desde R1.2)
+
+---
+
 ## 🎮 Cómo Jugar (Inicio Rápido)
 
 1. Abre el proyecto en **Godot Engine 4.7.2** (`project.godot`).

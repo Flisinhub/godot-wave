@@ -37,38 +37,26 @@ func _init() -> void:
 		quit(0)
 
 func _run_all_suites() -> void:
-	_run_suite("R1: Swarm & Flow Field Navigation", preload("res://tests/test_r1_swarm.gd").new())
-	_run_suite("R2: Combat Engine & Buffs", preload("res://tests/test_r2_combat.gd").new())
-	_run_suite("R3: Economy & Crossfire Cancellation", preload("res://tests/test_r3_economy.gd").new())
-	_run_suite("R4: Hero Progression & RPG", preload("res://tests/test_r4_heroes.gd").new())
-	_run_suite("R5: Boss Events, Puzzles & Persistence", preload("res://tests/test_r5_events_persistence.gd").new())
-	_run_suite("Tier 4: Full System Integration", preload("res://tests/test_integration_full.gd").new())
-	_run_suite("Phase 1: SFE5 Playable Integration", preload("res://tests/test_sfe5_phase1_playable_integration.gd").new())
-	_run_suite("Phase 2 Tier 1: Feature Coverage", preload("res://tests/test_p2_e2e_tier1.gd").new())
-	_run_suite("Phase 2 Tier 2: Boundary & Corner Cases", preload("res://tests/test_p2_e2e_tier2.gd").new())
-	_run_suite("Phase 2 Tier 3: Cross-Feature Combinations", preload("res://tests/test_p2_e2e_tier3.gd").new())
-	_run_suite("Phase 2 Tier 4: Real-World Scenarios", preload("res://tests/test_p2_e2e_tier4.gd").new())
-	_run_suite("Phase 3: Heroes Catalog, VisualRoot & 3D VFX", preload("res://tests/test_p3_heroes_catalog_and_vfx.gd").new())
-	_run_suite("Phase 3: Wave Progression, Strains & Bosses", preload("res://tests/test_p3_waves_strains_and_bosses.gd").new())
-	_run_suite("Phase 3: Armory Terminal & Auto-Turrets Runtime", preload("res://tests/test_p3_armory_and_turrets_runtime.gd").new())
-	_run_suite("Phase 3: SFXManager & 7-Bus Audio Layout Runtime", preload("res://tests/test_p3_sfx_and_audio_bus_runtime.gd").new())
-	_run_suite("SFE5 Wiki: Income Formula Specification", preload("res://tests/unit/test_income_formula.gd").new())
-	_run_suite("SFE5 Economy Integration & Telemetry", preload("res://tests/unit/test_sfe5_economy_integration.gd").new())
-	_run_suite("SFE5 Data Architecture & Catalog", preload("res://tests/unit/test_data_catalog.gd").new())
-	_run_suite("SFE5 Spawners & Map Generation", preload("res://tests/unit/test_spawners_and_map.gd").new())
-	_run_suite("SFE5 Player Console & Buffs", preload("res://tests/unit/test_player_console_and_buffs.gd").new())
-	_run_suite("SFE5 Heroes & Abilities", preload("res://tests/unit/test_heroes_and_abilities.gd").new())
-	_run_suite("SFE5 Difficulty & Revival", preload("res://tests/unit/test_difficulty_and_revival.gd").new())
-	_run_suite("SFE5 Elite & Recruitment", preload("res://tests/unit/test_elite_and_recruitment.gd").new())
-	_run_suite("SFE5 Timed Events & Attacks", preload("res://tests/unit/test_timed_events_and_attacks.gd").new())
-	_run_suite("SFE5 Story Phases, Puzzles & Secrets", preload("res://tests/unit/test_story_puzzles_and_secrets.gd").new())
-	_run_suite("SFE5 Pinnacle Bosses & Rituals", preload("res://tests/unit/test_pinnacle_bosses_and_rituals.gd").new())
-	_run_suite("SFE5 Game Modes & Mutators", preload("res://tests/unit/test_game_modes_and_mutators.gd").new())
-	_run_suite("SFE5 Meta Ranks & Achievements", preload("res://tests/unit/test_meta_ranks_and_achievements.gd").new())
-	_run_suite("SFE5 Co-op Multiplayer & Network", preload("res://tests/unit/test_multiplayer_and_networking.gd").new())
-	_run_suite("SFE5 UI, Audio & Polish", preload("res://tests/unit/test_ui_audio_and_polish.gd").new())
-	_run_suite("SFE5 Performance & QA Verification", preload("res://tests/unit/test_performance_and_qa.gd").new())
-	_run_suite("SFE5 Secret Heroes & Calendar Events", preload("res://tests/unit/test_secret_heroes_and_calendar.gd").new())
+	for dir_path in ["res://tests/integration", "res://tests/unit", "res://tests/smoke"]:
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			continue
+		var files: Array[String] = []
+		dir.list_dir_begin()
+		var f := dir.get_next()
+		while f != "":
+			if not dir.current_is_dir() and f.begins_with("test_") and f.ends_with(".gd"):
+				files.append(f)
+			f = dir.get_next()
+		dir.list_dir_end()
+		files.sort()
+		for file_name in files:
+			var script_path := "%s/%s" % [dir_path, file_name]
+			var script: GDScript = load(script_path)
+			if script and script.can_instantiate():
+				var suite_instance = script.new()
+				var display_name: String = file_name.get_basename().replace("test_", "").replace("_", " ").capitalize()
+				_run_suite(display_name, suite_instance)
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

@@ -1,4 +1,3 @@
-class_name TestSFE5Phase1PlayableIntegration
 extends RefCounted
 
 ## Automated Verification Suite for Phase 1 SFE5 Playable Integration.
