@@ -670,16 +670,16 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 > **Aviso:** es la fase de mayor riesgo. Decidir el modelo (ADR-01) *antes* de empezar la Fase 3 si es posible, o asumir refactor.
 
 ### Tareas
-- [ ] **13.1** Decisión ADR-01: *host autoritativo (ENet/Godot High-level Multiplayer)* vs *lockstep determinista*. `M`
-- [ ] **13.2** Abstracción de jugador: `PlayerSlot` (id, héroe, minerales, supply, color). `M`
-- [ ] **13.3** Lobby y sala: unirse por IP/código, listo/no listo, selección de héroe y dificultad (votación). `L`
-- [ ] **13.4** Sincronización de estado: héroes, compras, habilidades, engendradores, jefes, minerales. `XL`
-- [ ] **13.5** Enjambre masivo en red: el host simula; los clientes reciben snapshots comprimidos (posición/estado por grupo, interpolación). `XL`
-- [ ] **13.6** Compras de consola validadas por el host. `M`
-- [ ] **13.7** Desconexión/reconexión y recálculo dinámico del suministro. `M`
-- [ ] **13.8** Votaciones (dificultad, expulsión). `M`
+- [x] **13.1** Decisión ADR-01: *host autoritativo (ENet/Godot High-level Multiplayer)* vs *lockstep determinista*. `M`
+- [x] **13.2** Abstracción de jugador: `PlayerSlot` (id, héroe, minerales, supply, color). `M`
+- [x] **13.3** Lobby y sala: unirse por IP/código, listo/no listo, selección de héroe y dificultad (votación). `L`
+- [x] **13.4** Sincronización de estado: héroes, compras, habilidades, engendradores, jefes, minerales. `XL`
+- [x] **13.5** Enjambre masivo en red: el host simula; los clientes reciben snapshots comprimidos (posición/estado por grupo, interpolación). `XL`
+- [x] **13.6** Compras de consola validadas por el host. `M`
+- [x] **13.7** Desconexión/reconexión y recálculo dinámico del suministro. `M`
+- [x] **13.8** Votaciones (dificultad, expulsión). `M`
 - [ ] **13.9** Pruebas de latencia simulada (200 ms, 3 % pérdida). `M`
-- [ ] **13.10** Modo 10 jugadores (límites de red). `L`
+- [x] **13.10** Modo 10 jugadores (límites de red). `L`
 
 ### CdH
 - 4 clientes + 1 host: 20 minutos sin desincronizaciones graves ni cuelgues.
