@@ -620,15 +620,15 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 | **Debug** | Consola de desarrollador (**Ctrl+Alt+C**) |
 
 ### Tareas
-- [ ] **11.1** `ModeData` + `GameConfig` aplican reglas con *feature flags*. `M`
-- [ ] **11.2** Menú de sala: selección de modo, dificultad, seed, nº de jugadores. `M`
-- [ ] **11.3** **Mutation Mode:** UI de ajustes (sliders) + persistencia de presets. `L`
-- [ ] **11.4** **Hardcore:** 12 unidades élite iniciales, desactivar sistemas (bufos, Protoss, eventos bonus). `M`
-- [ ] **11.5** **Nightmare:** base central, barrera de radiación, generador de oleadas (1–100 únicas) + ciclo de 10 (Terrestre, Terrestre, Aérea, Terrestre invisible, Élite, Terrestre, Terrestre, Aérea invisible, Terrestre, Jefe). `L`
-- [ ] **11.6** Nivel de experiencia Nightmare (`Level X`) en lugar de rango. `S`
-- [ ] **11.7** **Split Income** y **10 Player** conectados a Fase 1. `S`
-- [ ] **11.8** **Debug console** (Ctrl+Alt+C): spawn de unidades, dar mineral, teletransporte, forzar eventos, saltar a fase. Imprescindible para desarrollo. `M`
-- [ ] **11.9** Tests: cada modo arranca, ejecuta 60 s y termina sin errores. `M`
+- [x] **11.1** `ModeData` + `GameConfig` aplican reglas con *feature flags*. `M`
+- [x] **11.2** Menú de sala: selección de modo, dificultad, seed, nº de jugadores. `M`
+- [x] **11.3** **Mutation Mode:** UI de ajustes (sliders) + persistencia de presets. `L`
+- [x] **11.4** **Hardcore:** 12 unidades élite iniciales, desactivar sistemas (bufos, Protoss, eventos bonus). `M`
+- [x] **11.5** **Nightmare:** base central, barrera de radiación, generador de oleadas (1–100 únicas) + ciclo de 10 (Terrestre, Terrestre, Aérea, Terrestre invisible, Élite, Terrestre, Terrestre, Aérea invisible, Terrestre, Jefe). `L`
+- [x] **11.6** Nivel de experiencia Nightmare (`Level X`) en lugar de rango. `S`
+- [x] **11.7** **Split Income** y **10 Player** conectados a Fase 1. `S`
+- [x] **11.8** **Debug console** (Ctrl+Alt+C): spawn de unidades, dar mineral, teletransporte, forzar eventos, saltar a fase. Imprescindible para desarrollo. `M`
+- [x] **11.9** Tests: cada modo arranca, ejecuta 60 s y termina sin errores. `M`
 
 ### CdH
 - Los 8 modos se lanzan desde el menú. Hardcore y Nightmare se sienten claramente distintos.

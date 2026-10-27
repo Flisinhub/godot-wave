@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ModeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/mode_data.gd" id="1_mode_data"]
+
+[resource]
+script = ExtResource("1_mode_data")
+id = &"ten_player"
+mode_name = "10 Player Mode"
+description = "Partida ampliada para 10 jugadores con suministro reducido a 30 por jugador."
+split_income = false
+no_buffs = false
+no_protoss = false
+nightmare_mode = false
+permadeath = false
+use_waves_mode = false
+max_players = 10

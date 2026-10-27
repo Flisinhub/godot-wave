@@ -63,6 +63,7 @@ func _run_all_suites() -> void:
 	_run_suite("SFE5 Timed Events & Attacks", preload("res://tests/unit/test_timed_events_and_attacks.gd").new())
 	_run_suite("SFE5 Story Phases, Puzzles & Secrets", preload("res://tests/unit/test_story_puzzles_and_secrets.gd").new())
 	_run_suite("SFE5 Pinnacle Bosses & Rituals", preload("res://tests/unit/test_pinnacle_bosses_and_rituals.gd").new())
+	_run_suite("SFE5 Game Modes & Mutators", preload("res://tests/unit/test_game_modes_and_mutators.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

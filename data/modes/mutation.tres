@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ModeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/mode_data.gd" id="1_mode_data"]
+
+[resource]
+script = ExtResource("1_mode_data")
+id = &"mutation"
+mode_name = "Mutation Mode"
+description = "Personalización completa de salud, daño, velocidad de ataque y economía por el anfitrión."
+split_income = false
+no_buffs = false
+no_protoss = false
+nightmare_mode = false
+permadeath = false
+use_waves_mode = false
+max_players = 6

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ModeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/data/mode_data.gd" id="1_mode_data"]
+
+[resource]
+script = ExtResource("1_mode_data")
+id = &"classic"
+mode_name = "Classic Survival"
+description = "Experiencia cooperativa estándar SFE5 con votación de dificultad, historia y jefes."
+split_income = false
+no_buffs = false
+no_protoss = false
+nightmare_mode = false
+permadeath = false
+use_waves_mode = false
+max_players = 6
