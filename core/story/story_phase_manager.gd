@@ -18,17 +18,17 @@ enum StoryPhase {
 
 var current_phase: StoryPhase = StoryPhase.ZERG
 var zerg_spawners_cleared: int = 0
-var zerg_spawners_goal: int = 3
+var zerg_spawners_goal: int = 6
 
 var protoss_spawners_cleared: int = 0
-var protoss_spawners_goal: int = 3
+var protoss_spawners_goal: int = 4
 
 var xelnaga_crystals_harmonized: int = 0
 var total_xelnaga_crystals: int = 3
 var pinnacle_bosses_unlocked: bool = false
 
 
-func _init(z_goal: int = 3, p_goal: int = 3) -> void:
+func _init(z_goal: int = 6, p_goal: int = 4) -> void:
 	zerg_spawners_goal = z_goal
 	protoss_spawners_goal = p_goal
 	current_phase = StoryPhase.ZERG
@@ -88,6 +88,19 @@ func get_phase_title(phase: StoryPhase = current_phase) -> String:
 		StoryPhase.PINNACLE_BOSSES:
 			return "FASE CÚSPIDE: DESAFÍO DE LOS ANTIGUOS"
 	return "FASE DESCONOCIDA"
+
+
+func get_phase_header_status() -> String:
+	match current_phase:
+		StoryPhase.ZERG:
+			return "FASE 1/4: ZERG (Nidos: %d/%d)" % [zerg_spawners_cleared, zerg_spawners_goal]
+		StoryPhase.PROTOSS_1:
+			return "FASE 2/4: PROTOSS (Portales: %d/%d)" % [protoss_spawners_cleared, protoss_spawners_goal]
+		StoryPhase.PROTOSS_2:
+			return "FASE 3/4: CRISTALES XEL'NAGA (%d/%d)" % [xelnaga_crystals_harmonized, total_xelnaga_crystals]
+		StoryPhase.PINNACLE_BOSSES:
+			return "FASE 4/4: JEFE CÚSPIDE"
+	return "FASE 1/4: ZERG"
 
 
 func get_phase_announcement(phase: StoryPhase = current_phase) -> String:

@@ -16,12 +16,18 @@ const SpawnerFamilyData = preload("res://core/data/spawner_family_data.gd")
 const EnemyBudgetManager = preload("res://core/spawners/enemy_budget_manager.gd")
 
 # Standard map tactical anchor locations (POI) around battle arena (Hostile Territory)
+# 10 diverse POIs positioned outside the SW Terran base quadrant (>20m distance)
 const DEFAULT_SPAWNER_SLOTS: Array[Vector3] = [
-	Vector3(-18.0, 0.0, -26.0), # Slot A: Noroeste
-	Vector3(0.0, 0.0, -30.0),   # Slot B: Norte Central
-	Vector3(24.0, 0.0, -24.0),  # Slot C: Noreste
-	Vector3(26.0, 0.0, 4.0),    # Slot D: Este Central
-	Vector3(6.0, 0.0, -12.0)    # Slot E: Centro del Cráter
+	Vector3(-28.0, 0.0, -28.0), # Slot 1: Noroeste Lejano
+	Vector3(-15.0, 0.0, -20.0), # Slot 2: Noroeste Medio
+	Vector3(0.0, 0.0, -32.0),   # Slot 3: Norte Central Profundo
+	Vector3(0.0, 0.0, -16.0),   # Slot 4: Norte Central Choke
+	Vector3(26.0, 0.0, -26.0),  # Slot 5: Noreste Lejano
+	Vector3(18.0, 0.0, -12.0),  # Slot 6: Noreste Medio
+	Vector3(28.0, 0.0, 2.0),    # Slot 7: Este Central Alto
+	Vector3(24.0, 0.0, 18.0),   # Slot 8: Este Central Bajo
+	Vector3(6.0, 0.0, -4.0),    # Slot 9: Centro del Cráter
+	Vector3(12.0, 0.0, 28.0)    # Slot 10: Llanura Sur-Este
 ]
 
 var map_seed: MapSeed

@@ -10,7 +10,7 @@ const DROP_POD_INTERVAL_SECONDS: float = 45.0
 const DROP_POD_GRACE_PERIOD_SECONDS: float = 120.0
 const TIMED_ATTACK_INTERVAL_SECONDS: float = 300.0
 const DEFAULT_SEED: int = 12345
-const SPAWNER_COUNT_DEFAULT: int = 3
+const SPAWNER_COUNT_DEFAULT: int = 6
 
 # Difficulty Income Multipliers
 const DIFFICULTY_INCOME_MULTIPLIERS: Dictionary = {

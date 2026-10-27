@@ -291,11 +291,17 @@ func _fire_at(target: Variant, target_pos: Vector3) -> void:
 	turret_fired.emit(target, final_damage)
 
 
-func _award_swarm_bounty(_unit_idx: int, death_pos: Vector3) -> void:
+func _award_swarm_bounty(unit_idx: int, death_pos: Vector3) -> void:
 	if not _is_headless:
 		var vfx_pool: Node3D = _get_combat_vfx_pool()
 		if vfx_pool and vfx_pool.has_method("spawn_acid_burst"):
 			vfx_pool.spawn_acid_burst(death_pos)
+
+	if is_inside_tree() and get_tree() and get_tree().root:
+		var ml: Node = get_tree().root.find_child("MainLevel", true, false)
+		if ml and ml.has_method("_on_swarm_unit_killed"):
+			ml._on_swarm_unit_killed(unit_idx, self, death_pos, 10)
+			return
 
 	var econ: Object = _get_economy_manager()
 	if econ != null:

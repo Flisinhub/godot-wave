@@ -232,6 +232,7 @@ func set_spawner_state(new_state: State) -> void:
 			if health_bar_mesh:
 				health_bar_mesh.visible = true
 			cycle_timer = 0.0
+			_try_spawn_cycle()
 		State.DESTROYED:
 			if shield_mesh:
 				shield_mesh.visible = false
@@ -255,6 +256,7 @@ func unlock() -> void:
 	if current_state == State.LOCKED:
 		set_spawner_state(State.ACTIVE)
 		spawner_unlocked.emit(spawner_id)
+		_try_spawn_cycle()
 		if is_inside_tree():
 			FloatingTextManager.spawn_text(
 				self,

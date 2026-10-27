@@ -192,7 +192,11 @@ func _try_fire_ibis_cannon() -> void:
 			cannon_barrel.look_at(enemy_pos, Vector3.UP)
 		
 		# Deal heavy explosive damage to target unit and nearby splash
-		swarm_simulation.apply_damage_to_unit(target_idx, cannon_damage)
+		var killed: bool = bool(swarm_simulation.apply_damage_to_unit(target_idx, cannon_damage))
+		if killed and is_inside_tree() and get_tree() and get_tree().root:
+			var ml: Node = get_tree().root.find_child("MainLevel", true, false)
+			if ml and ml.has_method("_on_swarm_unit_killed"):
+				ml._on_swarm_unit_killed(target_idx, self, enemy_pos, 10)
 		FloatingTextManager.spawn_text(
 			self,
 			enemy_pos + Vector3(0.0, 1.0, 0.0),

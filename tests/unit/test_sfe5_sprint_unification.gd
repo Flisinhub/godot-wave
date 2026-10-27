@@ -211,10 +211,10 @@ func test_command_card_shortcuts() -> Dictionary:
 	if not assert_true(trigger_events.has("open_recruitment"), "Open recruitment triggered from slot 13"):
 		return get_last_failure()
 
-	# Trigger slot 14 ([C] Consola corner)
+	# Trigger slot 14 ([B] Armería)
 	trigger_events.clear()
 	card._on_slot_pressed(14)
-	if not assert_true(trigger_events.has("open_console"), "Open console triggered from slot 14"):
+	if not assert_true(trigger_events.has("open_armory"), "Open armory triggered from slot 14"):
 		return get_last_failure()
 
 	dummy_unit.free()
@@ -265,10 +265,75 @@ func test_hero_combat_stats_and_buff_sync() -> Dictionary:
 func test_map_generator_hostile_slots_outside_base() -> Dictionary:
 	var MapGenerator = preload("res://core/map/map_generator.gd")
 	var base_pos := Vector3(-24.0, 0.0, 24.0)
+	if not assert_true(MapGenerator.DEFAULT_SPAWNER_SLOTS.size() >= 10, "At least 10 tactical spawner slots"):
+		return get_last_failure()
 	for slot in MapGenerator.DEFAULT_SPAWNER_SLOTS:
 		var dist: float = slot.distance_to(base_pos)
 		if not assert_true(dist > 20.0, "Spawner slot %s is outside base (distance: %.1f > 20)" % [slot, dist]):
 			return get_last_failure()
+	return pass_test()
+
+
+## 9. Test StoryPhaseManager 4-Phase Progression and Headers
+func test_story_phase_header_status_and_progression() -> Dictionary:
+	var StoryPhaseManager = preload("res://core/story/story_phase_manager.gd")
+	var spm = StoryPhaseManager.new(6, 4)
+	if not assert_eq(spm.get_phase_header_status(), "FASE 1/4: ZERG (Nidos: 0/6)", "Phase 1 initial header"):
+		return get_last_failure()
+
+	# Simulate clearing 6 Zerg spawners
+	for i in range(6):
+		spm.report_spawner_cleared(&"zerg")
+	if not assert_eq(spm.current_phase, StoryPhaseManager.StoryPhase.PROTOSS_1, "Advanced to Protoss 1"):
+		return get_last_failure()
+	if not assert_eq(spm.get_phase_header_status(), "FASE 2/4: PROTOSS (Portales: 0/4)", "Phase 2 initial header"):
+		return get_last_failure()
+
+	# Simulate clearing 4 Protoss portals
+	for i in range(4):
+		spm.report_spawner_cleared(&"protoss")
+	if not assert_eq(spm.current_phase, StoryPhaseManager.StoryPhase.PROTOSS_2, "Advanced to Protoss 2"):
+		return get_last_failure()
+	if not assert_eq(spm.get_phase_header_status(), "FASE 3/4: CRISTALES XEL'NAGA (0/3)", "Phase 3 initial header"):
+		return get_last_failure()
+
+	# Simulate harmonizing 3 Xel'Naga crystals
+	spm.harmonize_xelnaga_crystal(0)
+	spm.harmonize_xelnaga_crystal(1)
+	spm.harmonize_xelnaga_crystal(2)
+	if not assert_eq(spm.current_phase, StoryPhaseManager.StoryPhase.PINNACLE_BOSSES, "Advanced to Pinnacle Bosses"):
+		return get_last_failure()
+	if not assert_eq(spm.get_phase_header_status(), "FASE 4/4: JEFE CÚSPIDE", "Phase 4 header"):
+		return get_last_failure()
+
+	return pass_test()
+
+
+## 10. Test SecretManager 3D Locations and Triggers
+func test_secret_manager_3d_locations_and_triggers() -> Dictionary:
+	var SecretManager = preload("res://core/events/secret_manager.gd")
+	var sm = SecretManager.new(12345)
+	if not assert_eq(sm.MYSTERY_BOX_CANDIDATE_POINTS.size(), 4, "4 Mystery Box candidate points"):
+		return get_last_failure()
+
+	# Test Outhouse +10 supply
+	var sess := {"outhouse_secret_discovered": false}
+	var ok := sm.trigger_outhouse_secret(sess)
+	if not assert_true(ok and sm.outhouse_unlocked, "Outhouse unlocked"):
+		return get_last_failure()
+	if not assert_true(sess["outhouse_secret_discovered"], "Outhouse marked in session"):
+		return get_last_failure()
+
+	# Test Lucky Lizard 3000 minerals
+	var lizard_reward := sm.trigger_lucky_lizard()
+	if not assert_eq(lizard_reward, 3000, "Lucky lizard awards 3000 minerals"):
+		return get_last_failure()
+
+	# Test Mystery Box loot
+	var loot := sm.open_mystery_box(0)
+	if not assert_true(not loot.is_empty(), "Mystery box produces valid loot"):
+		return get_last_failure()
+
 	return pass_test()
 
 

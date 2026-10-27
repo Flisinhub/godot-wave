@@ -493,11 +493,16 @@ func _on_command_card_command_triggered(cmd_id: String, _payload: Variant) -> vo
 		console_open_requested.emit(0)
 	elif cmd_id == "open_recruitment":
 		console_open_requested.emit(3)
+	elif cmd_id == "open_armory":
+		open_armory_modal()
 
 
 func update_story_phase(phase_title: String, bounty_info: int) -> void:
 	if top_wave_label:
-		top_wave_label.text = "FASE: %s  |  BOTÍN BASE: +%d 💎" % [phase_title.to_upper(), bounty_info]
+		if phase_title.begins_with("FASE "):
+			top_wave_label.text = "%s  |  BOTÍN: +%d 💎" % [phase_title.to_upper(), bounty_info]
+		else:
+			top_wave_label.text = "FASE: %s  |  BOTÍN BASE: +%d 💎" % [phase_title.to_upper(), bounty_info]
 		top_wave_label.add_theme_color_override("font_color", Color(0.25, 0.88, 1.0))
 
 

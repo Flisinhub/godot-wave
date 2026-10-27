@@ -46,6 +46,7 @@ const BossBrutalisk3D = preload("res://entities/enemies/boss_brutalisk_3d.gd")
 const BossHybrid3D = preload("res://entities/enemies/boss_hybrid_3d.gd")
 const BossNydus3D = preload("res://entities/enemies/boss_nydus_3d.gd")
 const DebugConsole = preload("res://core/modes/debug_console.gd")
+const SecretManager = preload("res://core/events/secret_manager.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -115,6 +116,17 @@ var debug_cli_layer: CanvasLayer = null
 var debug_cli_input: LineEdit = null
 var debug_cli_output: Label = null
 
+# SFE5 Map Secrets (Fase 9)
+var secret_manager: SecretManager = null
+var _outhouse_node: Node3D = null
+var _mystery_box_nodes: Array[Node3D] = []
+var _lucky_lizard_node: Node3D = null
+
+# SFE5 4-Phase Match State
+var nydus_spawn_timer: float = 0.0
+var xelnaga_crystals: Array[Node3D] = []
+var final_pinnacle_boss: Node3D = null
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -128,6 +140,9 @@ func _ready() -> void:
 
 	# 3b. SFE5 Spawner Chain & Procedural Map (Task 3.12)
 	_setup_spawner_network()
+
+	# 3c. SFE5 Map Secrets (Outhouse, Mystery Boxes, Lucky Lizard)
+	_spawn_map_secrets()
 
 	# 4. Hero Spawn & RTS Controller / SC2 HUD Binding
 	_setup_hero_and_controls()
@@ -206,6 +221,7 @@ func _process(delta: float) -> void:
 	if not is_game_over:
 		match_timer += delta
 		_process_timed_events(delta)
+		_check_secret_proximities()
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
 		if budget_manager:
@@ -226,6 +242,12 @@ func _process_timed_events(delta: float) -> void:
 
 	if nydus_crater_manager:
 		nydus_crater_manager.process_craters(delta)
+		if nydus_crater_manager.is_active:
+			nydus_spawn_timer += delta
+			if nydus_spawn_timer >= 90.0:
+				nydus_spawn_timer = 0.0
+				var crater_idx := randi() % 12
+				nydus_crater_manager.trigger_crater_awakening(crater_idx, spawners_destroyed_count)
 
 
 func _on_drop_pod_due(_pod_index: int, _game_time: float) -> void:
@@ -496,7 +518,7 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 
 	# 4. Setup Story Phase Manager (Fase 9: Zerg -> Protoss 1 -> Protoss 2 -> Jefes Cúspide)
 	if story_phase_manager == null:
-		story_phase_manager = StoryPhaseManager.new(3, 3)
+		story_phase_manager = StoryPhaseManager.new(6, 4)
 		if not story_phase_manager.phase_changed.is_connected(_on_story_phase_changed):
 			story_phase_manager.phase_changed.connect(_on_story_phase_changed)
 
@@ -510,6 +532,7 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	if selected_hero and active_hero:
 		active_hero.hero_data = selected_hero
 		active_hero.spawn_position = active_hero.global_position
+		active_hero.swarm_simulation = swarm_simulation
 		if debug_console:
 			debug_console.active_hero = active_hero
 			debug_console.story_phase_manager = story_phase_manager
@@ -543,8 +566,10 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 
 	# 6. Update SC2 Top Bar
 	if sc2_hud_root:
+		var current_seed: int = sess.map_seed if sess and "map_seed" in sess and sess.map_seed != 0 else 12345
+		sc2_hud_root.update_seed(current_seed)
 		sc2_hud_root.update_difficulty(SFEDifficultyManager.get_difficulty_name(), diff_tier)
-		sc2_hud_root.update_story_phase(story_phase_manager.get_phase_title(), bounty_rate)
+		_refresh_phase_hud()
 		if economy_manager:
 			sc2_hud_root.update_minerals(economy_manager.current_minerals)
 		sc2_hud_root.update_supply(1, max_sup)
@@ -592,9 +617,8 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 				var first_spawner = spawner_chain.get_spawner(&"spawner_01")
 				if first_spawner:
 					first_spawner.unlock()
-				if sc2_hud_root and sc2_hud_root.top_wave_label:
-					sc2_hud_root.top_wave_label.text = "¡CADENA DE ENGENDRADORES ACTIVA! Quedan %d nidos." % spawner_chain.get_remaining_spawner_count()
-					sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.35))
+					first_spawner._try_spawn_cycle()
+				_refresh_phase_hud()
 
 
 func _on_hero_revive_countdown_updated(remaining: float, total: float) -> void:
@@ -738,16 +762,30 @@ func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
 
 func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 	spawners_destroyed_count += 1
+	var race: StringName = &"zerg"
+	if story_phase_manager and story_phase_manager.current_phase == StoryPhaseManager.StoryPhase.PROTOSS_1:
+		race = &"protoss"
 	if story_phase_manager:
-		story_phase_manager.report_spawner_cleared(&"zerg")
+		story_phase_manager.report_spawner_cleared(race)
 	_update_spawner_minimap()
+	_refresh_phase_hud()
 	if sc2_hud_root and sc2_hud_root.top_wave_label:
 		if remaining > 0:
-			sc2_hud_root.top_wave_label.text = "¡ENGENDRADOR DESTRUIDO! Quedan %d engendradores." % remaining
+			sc2_hud_root.top_wave_label.text = "¡OBJETIVO DESTRUIDO! Quedan %d engendradores." % remaining
 			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 		else:
-			sc2_hud_root.top_wave_label.text = "¡TODOS LOS ENGENDRADORES ERRADICADOS!"
+			sc2_hud_root.top_wave_label.text = "¡CADENA DE ENGENDRADORES PURGADA!"
 			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.2, 1.0, 0.3))
+
+
+func _refresh_phase_hud() -> void:
+	if not sc2_hud_root or not story_phase_manager:
+		return
+	var status_text: String = story_phase_manager.get_phase_header_status()
+	var bounty_rate: int = 50
+	if economy_manager and "bounty_per_kill" in economy_manager:
+		bounty_rate = economy_manager.bounty_per_kill
+	sc2_hud_root.update_story_phase(status_text, bounty_rate)
 
 
 func _on_story_phase_changed(_old_phase: int, new_phase: int, phase_title: String, announcement: String) -> void:
@@ -762,29 +800,384 @@ func _on_story_phase_changed(_old_phase: int, new_phase: int, phase_title: Strin
 
 	if new_phase == StoryPhaseManager.StoryPhase.PROTOSS_1 and nydus_crater_manager:
 		nydus_crater_manager.activate_network()
+		nydus_spawn_timer = 85.0 # Emerge first Nydus quickly (in 5s)
 
-	if sc2_hud_root:
-		var bounty_rate: int = 50
-		if economy_manager and "bounty_per_kill" in economy_manager:
-			bounty_rate = economy_manager.bounty_per_kill
-		sc2_hud_root.update_story_phase(phase_title, bounty_rate)
-		if sc2_hud_root.top_wave_label:
-			sc2_hud_root.top_wave_label.text = "¡%s!" % announcement.to_upper()
-			sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.3, 0.9, 1.0))
+	_refresh_phase_hud()
+	if sc2_hud_root and sc2_hud_root.top_wave_label:
+		sc2_hud_root.top_wave_label.text = "¡%s!" % announcement.to_upper()
+		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(0.3, 0.9, 1.0))
+
+
+func _setup_protoss_spawner_network() -> void:
+	var protoss_slots: Array[Vector3] = [
+		Vector3(-24.0, 0.0, -22.0),
+		Vector3(0.0, 0.0, -26.0),
+		Vector3(24.0, 0.0, -20.0),
+		Vector3(20.0, 0.0, 10.0)
+	]
+	var protoss_spawners: Array[SpawnerNode] = []
+	for i in range(4):
+		var p_spawner := SpawnerNode.new()
+		p_spawner.spawner_id = StringName("protoss_warp_%02d" % (i + 1))
+		p_spawner.spawner_name = "Portal Warp Protoss #%d" % (i + 1)
+		p_spawner.family = "protoss"
+		p_spawner.group_size = 5
+		p_spawner.cycle_seconds = 18.0
+		p_spawner.max_health = 4000.0
+		p_spawner.structure_armor = 12.0
+		p_spawner.archetype_id = 3 # Stalker / Hydra
+		p_spawner.position = protoss_slots[i]
+		p_spawner.budget_manager = budget_manager
+		p_spawner.swarm_simulation = swarm_simulation
+		p_spawner.initial_state = SpawnerNode.State.LOCKED
+		add_child(p_spawner)
+
+		# Protoss Gold / Cyan Visual Theme
+		if p_spawner.visual_mesh:
+			for child in p_spawner.visual_mesh.get_children():
+				if child is MeshInstance3D:
+					var p_mat := StandardMaterial3D.new()
+					p_mat.albedo_color = Color(0.9, 0.75, 0.2)
+					p_mat.metallic = 0.85
+					p_mat.roughness = 0.25
+					p_mat.emission_enabled = true
+					p_mat.emission = Color(0.1, 0.7, 1.0) * 0.9
+					(child as MeshInstance3D).material_override = p_mat
+
+		protoss_spawners.append(p_spawner)
+
+	spawner_chain = SpawnerChain.new()
+	spawner_chain.set_simulation(swarm_simulation)
+	var prev_id: StringName = &""
+	for sp in protoss_spawners:
+		spawner_chain.register_spawner(sp, prev_id)
+		prev_id = sp.spawner_id
+
+	spawner_chain.spawner_unlocked.connect(_on_spawner_unlocked)
+	spawner_chain.spawner_chain_step_completed.connect(_on_spawner_step_completed)
+	spawner_chain.all_spawners_destroyed.connect(_on_all_spawners_cleared)
+	
+	if protoss_spawners.size() > 0:
+		protoss_spawners[0].unlock()
+	_update_spawner_minimap()
+
+
+func _spawn_xelnaga_crystals() -> void:
+	var crystal_positions: Array[Vector3] = [
+		Vector3(-20.0, 0.0, -18.0),
+		Vector3(20.0, 0.0, -20.0),
+		Vector3(6.0, 0.0, 12.0)
+	]
+	xelnaga_crystals.clear()
+	for i in range(3):
+		var crystal_pos: Vector3 = crystal_positions[i]
+		var crystal := XelNagaCrystal3D.new()
+		crystal.name = "XelNagaCrystal_%d" % (i + 1)
+		crystal.position = crystal_pos
+		crystal.crystal_index = i
+		crystal.main_level_ref = self
+		crystal.add_to_group("enemies")
+		crystal.add_to_group("structures")
+		crystal.add_to_group("xelnaga_crystals")
+
+		var col := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(3.0, 4.5, 3.0)
+		col.shape = box
+		col.position = Vector3(0.0, 2.25, 0.0)
+		crystal.add_child(col)
+
+		var mesh_inst := MeshInstance3D.new()
+		var prism := CylinderMesh.new()
+		prism.top_radius = 0.2
+		prism.bottom_radius = 1.4
+		prism.height = 4.5
+		mesh_inst.mesh = prism
+		mesh_inst.position = Vector3(0.0, 2.25, 0.0)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.1, 0.85, 0.35)
+		mat.roughness = 0.2
+		mat.metallic = 0.5
+		mat.emission_enabled = true
+		mat.emission = Color(0.2, 1.0, 0.5) * 0.8
+		mesh_inst.material_override = mat
+		crystal.add_child(mesh_inst)
+
+		var lbl := Label3D.new()
+		lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		lbl.position = Vector3(0.0, 5.0, 0.0)
+		lbl.font_size = 26
+		lbl.modulate = Color(0.3, 1.0, 0.5)
+		lbl.text = "💎 CRISTAL XEL'NAGA #%d\n[5000 HP]" % (i + 1)
+		crystal.add_child(lbl)
+
+		add_child(crystal)
+		xelnaga_crystals.append(crystal)
+
+		# Spawn Guardian Boss for each crystal
+		var guardian := BossHybrid3D.new()
+		guardian.position = crystal_pos + Vector3(3.0, 0.0, 3.0)
+		guardian.boss_name = "Guardián Híbrido #%d" % (i + 1)
+		guardian.max_health = 6000.0
+		guardian.current_health = 6000.0
+		add_child(guardian)
+		if boss_health_bar_ui:
+			boss_health_bar_ui.bind_boss(guardian)
+
+	if SignalBus.has_signal("announcement_triggered"):
+		SignalBus.announcement_triggered.emit("¡Fase 3: Armoniza los 3 Cristales Xel'Naga!")
+
+
+func _on_xelnaga_crystal_harmonized(crystal_index: int) -> void:
+	if story_phase_manager:
+		story_phase_manager.harmonize_xelnaga_crystal(crystal_index)
+	_play_sfx_3d(&"upgrade_complete", Vector3(0.0, 0.0, 0.0))
+	_refresh_phase_hud()
+	if story_phase_manager and story_phase_manager.current_phase == StoryPhaseManager.StoryPhase.PINNACLE_BOSSES:
+		_spawn_final_pinnacle_boss()
+
+
+func _spawn_final_pinnacle_boss() -> void:
+	if final_pinnacle_boss and is_instance_valid(final_pinnacle_boss):
+		return
+	var boss := BossHybrid3D.new()
+	boss.name = "FinalBossNarud"
+	boss.boss_name = "Narud / Hybrid Behemoth"
+	boss.max_health = 25000.0
+	boss.current_health = 25000.0
+	boss.max_shields = 5000.0
+	boss.current_shields = 5000.0
+	boss.flat_armor = 14.0
+	boss.attack_damage = 110.0
+	boss.position = Vector3(0.0, 0.0, -30.0)
+	add_child(boss)
+	final_pinnacle_boss = boss
+
+	if boss_health_bar_ui:
+		boss_health_bar_ui.bind_boss(boss)
+
+	boss.boss_died.connect(func():
+		_end_game(true)
+	)
+
+	# Elite Escort Wave
+	if swarm_simulation:
+		swarm_simulation.spawn_wave(1, 8, Vector3(0.0, 0.0, -28.0), 5.0) # Roaches
+		swarm_simulation.spawn_wave(3, 6, Vector3(0.0, 0.0, -32.0), 5.0) # Hydralisks
+
+	if sc2_hud_root and sc2_hud_root.top_wave_label:
+		sc2_hud_root.top_wave_label.text = "¡FASE 4/4: DERROTA AL JEFE CÚSPIDE NARUD!"
+		sc2_hud_root.top_wave_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.3))
+
+
+func _spawn_map_secrets() -> void:
+	var sess := _get_game_session()
+	var seed_val: int = sess.map_seed if sess and "map_seed" in sess and sess.map_seed != 0 else 12345
+	secret_manager = SecretManager.new(seed_val)
+
+	# 1. Outhouse (+10 supply)
+	_outhouse_node = Outhouse3D.new()
+	_outhouse_node.name = "SecretOuthouse"
+	_outhouse_node.position = Vector3(-35.0, 0.0, 20.0)
+	_outhouse_node.main_level_ref = self
+	_outhouse_node.add_to_group("structures")
+	_outhouse_node.add_to_group("secrets")
+
+	var o_col := CollisionShape3D.new()
+	var o_box := BoxShape3D.new()
+	o_box.size = Vector3(2.5, 3.0, 2.5)
+	o_col.shape = o_box
+	o_col.position = Vector3(0.0, 1.5, 0.0)
+	_outhouse_node.add_child(o_col)
+
+	var o_mesh := MeshInstance3D.new()
+	var o_box_mesh := BoxMesh.new()
+	o_box_mesh.size = Vector3(2.2, 2.8, 2.2)
+	o_mesh.mesh = o_box_mesh
+	o_mesh.position = Vector3(0.0, 1.4, 0.0)
+	var o_mat := StandardMaterial3D.new()
+	o_mat.albedo_color = Color(0.45, 0.32, 0.18)
+	o_mesh.material_override = o_mat
+	_outhouse_node.add_child(o_mesh)
+
+	var o_lbl := Label3D.new()
+	o_lbl.name = "Label3D"
+	o_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	o_lbl.position = Vector3(0.0, 3.6, 0.0)
+	o_lbl.font_size = 22
+	o_lbl.modulate = Color(0.3, 0.9, 0.4)
+	o_lbl.text = "⛺ REFUGIO SECRETO\n[+10 Suministro]"
+	_outhouse_node.add_child(o_lbl)
+	add_child(_outhouse_node)
+
+	# 2. Mystery Boxes (4 items)
+	_mystery_box_nodes.clear()
+	for i in range(SecretManager.MYSTERY_BOX_CANDIDATE_POINTS.size()):
+		var b_pos: Vector3 = SecretManager.MYSTERY_BOX_CANDIDATE_POINTS[i]
+		var box := MysteryBox3D.new()
+		box.name = "MysteryBox_%d" % (i + 1)
+		box.position = b_pos
+		box.box_index = i
+		box.main_level_ref = self
+		box.add_to_group("structures")
+		box.add_to_group("secrets")
+		box.add_to_group("mystery_boxes")
+
+		var b_col := CollisionShape3D.new()
+		var b_shape := BoxShape3D.new()
+		b_shape.size = Vector3(1.5, 1.5, 1.5)
+		b_col.shape = b_shape
+		b_col.position = Vector3(0.0, 0.75, 0.0)
+		box.add_child(b_col)
+
+		var b_mesh := MeshInstance3D.new()
+		var b_box_m := BoxMesh.new()
+		b_box_m.size = Vector3(1.2, 1.2, 1.2)
+		b_mesh.mesh = b_box_m
+		b_mesh.position = Vector3(0.0, 0.6, 0.0)
+		var b_mat := StandardMaterial3D.new()
+		b_mat.albedo_color = Color(0.85, 0.65, 0.15)
+		b_mat.emission_enabled = true
+		b_mat.emission = Color(1.0, 0.8, 0.2) * 0.5
+		b_mesh.material_override = b_mat
+		box.add_child(b_mesh)
+
+		var b_lbl := Label3D.new()
+		b_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		b_lbl.position = Vector3(0.0, 1.8, 0.0)
+		b_lbl.font_size = 20
+		b_lbl.modulate = Color(1.0, 0.85, 0.2)
+		b_lbl.text = "[?] CAJA SORPRESA"
+		box.add_child(b_lbl)
+
+		add_child(box)
+		_mystery_box_nodes.append(box)
+
+	# 3. Lucky Lizard (awards 3000 minerals)
+	_lucky_lizard_node = LuckyLizard3D.new()
+	_lucky_lizard_node.name = "LuckyLizard"
+	_lucky_lizard_node.position = Vector3(32.0, 0.0, 0.0)
+	_lucky_lizard_node.main_level_ref = self
+	_lucky_lizard_node.add_to_group("enemies")
+	_lucky_lizard_node.add_to_group("secrets")
+
+	var l_col := CollisionShape3D.new()
+	var l_cap := CapsuleShape3D.new()
+	l_cap.radius = 0.4
+	l_cap.height = 1.0
+	l_col.shape = l_cap
+	l_col.position = Vector3(0.0, 0.5, 0.0)
+	_lucky_lizard_node.add_child(l_col)
+
+	var l_mesh := MeshInstance3D.new()
+	var l_cyl := CylinderMesh.new()
+	l_cyl.top_radius = 0.35
+	l_cyl.bottom_radius = 0.4
+	l_cyl.height = 0.8
+	l_mesh.mesh = l_cyl
+	l_mesh.position = Vector3(0.0, 0.4, 0.0)
+	var l_mat := StandardMaterial3D.new()
+	l_mat.albedo_color = Color(0.2, 0.9, 0.3)
+	l_mat.emission_enabled = true
+	l_mat.emission = Color(0.5, 1.0, 0.3) * 0.6
+	l_mesh.material_override = l_mat
+	_lucky_lizard_node.add_child(l_mesh)
+
+	var l_lbl := Label3D.new()
+	l_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l_lbl.position = Vector3(0.0, 1.4, 0.0)
+	l_lbl.font_size = 22
+	l_lbl.modulate = Color(0.3, 1.0, 0.4)
+	l_lbl.text = "🦎 LAGARTO DE LA SUERTE\n[+3.000 Minerales]"
+	_lucky_lizard_node.add_child(l_lbl)
+	add_child(_lucky_lizard_node)
+
+
+func _check_secret_proximities() -> void:
+	if not active_hero or not is_instance_valid(active_hero) or not secret_manager:
+		return
+	var hero_pos: Vector3 = active_hero.global_position
+
+	# Check Outhouse Proximity
+	if _outhouse_node and is_instance_valid(_outhouse_node) and not secret_manager.outhouse_unlocked:
+		if hero_pos.distance_to(_outhouse_node.global_position) <= 4.0:
+			_trigger_outhouse_interaction(_outhouse_node)
+
+	# Check Mystery Boxes Proximity
+	for i in range(_mystery_box_nodes.size()):
+		var box: Node3D = _mystery_box_nodes[i]
+		if box and is_instance_valid(box) and not secret_manager.boxes_opened.has(i):
+			if hero_pos.distance_to(box.global_position) <= 3.0:
+				_trigger_mystery_box_interaction(box, i)
+
+
+func _trigger_outhouse_interaction(node: Node3D) -> void:
+	if not secret_manager or secret_manager.outhouse_unlocked:
+		return
+	var sess := _get_game_session()
+	var ok := secret_manager.trigger_outhouse_secret(sess)
+	if ok:
+		_play_sfx_3d(&"upgrade_complete", node.global_position)
+		FloatingTextManager.spawn_text(self, node.global_position + Vector3(0.0, 3.5, 0.0), "+10 SUMINISTRO MÁXIMO!", Color(0.2, 1.0, 0.4))
+		if sc2_hud_root:
+			var cur_sup: int = player_console._get_current_supply() if player_console else 1
+			var max_sup: int = (sess.get_max_supply() if sess else 80) + 10
+			sc2_hud_root.update_supply(cur_sup, max_sup)
+		var lbl: Label3D = node.get_node_or_null("Label3D") as Label3D
+		if lbl:
+			lbl.text = "🔓 REFUGIO DESBLOQUEADO (+10 Suministro)"
+			lbl.modulate = Color(0.4, 1.0, 0.4)
+
+
+func _trigger_mystery_box_interaction(node: Node3D, idx: int) -> void:
+	if not secret_manager or secret_manager.boxes_opened.has(idx):
+		return
+	var loot := secret_manager.open_mystery_box(idx)
+	if not loot.is_empty():
+		_play_sfx_3d(&"upgrade_complete", node.global_position)
+		FloatingTextManager.spawn_text(self, node.global_position + Vector3(0.0, 2.0, 0.0), str(loot.get("label", "Botín")), Color(1.0, 0.85, 0.2))
+		match str(loot.get("type", "")):
+			"minerals":
+				if economy_manager:
+					economy_manager.add_minerals(int(loot.get("amount", 1500)), "Mystery Box")
+			"shield_buff":
+				if active_hero and active_hero.hero_data:
+					active_hero.hero_data.current_shield = minf(active_hero.hero_data.max_shield, active_hero.hero_data.current_shield + float(loot.get("amount", 250.0)))
+			"experience":
+				if active_hero:
+					active_hero.gain_experience(int(loot.get("amount", 2000)))
+		node.queue_free()
+
+
+func _trigger_lucky_lizard_death(lizard: Node3D) -> void:
+	if not secret_manager or secret_manager.lizard_caught:
+		return
+	var reward := secret_manager.trigger_lucky_lizard()
+	if reward > 0:
+		_play_sfx_3d(&"zerg_death", lizard.global_position)
+		FloatingTextManager.spawn_text(self, lizard.global_position + Vector3(0.0, 2.0, 0.0), "+%d MINERALES (LAGARTO DE LA SUERTE)" % reward, Color(1.0, 0.85, 0.2))
+		if economy_manager:
+			economy_manager.add_minerals(reward, "Lucky Lizard")
+		session_kills += 1
+		if active_hero:
+			active_hero.gain_experience(1000)
+		lizard.queue_free()
 
 
 func _end_game(victory: bool) -> void:
 	if is_game_over:
 		return
 	is_game_over = true
+	var final_kills: int = session_kills
 	_save_bank_progress(!victory)
+	session_kills = final_kills
 	
 	if is_waves_mode and not victory and game_over_panel:
 		game_over_panel.visible = true
 	
 	var total_min: int = economy_manager.total_minerals_earned if economy_manager else 0
-	var cleared: int = spawners_destroyed_count if not victory else (spawner_chain.get_total_spawner_count() if spawner_chain else 3)
-	var total_sp: int = spawner_chain.get_total_spawner_count() if spawner_chain else 3
+	var total_sp: int = 10
+	var cleared: int = spawners_destroyed_count if not victory else total_sp
 	var sess := _get_game_session()
 	var current_seed: int = sess.map_seed if sess and "map_seed" in sess else 0
 
@@ -792,7 +1185,7 @@ func _end_game(victory: bool) -> void:
 	modal.setup(
 		victory,
 		match_timer,
-		session_kills,
+		final_kills,
 		total_min,
 		cleared,
 		total_sp,
@@ -803,6 +1196,20 @@ func _end_game(victory: bool) -> void:
 
 
 func _on_all_spawners_cleared() -> void:
+	if story_phase_manager:
+		match story_phase_manager.current_phase:
+			StoryPhaseManager.StoryPhase.ZERG:
+				story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PROTOSS_1)
+				_setup_protoss_spawner_network()
+				_refresh_phase_hud()
+				return
+			StoryPhaseManager.StoryPhase.PROTOSS_1:
+				story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PROTOSS_2)
+				_spawn_xelnaga_crystals()
+				_refresh_phase_hud()
+				return
+			StoryPhaseManager.StoryPhase.PROTOSS_2, StoryPhaseManager.StoryPhase.PINNACLE_BOSSES:
+				return
 	_end_game(true)
 
 
@@ -1826,7 +2233,6 @@ func _save_bank_progress(is_loss: bool) -> void:
 	var bank: Dictionary = BankManager.load_bank()
 	var prev_kills: int = bank.get("total_kills", 0)
 	var new_total_kills: int = prev_kills + session_kills
-	session_kills = 0
 	bank["total_kills"] = new_total_kills
 	var new_vet: int = maxi(1, 1 + int(new_total_kills / 100))
 	bank["veterancy_level"] = new_vet
@@ -1903,3 +2309,70 @@ func _log_milestone_6_diagnostics() -> void:
 			combat_vfx_pool.get_acid_pool_size()
 		])
 	print("=============================================================\n")
+
+
+# ==============================================================================
+# SFE5 Inner Classes: Xel'Naga Crystals, Outhouse, Mystery Boxes, Lucky Lizard
+# ==============================================================================
+
+class XelNagaCrystal3D extends StaticBody3D:
+	var max_health: float = 5000.0
+	var current_health: float = 5000.0
+	var flat_armor: float = 8.0
+	var crystal_index: int = 0
+	var main_level_ref: Node = null
+
+	func take_damage_context(amount: float, _dt: int = 0, _aoe: bool = false, _al: int = 0) -> void:
+		take_damage(amount)
+
+	func take_damage(amount: float) -> void:
+		if current_health <= 0.0:
+			return
+		var dmg: float = maxf(1.0, amount - flat_armor)
+		current_health = maxf(0.0, current_health - dmg)
+		FloatingTextManager.spawn_text(self, global_position + Vector3(0.0, 3.5, 0.0), "-%d" % int(dmg), Color(0.3, 1.0, 0.5))
+		if current_health <= 0.0:
+			if main_level_ref and main_level_ref.has_method("_on_xelnaga_crystal_harmonized"):
+				main_level_ref._on_xelnaga_crystal_harmonized(crystal_index)
+			queue_free()
+
+
+class MysteryBox3D extends StaticBody3D:
+	var box_index: int = 0
+	var main_level_ref: Node = null
+
+	func take_damage_context(amount: float, _dt: int = 0, _aoe: bool = false, _al: int = 0) -> void:
+		take_damage(amount)
+
+	func take_damage(_amount: float) -> void:
+		if main_level_ref and main_level_ref.has_method("_trigger_mystery_box_interaction"):
+			main_level_ref._trigger_mystery_box_interaction(self, box_index)
+
+
+class Outhouse3D extends StaticBody3D:
+	var main_level_ref: Node = null
+
+	func take_damage_context(amount: float, _dt: int = 0, _aoe: bool = false, _al: int = 0) -> void:
+		take_damage(amount)
+
+	func take_damage(_amount: float) -> void:
+		if main_level_ref and main_level_ref.has_method("_trigger_outhouse_interaction"):
+			main_level_ref._trigger_outhouse_interaction(self)
+
+
+class LuckyLizard3D extends CharacterBody3D:
+	var max_health: float = 100.0
+	var current_health: float = 100.0
+	var flat_armor: float = 2.0
+	var main_level_ref: Node = null
+
+	func take_damage_context(amount: float, _dt: int = 0, _aoe: bool = false, _al: int = 0) -> void:
+		take_damage(amount)
+
+	func take_damage(amount: float) -> void:
+		if current_health <= 0.0:
+			return
+		current_health = maxf(0.0, current_health - amount)
+		if current_health <= 0.0:
+			if main_level_ref and main_level_ref.has_method("_trigger_lucky_lizard_death"):
+				main_level_ref._trigger_lucky_lizard_death(self)

@@ -30,6 +30,7 @@ var revive_timer: float = 0.0
 var total_revive_time: float = 0.0
 var spawn_position: Vector3 = Vector3(-22.0, 0.0, 20.0)
 var current_difficulty_data: Resource = null
+var swarm_simulation: Node = null
 
 @export var hero_data: HeroData
 
@@ -388,7 +389,7 @@ func _physics_process(delta: float) -> void:
 		_update_animations()
 		return
 
-	# 7. Stationary Behavior: Auto-Attack nearby enemies within attack_range
+	# 7. Stationary Behavior: Auto-Attack nearby enemies within attack_range (Hostile Nodes & Swarm Units)
 	_stop_movement(delta)
 	var enemy: Node3D = _find_nearest_enemy_in_range()
 	if enemy:
@@ -396,6 +397,14 @@ func _physics_process(delta: float) -> void:
 		if _attack_timer <= 0.0:
 			_attack_timer = attack_cooldown
 			_fire_at(enemy)
+	else:
+		var swarm_target: Dictionary = _find_nearest_swarm_unit(attack_range)
+		if not swarm_target.is_empty():
+			var spos: Vector3 = swarm_target["position"]
+			_look_at_target(spos, delta)
+			if _attack_timer <= 0.0:
+				_attack_timer = attack_cooldown
+				_fire_at_swarm(int(swarm_target["index"]), spos)
 	_update_animations()
 
 
@@ -478,6 +487,80 @@ func _find_nearest_enemy_in_range() -> Node3D:
 				nearest = node as Node3D
 
 	return nearest
+
+
+func _get_swarm_simulation() -> Node:
+	if swarm_simulation and is_instance_valid(swarm_simulation):
+		return swarm_simulation
+	if is_inside_tree():
+		var node := get_tree().root.find_child("SwarmSimulation", true, false)
+		if node:
+			swarm_simulation = node
+			return swarm_simulation
+	return null
+
+
+func _notify_swarm_kill(unit_idx: int, hit_pos: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	var tree := get_tree()
+	if tree and tree.root:
+		var ml: Node = tree.root.find_child("MainLevel", true, false)
+		if ml and ml.has_method("_on_swarm_unit_killed"):
+			ml._on_swarm_unit_killed(unit_idx, self, hit_pos, 5)
+
+
+func _find_nearest_swarm_unit(max_dist: float) -> Dictionary:
+	var sim = _get_swarm_simulation()
+	if sim and "spatial_hash" in sim and sim.spatial_hash and "swarm_data" in sim and sim.swarm_data:
+		var center_2d := Vector2(global_position.x, global_position.z)
+		var hits: PackedInt32Array = sim.spatial_hash.query_radius(center_2d, max_dist, sim.swarm_data)
+		var nearest_idx: int = -1
+		var nearest_dist: float = max_dist
+		var nearest_pos: Vector3 = Vector3.ZERO
+		for idx in hits:
+			var u_pos := Vector3(sim.swarm_data.pos_x[idx], 0.35, sim.swarm_data.pos_z[idx])
+			var d := global_position.distance_to(u_pos)
+			if d <= nearest_dist:
+				nearest_dist = d
+				nearest_idx = idx
+				nearest_pos = u_pos
+		if nearest_idx >= 0:
+			return {"index": nearest_idx, "position": nearest_pos, "distance": nearest_dist}
+	return {}
+
+
+func _fire_at_swarm(target_idx: int, target_pos: Vector3) -> void:
+	var sim = _get_swarm_simulation()
+	if sim == null:
+		return
+	var base_dmg: float = stats_component.get_effective_damage() if stats_component else (hero_data.weapon_damage if hero_data else attack_damage)
+	var buff_mult: float = buff_engine.get_total_stat_multiplier("attack_damage") if buff_engine else 1.0
+	var tier_buff_mult: float = buff_component.get_damage_multiplier(false) if buff_component else 1.0
+	var final_damage: float = base_dmg * buff_mult * tier_buff_mult
+
+	if is_inside_tree():
+		var vfx_pool = get_tree().root.find_child("CombatVFXPool", true, false)
+		if vfx_pool and vfx_pool.has_method("spawn_tracer"):
+			vfx_pool.spawn_tracer(global_position + Vector3(0.0, 1.1, 0.0), target_pos)
+
+	if is_instance_valid(anim_player):
+		if anim_player.has_animation("shoot"):
+			anim_player.play("shoot")
+		elif anim_player.has_animation("attack"):
+			anim_player.play("attack")
+
+	if muzzle_flash:
+		muzzle_flash.visible = true
+		var tween: Tween = create_tween()
+		if tween:
+			tween.tween_interval(0.06)
+			tween.tween_callback(func(): if is_instance_valid(muzzle_flash): muzzle_flash.visible = false)
+
+	var killed: bool = bool(sim.apply_damage_to_unit(target_idx, final_damage))
+	if killed:
+		_notify_swarm_kill(target_idx, target_pos)
+
 
 ## Routes damage calculation through SFECombatEngine with HEROIC tag and invulnerability checks.
 func take_damage_context(
@@ -937,6 +1020,17 @@ func _apply_aoe_damage(center: Vector3, radius: float, damage: float, damage_typ
 				elif e.has_method("take_damage"):
 					e.take_damage(calc_result.damage_dealt)
 
+	# Also apply AoE damage to mass Swarm units via spatial hash
+	var sim = _get_swarm_simulation()
+	if sim and "spatial_hash" in sim and sim.spatial_hash and "swarm_data" in sim and sim.swarm_data:
+		var center_2d := Vector2(center.x, center.z)
+		var hits: PackedInt32Array = sim.spatial_hash.query_radius(center_2d, radius, sim.swarm_data)
+		for idx in hits:
+			var hit_pos := Vector3(sim.swarm_data.pos_x[idx], 0.35, sim.swarm_data.pos_z[idx])
+			var killed: bool = bool(sim.apply_damage_to_unit(idx, damage))
+			if killed:
+				_notify_swarm_kill(idx, hit_pos)
+
 
 func _apply_line_damage(from_pos: Vector3, to_pos: Vector3, width: float, damage: float, damage_type: int) -> void:
 	if not is_inside_tree():
@@ -968,6 +1062,22 @@ func _apply_line_damage(from_pos: Vector3, to_pos: Vector3, width: float, damage
 					e.take_damage_context(calc_result.damage_dealt, damage_type, false, 0)
 				elif e.has_method("take_damage"):
 					e.take_damage(calc_result.damage_dealt)
+
+	# Also apply Line damage to mass Swarm units
+	var sim = _get_swarm_simulation()
+	if sim and "spatial_hash" in sim and sim.spatial_hash and "swarm_data" in sim and sim.swarm_data:
+		var center := (from_pos + to_pos) * 0.5
+		var seg_len := from_pos.distance_to(to_pos)
+		var query_rad := seg_len * 0.5 + width
+		var hits: PackedInt32Array = sim.spatial_hash.query_radius(Vector2(center.x, center.z), query_rad, sim.swarm_data)
+		for idx in hits:
+			var u_pos := Vector3(sim.swarm_data.pos_x[idx], 0.35, sim.swarm_data.pos_z[idx])
+			var t: float = clampf((u_pos - from_pos).dot(seg_dir) / seg_len_sq, 0.0, 1.0)
+			var proj: Vector3 = from_pos + seg_dir * t
+			if u_pos.distance_to(proj) <= width:
+				var killed: bool = bool(sim.apply_damage_to_unit(idx, damage))
+				if killed:
+					_notify_swarm_kill(idx, u_pos)
 
 
 func _apply_single_target_damage(target_node: Node3D, damage: float, damage_type: int) -> void:

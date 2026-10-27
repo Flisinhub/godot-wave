@@ -21,7 +21,7 @@ func test_spawner_chain_initialization_and_states() -> Dictionary:
 	var budget := EnemyBudgetManager.new(300)
 	var parent_node := Node3D.new()
 
-	var plan := generator.generate_layout_plan(GameConfig.SPAWNER_COUNT_DEFAULT)
+	var plan := generator.generate_layout_plan(3)
 	if not assert_eq(plan.size(), 3, "Plan must contain exactly 3 spawner slots"):
 		parent_node.free()
 		return get_last_failure()
