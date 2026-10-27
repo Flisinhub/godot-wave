@@ -1,8 +1,10 @@
-[gd_resource type="Resource" script_class="HeroData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="HeroData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://core/heroes/hero_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://data/skills/blink.tres" id="2_blink"]
 [ext_resource type="Resource" path="res://data/skills/shadow_cleave.tres" id="3_cleave"]
+[ext_resource type="Resource" path="res://data/skills/void_prison.tres" id="4_prison"]
+[ext_resource type="Resource" path="res://data/skills/shadow_strike.tres" id="5_strike"]
 
 [resource]
 script = ExtResource("1_data")
@@ -34,4 +36,4 @@ xp_for_next_level = 150
 growth_strength = 2
 growth_dexterity = 3
 growth_intelligence = 2
-skills = [ExtResource("2_blink"), ExtResource("3_cleave")]
+skills = [ExtResource("2_blink"), ExtResource("3_cleave"), ExtResource("4_prison"), ExtResource("5_strike")]

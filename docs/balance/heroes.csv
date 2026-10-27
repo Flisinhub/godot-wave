@@ -1,0 +1,12 @@
+hero_id,name,role,race,base_hp,base_damage,attack_cooldown,attack_range,flat_armor,base_energy,energy_regen,move_speed,str,dex,int,growth_str,growth_dex,growth_int,skill_q,skill_w,skill_e,skill_r,is_secret
+marine,Marine Commander,Ranged DPS & Tactical Frontline,terran,550.0,28.0,0.80,8.5,1.0,120.0,1.2,5.2,12,10,8,2,2,1,penetrating_round,stimpack,frag_grenade,orbital_bombardment,false
+raynor,Jim Raynor,Marine Commander & Tactical Frontline,terran,550.0,28.0,0.80,8.5,1.0,120.0,1.2,5.2,12,10,8,2,2,1,penetrating_round,stimpack,frag_grenade,orbital_bombardment,false
+tychus,Tychus Findlay,Heavy Commando & Minigun Juggernaut,terran,720.0,24.0,0.85,7.5,3.0,110.0,1.0,4.8,16,8,6,3,1,1,overkill,shredder_grenade,frag_grenade,orbital_bombardment,false
+nova,Nova Terra,Ghost Operative & Stealth Assassin,terran,420.0,45.0,1.20,14.0,0.0,200.0,2.0,5.0,8,12,16,1,2,3,snipe,tactical_cloak,holo_decoy,celestial_singularity,false
+zeratul,Zeratul,Dark Templar Prelate & Void Assassin,protoss,480.0,52.0,0.75,2.2,2.0,150.0,1.8,5.6,14,18,12,2,3,2,blink,shadow_cleave,void_prison,shadow_strike,false
+tassadar,Tassadar,High Templar & Psionic Storm Channeler,protoss,420.0,32.0,1.00,9.0,1.0,220.0,2.5,4.9,10,10,20,1,1,4,psionic_storm,plasma_shield,dimensional_beam,celestial_singularity,false
+medic,Egon Stetmann,Combat Support & Nano-Repair Specialist,terran,460.0,18.0,0.85,7.0,2.0,200.0,2.2,5.0,11,11,16,2,2,2,heal_beam,defensive_matrix,frag_grenade,orbital_bombardment,false
+ghost,Ghost Operative,Long-Range Precision Sniper,terran,420.0,45.0,1.20,18.0,0.0,200.0,2.0,5.0,8,12,16,1,2,3,snipe,tactical_cloak,holo_decoy,celestial_singularity,false
+marauder,Heavy Marauder,Armored Shock Trooper & Concussive Grenades,terran,720.0,22.0,0.90,7.0,3.0,100.0,1.0,4.6,16,8,6,3,1,1,concussion_grenade,kinetic_foam,frag_grenade,orbital_bombardment,false
+reaper,Reaper Infiltrator,High Mobility Jetpack Raider,terran,460.0,24.0,0.65,6.5,0.5,140.0,1.5,5.8,9,15,8,1,3,1,nitro_boost,cluster_mine,frag_grenade,orbital_bombardment,false
+harbinger,Xel'Naga Harbinger,Celestial Singularity & Dimensional Transcendence,hybrid,850.0,55.0,0.75,10.0,4.0,300.0,3.0,6.0,18,18,22,3,3,3,celestial_singularity,dimensional_beam,void_prison,shadow_strike,true

@@ -1,8 +1,10 @@
-[gd_resource type="Resource" script_class="HeroData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="HeroData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://core/heroes/hero_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://data/skills/snipe.tres" id="2_snipe"]
 [ext_resource type="Resource" path="res://data/skills/tactical_cloak.tres" id="3_cloak"]
+[ext_resource type="Resource" path="res://data/skills/holo_decoy.tres" id="4_decoy"]
+[ext_resource type="Resource" path="res://data/skills/celestial_singularity.tres" id="5_singularity"]
 
 [resource]
 script = ExtResource("1_data")
@@ -34,4 +36,4 @@ xp_for_next_level = 150
 growth_strength = 1
 growth_dexterity = 2
 growth_intelligence = 3
-skills = [ExtResource("2_snipe"), ExtResource("3_cloak")]
+skills = [ExtResource("2_snipe"), ExtResource("3_cloak"), ExtResource("4_decoy"), ExtResource("5_singularity")]

@@ -1,8 +1,10 @@
-[gd_resource type="Resource" script_class="HeroData" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="HeroData" load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://core/heroes/hero_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://data/skills/psionic_storm.tres" id="2_storm"]
 [ext_resource type="Resource" path="res://data/skills/plasma_shield.tres" id="3_shield"]
+[ext_resource type="Resource" path="res://data/skills/dimensional_beam.tres" id="4_beam"]
+[ext_resource type="Resource" path="res://data/skills/celestial_singularity.tres" id="5_singularity"]
 
 [resource]
 script = ExtResource("1_data")
@@ -34,4 +36,4 @@ xp_for_next_level = 150
 growth_strength = 1
 growth_dexterity = 1
 growth_intelligence = 4
-skills = [ExtResource("2_storm"), ExtResource("3_shield")]
+skills = [ExtResource("2_storm"), ExtResource("3_shield"), ExtResource("4_beam"), ExtResource("5_singularity")]

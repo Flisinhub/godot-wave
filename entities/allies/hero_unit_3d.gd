@@ -13,6 +13,10 @@ const HeroData = preload("res://core/heroes/hero_data.gd")
 const HeroSkillData = preload("res://data/skills/hero_skill_data.gd")
 const FloatingTextManager = preload("res://core/vfx/floating_text_manager.gd")
 const HeroAbilityVFX = preload("res://core/vfx/hero_ability_vfx.gd")
+const StatsComponent = preload("res://core/components/stats_component.gd")
+const BuffComponent = preload("res://core/components/buff_component.gd")
+const AbilityComponent = preload("res://core/components/ability_component.gd")
+const ExperienceComponent = preload("res://core/components/experience_component.gd")
 
 signal skill_cast(skill: HeroSkillData, target: Variant)
 signal hero_leveled_up(new_level: int)
@@ -56,6 +60,10 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9
 # Subsystems
 var buff_engine: SFEBuffEngine = null
 var skill_cooldowns: Dictionary = {} # skill_id -> remaining_seconds
+var stats_component: StatsComponent = null
+var buff_component: BuffComponent = null
+var ability_component: AbilityComponent = null
+var experience_component: ExperienceComponent = null
 
 # Target classification bitmask tagged HEROIC
 var target_tags: int = CombatTypes.TargetTag.HEROIC | CombatTypes.TargetTag.BIOLOGICAL | CombatTypes.TargetTag.GROUND
@@ -142,14 +150,77 @@ func _ensure_animation_player() -> void:
 				scene.queue_free()
 
 
+func _ensure_components() -> void:
+	if not stats_component:
+		stats_component = get_node_or_null("StatsComponent") as StatsComponent
+		if not stats_component:
+			stats_component = StatsComponent.new()
+			stats_component.name = "StatsComponent"
+			add_child(stats_component)
+	
+	if not buff_component:
+		buff_component = get_node_or_null("BuffComponent") as BuffComponent
+		if not buff_component:
+			buff_component = BuffComponent.new()
+			buff_component.name = "BuffComponent"
+			add_child(buff_component)
+	
+	if not ability_component:
+		ability_component = get_node_or_null("AbilityComponent") as AbilityComponent
+		if not ability_component:
+			ability_component = AbilityComponent.new()
+			ability_component.name = "AbilityComponent"
+			ability_component.stats_component = stats_component
+			add_child(ability_component)
+	
+	if not experience_component:
+		experience_component = get_node_or_null("ExperienceComponent") as ExperienceComponent
+		if not experience_component:
+			experience_component = ExperienceComponent.new()
+			experience_component.name = "ExperienceComponent"
+			experience_component.stats_component = stats_component
+			add_child(experience_component)
+			if not experience_component.level_up.is_connected(_on_experience_level_up):
+				experience_component.level_up.connect(_on_experience_level_up)
+
+
+func _on_experience_level_up(new_lvl: int) -> void:
+	hero_leveled_up.emit(new_lvl)
+	if hero_data:
+		hero_data.xp_level = new_lvl
+
+
 func _bind_hero_data() -> void:
 	if hero_data == null:
 		return
+
+	_ensure_components()
 
 	if not hero_data.derived_stats_updated.is_connected(_on_derived_stats_updated):
 		hero_data.derived_stats_updated.connect(_on_derived_stats_updated)
 	if not hero_data.level_up.is_connected(_on_hero_level_up):
 		hero_data.level_up.connect(_on_hero_level_up)
+
+	# Synchronize stats_component
+	if stats_component:
+		stats_component.base_max_hp = hero_data.base_hp
+		stats_component.base_damage = hero_data.base_damage
+		stats_component.base_attack_period = hero_data.base_cooldown
+		stats_component.base_armor = hero_data.flat_armor
+		stats_component.base_max_energy = hero_data.base_energy
+		stats_component.base_energy_regen = hero_data.base_energy_regen
+		stats_component.base_move_speed = hero_data.move_speed
+		stats_component.strength = hero_data.strength
+		stats_component.dexterity = hero_data.dexterity
+		stats_component.intelligence = hero_data.intelligence
+		stats_component.recalculate()
+
+	# Synchronize ability_component skills
+	if ability_component and not hero_data.skills.is_empty():
+		var slots := ["Q", "W", "E", "R"]
+		for i in range(mini(slots.size(), hero_data.skills.size())):
+			if hero_data.skills[i]:
+				ability_component.bind_skill(slots[i], hero_data.skills[i])
 
 	hero_data.recalculate_derived_stats(true)
 	_apply_hero_stats_to_unit()
@@ -751,9 +822,14 @@ func get_skill_cooldown_remaining(skill_id: StringName) -> float:
 
 
 func gain_experience(amount: int) -> bool:
+	_ensure_components()
+	var lvl_up := false
+	if experience_component:
+		lvl_up = experience_component.award_xp(amount)
 	if hero_data:
-		return hero_data.add_experience(amount)
-	return false
+		var hero_lvl := hero_data.add_experience(amount)
+		lvl_up = lvl_up or hero_lvl
+	return lvl_up
 
 
 func allocate_attribute(attr_name: String, amount: int = 1) -> bool:

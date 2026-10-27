@@ -30,11 +30,31 @@ static func _load_or_create_archetypes() -> void:
 		12, 10, 8
 	)
 
+	var raynor := _load_or_create(
+		"res://data/heroes/raynor.tres",
+		&"raynor",
+		"Jim Raynor",
+		"Marine Commander & Tactical Frontline",
+		false,
+		550.0, 28.0, 0.8, 1.0, 120.0, 1.2, 14.0, 1.0,
+		12, 10, 8
+	)
+
 	var ghost := _load_or_create(
 		"res://data/heroes/ghost.tres",
 		&"ghost",
 		"Ghost Operative",
 		"Long-Range Precision Sniper & Tactical Cloak",
+		false,
+		420.0, 45.0, 1.2, 0.8, 200.0, 2.0, 18.0, 0.0,
+		8, 12, 16
+	)
+
+	var nova := _load_or_create(
+		"res://data/heroes/nova.tres",
+		&"nova",
+		"Nova Terra",
+		"Ghost Operative & Stealth Assassin",
 		false,
 		420.0, 45.0, 1.2, 0.8, 200.0, 2.0, 18.0, 0.0,
 		8, 12, 16
@@ -57,6 +77,16 @@ static func _load_or_create_archetypes() -> void:
 		"Armored Shock Trooper & Concussive Grenades",
 		false,
 		720.0, 22.0, 0.9, 1.5, 100.0, 1.0, 12.0, 3.0,
+		16, 8, 6
+	)
+
+	var tychus := _load_or_create(
+		"res://data/heroes/tychus.tres",
+		&"tychus",
+		"Tychus Findlay",
+		"Heavy Commando & Minigun Juggernaut",
+		false,
+		720.0, 24.0, 0.85, 1.5, 110.0, 1.0, 12.0, 3.0,
 		16, 8, 6
 	)
 
@@ -100,26 +130,25 @@ static func _load_or_create_archetypes() -> void:
 		18, 18, 22
 	)
 
-	_standard_archetypes = [marine, marauder, ghost, zeratul, tassadar, medic, reaper]
+	_standard_archetypes = [marine, raynor, tychus, nova, zeratul, tassadar, marauder, ghost, medic, reaper]
 	_secret_archetype = harbinger
 
 	# Index by ID and canonical aliases
 	_catalog_by_id[&"marine"] = marine
-	_catalog_by_id[&"raynor"] = marine
-	_catalog_by_id[&"jim_raynor"] = marine
+	_catalog_by_id[&"raynor"] = raynor
+	_catalog_by_id[&"jim_raynor"] = raynor
 
 	_catalog_by_id[&"ghost"] = ghost
-	_catalog_by_id[&"nova"] = ghost
-	_catalog_by_id[&"nova_terra"] = ghost
+	_catalog_by_id[&"nova"] = nova
+	_catalog_by_id[&"nova_terra"] = nova
 
 	_catalog_by_id[&"reaper"] = reaper
 
 	_catalog_by_id[&"marauder"] = marauder
-	_catalog_by_id[&"tychus"] = marauder
-	_catalog_by_id[&"tychus_findlay"] = marauder
+	_catalog_by_id[&"tychus"] = tychus
+	_catalog_by_id[&"tychus_findlay"] = tychus
 
 	_catalog_by_id[&"zeratul"] = zeratul
-
 	_catalog_by_id[&"tassadar"] = tassadar
 
 	_catalog_by_id[&"medic"] = medic

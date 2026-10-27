@@ -57,6 +57,7 @@ func _run_all_suites() -> void:
 	_run_suite("SFE5 Data Architecture & Catalog", preload("res://tests/unit/test_data_catalog.gd").new())
 	_run_suite("SFE5 Spawners & Map Generation", preload("res://tests/unit/test_spawners_and_map.gd").new())
 	_run_suite("SFE5 Player Console & Buffs", preload("res://tests/unit/test_player_console_and_buffs.gd").new())
+	_run_suite("SFE5 Heroes & Abilities", preload("res://tests/unit/test_heroes_and_abilities.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

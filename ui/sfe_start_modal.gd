@@ -178,7 +178,7 @@ func _build_modal_layout() -> void:
 
 	# Random Hero Button
 	random_button = Button.new()
-	random_button.text = "🎲 RANDOM\n(+50 Minerals)"
+	random_button.text = "🎲 RANDOM\n(+15.000 Min)"
 	random_button.custom_minimum_size = Vector2(110, 48)
 	random_button.focus_mode = Control.FOCUS_NONE
 	random_button.pressed.connect(_on_random_button_pressed)
@@ -294,9 +294,9 @@ func _update_hero_selection(id: StringName, is_rand: bool) -> void:
 
 	if is_rand:
 		if hero_desc_label:
-			hero_desc_label.text = "🎲 RANDOM HERO ASSIGNMENT (+50 STARTING MINERALS)\n" + \
-				"Deploy with a randomized hero drawn from the standard catalog. Grants an immediate +50 Minerals resource cache.\n" + \
-				"✦ Includes an authentic 1.0% chance of awakening the mythical Xel'Naga Harbinger secret archetype!"
+			hero_desc_label.text = "🎲 ASIGNACIÓN DE HÉROE ALEATORIO (+15.000 / Nº JUGADORES MINERALES)\n" + \
+				"Despliégate con un héroe aleatorio del catálogo. Otorga una bonificación de 15.000 minerales dividida entre los jugadores.\n" + \
+				"✦ ¡Incluye una probabilidad auténtica del 1,0 % de despertar al mítico Heraldo Xel'Naga (Secret Hero)!"
 		return
 
 	var hero_index: int = -1

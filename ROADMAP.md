@@ -431,20 +431,20 @@ Implementar un `BuffComponent` con **un bufo activo por tier** (máx. 7 + suprem
 | D | 42 | Catálogo completo |
 
 ### Tareas
-- [ ] **5.1** `AbilityComponent`: energía, enfriamientos, lanzamiento (objetivo/punto/sin objetivo), cola de órdenes. `L`
-- [ ] **5.2** Biblioteca de **efectos reutilizables** (daño en área, aturdimiento, curación, invisibilidad, proyectil, invocación, tormenta). `L`
-- [ ] **5.3** `ExperienceComponent`: curva de niveles, XP por baja, subida con eventos visuales. `M`
-- [ ] **5.4** Escalado de habilidades con Inteligencia (daño/duración/enfriamiento). `M`
-- [ ] **5.5** Pasivas y auras de héroe (p. ej. Tychus pasivo ya existente). `M`
-- [ ] **5.6** Selector de héroe con descripción, estadísticas base y vista previa. `M`
-- [ ] **5.7** **Random Hero** (+15.000/jugadores de mineral). `S`
-- [ ] **5.8** Tanda A: pulir 6 héroes con habilidades finales + tests de cada habilidad. `L`
+- [x] **5.1** `AbilityComponent`: energía, enfriamientos, lanzamiento (objetivo/punto/sin objetivo), cola de órdenes. `L`
+- [x] **5.2** Biblioteca de **efectos reutilizables** (daño en área, aturdimiento, curación, invisibilidad, proyectil, invocación, tormenta). `L`
+- [x] **5.3** `ExperienceComponent`: curva de niveles, XP por baja, subida con eventos visuales. `M`
+- [x] **5.4** Escalado de habilidades con Inteligencia (daño/duración/enfriamiento). `M`
+- [x] **5.5** Pasivas y auras de héroe (p. ej. Tychus pasivo ya existente). `M`
+- [x] **5.6** Selector de héroe con descripción, estadísticas base y vista previa. `M`
+- [x] **5.7** **Random Hero** (+15.000/jugadores de mineral). `S`
+- [x] **5.8** Tanda A: pulir 6 héroes con habilidades finales + tests de cada habilidad. `L`
 - [ ] **5.9** Tanda B: 6 héroes más. `L`
 - [ ] **5.10** Tanda C: 12 héroes (zerg incluidos). `XL`
 - [ ] **5.11** Tanda D: 18 héroes restantes. `XL`
-- [ ] **5.12** Equilibrado inicial con hoja de cálculo (`docs/balance/heroes.csv`). `M`
+- [x] **5.12** Equilibrado inicial con hoja de cálculo (`docs/balance/heroes.csv`). `M`
 - [ ] **5.13** Retratos, iconos y animaciones provisionales (placeholders coherentes). `M`
-- [ ] **5.14** Habilidades que consumen el estado del bufo (p. ej. Quantum Field + habilidad). `S`
+- [x] **5.14** Habilidades que consumen el estado del bufo (p. ej. Quantum Field + habilidad). `S`
 
 ### Plantilla de héroe (para cada nuevo héroe)
 ```
