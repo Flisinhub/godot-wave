@@ -33,14 +33,26 @@ Para fundamentos de diseño y fórmulas de referencia contrastadas con la wiki d
 
 ---
 
-## 🧪 Verificación Automatizada (Tests)
+## 🧪 Verificación Automatizada (Tests & Benchmarks)
 
-Ejecutar la suite completa de pruebas en modo headless:
+Ejecutar la suite completa de pruebas en modo headless (238 tests unitarios e integrados):
 ```bash
 godot --headless --path . -s tests/test_runner.gd
+```
+
+Ejecutar la prueba de estrés de enjambre y rendimiento de combate:
+```bash
+godot --headless --path . -s core/swarm/swarm_benchmark.gd
 ```
 
 Verificar arranque limpio de la escena principal sin entorno gráfico:
 ```bash
 godot --headless --path . --quit-after 200 "res://levels/main_level.tscn"
 ```
+
+---
+
+## 📜 Historial de Versiones y Legal
+* **Changelog detallado:** 👉 **[CHANGELOG.md](./CHANGELOG.md)**
+* **Aviso Legal y Propiedad Intelectual:** 👉 **[docs/LEGAL.md](./docs/LEGAL.md)**
+

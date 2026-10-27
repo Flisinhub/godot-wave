@@ -67,6 +67,7 @@ func _run_all_suites() -> void:
 	_run_suite("SFE5 Meta Ranks & Achievements", preload("res://tests/unit/test_meta_ranks_and_achievements.gd").new())
 	_run_suite("SFE5 Co-op Multiplayer & Network", preload("res://tests/unit/test_multiplayer_and_networking.gd").new())
 	_run_suite("SFE5 UI, Audio & Polish", preload("res://tests/unit/test_ui_audio_and_polish.gd").new())
+	_run_suite("SFE5 Performance & QA Verification", preload("res://tests/unit/test_performance_and_qa.gd").new())
 
 func _run_suite(suite_name: String, suite_instance: Object) -> void:
 	print("\n" + ANSI_YELLOW + ANSI_BOLD + ">> Running Suite: " + suite_name + ANSI_RESET)

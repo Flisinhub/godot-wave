@@ -723,18 +723,18 @@ Regla: 8 pedestales en anillo; cada pulsación invierte el pedestal y sus **dos 
 **HJ:** versión 1.0 estable, empaquetada y publicable.
 
 ### Tareas
-- [ ] **15.1** Definir equipo de referencia (CPU/GPU/RAM) y presupuesto: 300 enemigos + 6 jugadores ≥ 60 FPS. `S`
-- [ ] **15.2** Perfilado (Godot Profiler, Monitors, Visual Profiler) con escenas de estrés. `M`
-- [ ] **15.3** Optimización: LOD, culling, agrupación de simulación, pooling de proyectiles/VFX. `L`
-- [ ] **15.4** Prueba de saturación larga (soak test): 2 h de partida sin fugas de memoria. `M`
-- [ ] **15.5** Matriz de pruebas: Windows/Linux, GPU diversas, resoluciones. `M`
-- [ ] **15.6** Revisión de balance con telemetría local (tiempo hasta cada hito, muertes, minerales). `L`
-- [ ] **15.7** Lista de bugs conocidos y triaje (P0 bloqueante, P1 grave…). `M`
-- [ ] **15.8** Presets de exportación (Windows/Linux), firma, iconos, versión. `M`
-- [ ] **15.9** Página del proyecto (itch.io / GitHub Releases), capturas y trailer corto. `M`
-- [ ] **15.10** Guía de usuario y *changelog*. `S`
-- [ ] **15.11** Revisión legal: nombres, assets y licencias (StarCraft II es IP de Blizzard; clarificar que es un proyecto fan sin ánimo de lucro, sin assets extraídos, y revisar el uso de nombres). `M`
-- [ ] **15.12** Beta cerrada con 5–10 testers y recogida de feedback. `L`
+- [x] **15.1** Definir equipo de referencia (CPU/GPU/RAM) y presupuesto: 300 enemigos + 6 jugadores ≥ 60 FPS. `S`
+- [x] **15.2** Perfilado (Godot Profiler, Monitors, Visual Profiler) con escenas de estrés. `M`
+- [x] **15.3** Optimización: LOD, culling, agrupación de simulación, pooling de proyectiles/VFX. `L`
+- [x] **15.4** Prueba de saturación larga (soak test): 2 h de partida sin fugas de memoria. `M`
+- [x] **15.5** Matriz de pruebas: Windows/Linux, GPU diversas, resoluciones. `M`
+- [x] **15.6** Revisión de balance con telemetría local (tiempo hasta cada hito, muertes, minerales). `L`
+- [x] **15.7** Lista de bugs conocidos y triaje (P0 bloqueante, P1 grave…). `M`
+- [x] **15.8** Presets de exportación (Windows/Linux), firma, iconos, versión. `M`
+- [x] **15.9** Página del proyecto (itch.io / GitHub Releases), capturas y trailer corto. `M`
+- [x] **15.10** Guía de usuario y *changelog*. `S`
+- [x] **15.11** Revisión legal: nombres, assets y licencias (StarCraft II es IP de Blizzard; clarificar que es un proyecto fan sin ánimo de lucro, sin assets extraídos, y revisar el uso de nombres). `M`
+- [x] **15.12** Beta cerrada con 5–10 testers y recogida de feedback. `L`
 
 ### CdH
 - 0 bugs P0, ≤ 5 bugs P1 conocidos y documentados; 2 h de partida estable.
