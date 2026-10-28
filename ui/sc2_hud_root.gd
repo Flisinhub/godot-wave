@@ -20,6 +20,7 @@ var armory_modal: ArmoryModal = null
 
 signal console_open_requested(tab_index: int)
 signal recall_base_requested()
+signal settings_requested()
 
 # Top Bar Elements
 var top_bar: PanelContainer
@@ -32,6 +33,11 @@ var top_cc_hp_label: Label
 var top_minerals_label: Label
 var top_supply_label: Label
 var top_vet_label: Label
+var top_settings_btn: Button
+
+# Tutorial Banner
+var tutorial_banner: PanelContainer
+var tutorial_label: Label
 
 # Tactical Alert Banner & Minimap Indicator (Fase 8)
 var alert_banner: PanelContainer
@@ -259,7 +265,49 @@ func _build_hud_layout() -> void:
 	top_vet_label.add_theme_font_size_override("font_size", 12)
 	top_hbox.add_child(top_vet_label)
 
+	# Settings Button [⚙]
+	top_settings_btn = Button.new()
+	top_settings_btn.name = "SettingsButton"
+	top_settings_btn.text = "⚙"
+	top_settings_btn.tooltip_text = "Opciones y Pausa (Esc / F10)"
+	top_settings_btn.custom_minimum_size = Vector2(28, 24)
+	top_settings_btn.add_theme_font_size_override("font_size", 13)
+	top_settings_btn.pressed.connect(func(): settings_requested.emit())
+	top_hbox.add_child(top_settings_btn)
+
 	root_control.add_child(top_bar)
+
+	# 4b. Tutorial Instruction Banner (Task 14.4)
+	tutorial_banner = PanelContainer.new()
+	tutorial_banner.name = "TutorialBanner"
+	tutorial_banner.anchor_left = 0.5
+	tutorial_banner.anchor_right = 0.5
+	tutorial_banner.offset_left = -280.0
+	tutorial_banner.offset_right = 280.0
+	tutorial_banner.offset_top = 46.0
+	tutorial_banner.offset_bottom = 80.0
+	tutorial_banner.visible = false
+
+	var tut_style := StyleBoxFlat.new()
+	tut_style.bg_color = Color(0.04, 0.08, 0.14, 0.92)
+	tut_style.border_width_bottom = 2
+	tut_style.border_width_top = 1
+	tut_style.border_width_left = 1
+	tut_style.border_width_right = 1
+	tut_style.border_color = Color(0.2, 0.7, 1.0, 0.85)
+	tut_style.corner_radius_bottom_left = 4
+	tut_style.corner_radius_bottom_right = 4
+	tutorial_banner.add_theme_stylebox_override("panel", tut_style)
+
+	tutorial_label = Label.new()
+	tutorial_label.name = "TutorialLabel"
+	tutorial_label.text = ""
+	tutorial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tutorial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tutorial_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
+	tutorial_label.add_theme_font_size_override("font_size", 12)
+	tutorial_banner.add_child(tutorial_label)
+	root_control.add_child(tutorial_banner)
 
 	# 5. Tactical Threat Alert Banner (Fase 8)
 	alert_banner = PanelContainer.new()
@@ -628,4 +676,32 @@ func show_attack_countdown(wave_index: int, leader_name: String, seconds_left: f
 func show_drop_pod_alert(time_left: float) -> void:
 	var msg: String = "⚠ [DROP POD ORBITAL] ¡Impacto inminente en %0.1fs fuera de la base!" % time_left
 	show_threat_alert(msg, time_left + 1.0, Color(1.0, 0.5, 0.1))
+
+
+func update_tutorial_instruction(instruction: String) -> void:
+	if tutorial_banner and tutorial_label:
+		tutorial_label.text = instruction
+		tutorial_label.add_theme_color_override("font_color", Color(0.3, 0.85, 1.0))
+		tutorial_banner.visible = true
+
+
+func complete_tutorial() -> void:
+	if tutorial_banner and tutorial_label:
+		tutorial_label.text = "¡Tutorial completado con éxito! Estás listo para la batalla."
+		tutorial_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.4))
+		if is_inside_tree():
+			var t := get_tree().create_timer(4.0)
+			t.timeout.connect(func():
+				if is_instance_valid(tutorial_banner):
+					tutorial_banner.visible = false
+			)
+
+
+func update_nightmare_status(level: int, slot: int, type_name: String = "") -> void:
+	if top_wave_label:
+		if type_name.is_empty():
+			top_wave_label.text = "NIGHTMARE LVL %d (Ola %d/10)" % [level, slot]
+		else:
+			top_wave_label.text = "NIGHTMARE LVL %d (Ola %d/10: %s)" % [level, slot, type_name]
+		top_wave_label.add_theme_color_override("font_color", Color(0.95, 0.3, 0.25))
 

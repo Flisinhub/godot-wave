@@ -231,6 +231,17 @@ func _get_nearby_blocking_structure() -> Node3D:
 	return null
 
 
+func apply_slow(ratio: float, duration: float = 2.0) -> void:
+	var orig_speed := move_speed
+	move_speed = maxf(0.5, move_speed * (1.0 - ratio))
+	if is_inside_tree():
+		var timer := get_tree().create_timer(duration)
+		timer.timeout.connect(func():
+			if is_instance_valid(self):
+				move_speed = orig_speed
+		)
+
+
 func take_damage(amount: float) -> void:
 	current_health = max(0.0, current_health - amount)
 	if health_bar:

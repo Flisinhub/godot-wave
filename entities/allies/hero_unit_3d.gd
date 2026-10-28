@@ -80,6 +80,8 @@ var elite_component: EliteComponent = null
 # Target classification bitmask tagged HEROIC
 var target_tags: int = CombatTypes.TargetTag.HEROIC | CombatTypes.TargetTag.BIOLOGICAL | CombatTypes.TargetTag.GROUND
 var is_heroic: bool = true
+var concussive_slow: bool = false
+var healing_power: float = 1.0
 
 func _init() -> void:
 	add_to_group("allies")
@@ -651,6 +653,12 @@ func _fire_at(target: Node3D) -> void:
 		target.take_damage_context(final_damage, CombatTypes.DamageType.PHYSICAL, false, 0)
 	elif target.has_method("take_damage"):
 		target.take_damage(final_damage)
+
+	if concussive_slow or (has_meta("concussive_slow") and bool(get_meta("concussive_slow"))):
+		if target.has_method("apply_slow"):
+			target.apply_slow(0.25, 2.0)
+		elif "move_speed" in target:
+			target.move_speed = maxf(0.5, target.move_speed * 0.75)
 
 	if is_instance_valid(anim_player):
 		if anim_player.has_animation("shoot"):

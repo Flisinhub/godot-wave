@@ -26,6 +26,7 @@ var protoss_spawners_goal: int = 4
 var xelnaga_crystals_harmonized: int = 0
 var total_xelnaga_crystals: int = 3
 var pinnacle_bosses_unlocked: bool = false
+var allow_protoss_phases: bool = true
 
 
 func _init(z_goal: int = 6, p_goal: int = 4) -> void:
@@ -40,7 +41,10 @@ func report_spawner_cleared(race_or_family: StringName = &"zerg") -> void:
 		StoryPhase.ZERG:
 			zerg_spawners_cleared += 1
 			if zerg_spawners_cleared >= zerg_spawners_goal:
-				advance_to_phase(StoryPhase.PROTOSS_1)
+				if allow_protoss_phases:
+					advance_to_phase(StoryPhase.PROTOSS_1)
+				else:
+					advance_to_phase(StoryPhase.PINNACLE_BOSSES)
 		StoryPhase.PROTOSS_1:
 			protoss_spawners_cleared += 1
 			if protoss_spawners_cleared >= protoss_spawners_goal:

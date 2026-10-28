@@ -32,6 +32,7 @@ var damage_upgrade_mult: float = 1.0
 var armor_upgrade_flat: float = 0.0
 var hp_upgrade_mult: float = 1.0
 var attack_speed_upgrade_mult: float = 1.0
+var ability_power_upgrade_bonus: float = 0.0
 
 # Cached Effective Values
 var _dirty: bool = true
@@ -69,7 +70,7 @@ func recalculate() -> void:
 	# 3. Inteligencia (Intelligence): +10 Energy, +0.25 Regen, +1.5% Ability Power
 	var int_energy := float(intelligence) * GameConfig.INT_ENERGY_BONUS
 	var int_regen := float(intelligence) * GameConfig.INT_ENERGY_REGEN_BONUS
-	var int_ap := 1.0 + (float(intelligence) * GameConfig.INT_ABILITY_POWER_BONUS)
+	var int_ap := 1.0 + (float(intelligence) * GameConfig.INT_ABILITY_POWER_BONUS) + ability_power_upgrade_bonus
 
 	# 4. Aguante (Endurance): +0.12 Armor, +0.35 HP Regen
 	var end_armor := float(endurance) * GameConfig.END_ARMOR_BONUS

@@ -12,6 +12,9 @@ var spawners_cleared: int = 0
 var total_spawners: int = 0
 var difficulty_name: String = "Normal"
 var match_seed: int = 0
+var rank_string: String = ""
+var rank_delta: int = 0
+var session_achievements: Array = []
 
 signal restart_requested()
 
@@ -24,7 +27,10 @@ func setup(
 	p_spawners_cleared: int,
 	p_total_spawners: int,
 	p_diff: String,
-	p_seed: int = 0
+	p_seed: int = 0,
+	p_rank_string: String = "",
+	p_rank_delta: int = 0,
+	p_achievements: Array = []
 ) -> void:
 	is_victory = p_victory
 	elapsed_time_sec = p_time_sec
@@ -34,6 +40,9 @@ func setup(
 	total_spawners = p_total_spawners
 	difficulty_name = p_diff
 	match_seed = p_seed
+	rank_string = p_rank_string
+	rank_delta = p_rank_delta
+	session_achievements = p_achievements
 
 
 func _ready() -> void:
@@ -117,6 +126,26 @@ func _build_ui() -> void:
 	_add_stat_row(grid, "Engendradores Erradicados:", "%d / %d" % [spawners_cleared, total_spawners])
 	_add_stat_row(grid, "Bajas Enemigas Totales:", str(total_kills))
 	_add_stat_row(grid, "Minerales Acumulados:", "%d 💎" % total_minerals)
+	if not rank_string.is_empty():
+		_add_stat_row(grid, "Rango Alcanzado:", rank_string)
+		var sign_str: String = "+" if rank_delta >= 0 else ""
+		_add_stat_row(grid, "Variación de Rango:", "%s%d pts" % [sign_str, rank_delta])
+
+	if not session_achievements.is_empty():
+		var ach_box := VBoxContainer.new()
+		ach_box.add_theme_constant_override("separation", 4)
+		var ach_title := Label.new()
+		ach_title.text = "🏆 LOGROS DESBLOQUEADOS:"
+		ach_title.add_theme_font_size_override("font_size", 13)
+		ach_title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+		ach_box.add_child(ach_title)
+		for ach in session_achievements:
+			var a_lbl := Label.new()
+			a_lbl.text = "  ★ %s" % str(ach)
+			a_lbl.add_theme_font_size_override("font_size", 12)
+			a_lbl.add_theme_color_override("font_color", Color(0.3, 0.95, 0.5))
+			ach_box.add_child(a_lbl)
+		vbox.add_child(ach_box)
 	
 	var sep2 := HSeparator.new()
 	vbox.add_child(sep2)
@@ -149,7 +178,6 @@ func _build_ui() -> void:
 			copy_btn.text = "¡COPIADA!"
 		)
 		btn_box.add_child(copy_btn)
-	vbox.add_child(btn)
 
 
 func _add_stat_row(grid: GridContainer, label_text: String, value_text: String) -> void:

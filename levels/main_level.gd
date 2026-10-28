@@ -52,6 +52,13 @@ const PinnacleBossBase = preload("res://core/bosses/pinnacle_boss_base.gd")
 const SummoningRitual = preload("res://core/bosses/summoning_ritual.gd")
 const BossRewardManager = preload("res://core/bosses/boss_reward_manager.gd")
 const AchievementSystem = preload("res://core/meta/achievement_system.gd")
+const GameModeManager = preload("res://core/modes/game_mode_manager.gd")
+const ModeData = preload("res://core/data/mode_data.gd")
+const RankSystem = preload("res://core/meta/rank_system.gd")
+const PlayerProfileStats = preload("res://core/meta/player_profile_stats.gd")
+const TutorialManager = preload("res://core/tutorial/tutorial_manager.gd")
+const SFESettingsModal = preload("res://ui/sfe_settings_modal.gd")
+const BaseUnit3D = preload("res://entities/allies/base_unit_3d.gd")
 
 # Core Systems
 @onready var nav_region: NavigationRegion3D = get_node_or_null("NavigationRegion3D")
@@ -151,6 +158,11 @@ var _odin_beacons: Array[Node3D] = []
 var _odin_beacons_active: int = 0
 var _gorgon_hold_timer: float = 0.0
 
+var game_mode_manager: GameModeManager = null
+var tutorial_manager: TutorialManager = null
+var settings_modal: SFESettingsModal = null
+var nightmare_wave_timer: float = 0.0
+
 
 func _ready() -> void:
 	# 1. Navigation Mesh & Gate Doors Pre-Bake
@@ -202,6 +214,12 @@ func _ready() -> void:
 	# 11. SFE5 Timed Events & Scheduled Attacks (Fase 8)
 	_setup_timed_events_and_pressure()
 
+	# 12. SFE5 Interactive Tutorial (Task 14.4)
+	_setup_tutorial_manager()
+
+	# 13. SFE5 Pause & Settings Modal (Task 12.6)
+	_setup_settings_modal()
+
 
 func _setup_player_console() -> void:
 	player_console = PlayerConsole.new()
@@ -216,6 +234,57 @@ func _setup_player_console() -> void:
 func _on_hud_console_open_requested(tab_index: int) -> void:
 	if player_console:
 		player_console.open_console(active_hero, tab_index)
+
+
+func _setup_tutorial_manager() -> void:
+	tutorial_manager = TutorialManager.new(true)
+	if sc2_hud_root:
+		sc2_hud_root.update_tutorial_instruction(tutorial_manager.get_current_instruction())
+	tutorial_manager.step_advanced.connect(func(_step: int, _total: int, instruction: String):
+		if sc2_hud_root:
+			sc2_hud_root.update_tutorial_instruction(instruction)
+	)
+	tutorial_manager.tutorial_completed.connect(func():
+		if sc2_hud_root:
+			sc2_hud_root.complete_tutorial()
+	)
+	if player_console:
+		player_console.attribute_purchased.connect(func(_attr: String, _pts: int):
+			if tutorial_manager:
+				tutorial_manager.record_upgrade_bought()
+		)
+		player_console.buff_purchased.connect(func(_tier: int, _buff: String):
+			if tutorial_manager:
+				tutorial_manager.record_upgrade_bought()
+		)
+		player_console.racial_upgrade_purchased.connect(func(_up_id: String, _lvl: int):
+			if tutorial_manager:
+				tutorial_manager.record_upgrade_bought()
+		)
+	var bus := _get_signal_bus()
+	if bus and bus.has_signal("move_command_issued"):
+		bus.connect("move_command_issued", func(_target_pos: Vector3):
+			if tutorial_manager:
+				tutorial_manager.record_hero_moved()
+		)
+
+
+func _setup_settings_modal() -> void:
+	settings_modal = SFESettingsModal.new()
+	settings_modal.name = "SettingsModal"
+	settings_modal.visible = false
+	add_child(settings_modal)
+	if sc2_hud_root:
+		sc2_hud_root.settings_requested.connect(toggle_settings_modal)
+
+
+func toggle_settings_modal() -> void:
+	if not settings_modal:
+		_setup_settings_modal()
+	if settings_modal.visible:
+		settings_modal.close()
+	else:
+		settings_modal.open()
 
 
 func _setup_timed_events_and_pressure() -> void:
@@ -247,6 +316,13 @@ func _process(delta: float) -> void:
 		_process_timed_events(delta)
 		_check_secret_proximities(delta)
 		_process_altars_and_teleports(delta)
+		if game_mode_manager and game_mode_manager.is_nightmare:
+			nightmare_wave_timer += delta
+			if nightmare_wave_timer >= 30.0:
+				nightmare_wave_timer = 0.0
+				var wave_info: Dictionary = game_mode_manager.advance_nightmare_wave()
+				if sc2_hud_root:
+					sc2_hud_root.update_nightmare_status(wave_info.get("level", 1), wave_info.get("cycle_slot", 1), wave_info.get("type", ""))
 	if sc2_hud_root:
 		sc2_hud_root.update_hive_evolution(SFEDifficultyManager.hive_level, SFEDifficultyManager.cadence_timer)
 		if budget_manager:
@@ -379,6 +455,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_debug_cli_modal()
 		elif debug_cli_layer and debug_cli_layer.visible and event.keycode == KEY_ESCAPE:
 			_toggle_debug_cli_modal()
+		elif event.keycode == KEY_ESCAPE or event.keycode == KEY_F10:
+			toggle_settings_modal()
 
 
 func _setup_debug_console() -> void:
@@ -513,7 +591,18 @@ func _get_tree_safe() -> SceneTree:
 func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random: bool) -> void:
 	var chosen_mode: StringName = start_modal.selected_mode_id if start_modal else &"classic"
 
-	# 1. Apply difficulty scaling
+	# Load ModeData & GameModeManager (Task 11.1)
+	var mode_res_path: String = "res://data/modes/%s.tres" % str(chosen_mode)
+	var mode_data: ModeData = null
+	if ResourceLoader.exists(mode_res_path):
+		mode_data = load(mode_res_path) as ModeData
+	game_mode_manager = GameModeManager.new(mode_data)
+
+	# 1. Mode Torment: Force Torment difficulty (Task 11.2)
+	if chosen_mode == &"torment":
+		diff_tier = 4
+
+	# Apply difficulty scaling
 	if difficulty_manager:
 		difficulty_manager.set_difficulty(diff_tier)
 	elif SFEDifficultyManager.instance:
@@ -524,9 +613,12 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 	if sess and sess.has_method("set_game_mode"):
 		sess.set_game_mode(chosen_mode)
 	elif sess:
-		var mode_res_path: String = "res://data/modes/%s.tres" % str(chosen_mode)
-		if ResourceLoader.exists(mode_res_path):
-			sess.active_mode = load(mode_res_path)
+		sess.active_mode = mode_data
+
+	if sess:
+		sess.set_meta("is_random_selected", is_random)
+		if chosen_mode == &"split_income":
+			sess.split_income_mode = true
 
 	# 3. Start GameSession and calculate initial minerals per SFE5 wiki rules
 	var initial_mins: int = 12000
@@ -540,12 +632,39 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 
 	if economy_manager:
 		economy_manager.reset(initial_mins)
+		if chosen_mode == &"split_income" and "split_income" in economy_manager:
+			economy_manager.split_income = true
 
 	# 4. Setup Story Phase Manager (Fase 9: Zerg -> Protoss 1 -> Protoss 2 -> Jefes Cúspide)
 	if story_phase_manager == null:
 		story_phase_manager = StoryPhaseManager.new(6, 4)
 		if not story_phase_manager.phase_changed.is_connected(_on_story_phase_changed):
 			story_phase_manager.phase_changed.connect(_on_story_phase_changed)
+
+	# Mode Hardcore: disable buff purchases in PlayerConsole, disable Protoss phases, deploy starting roster
+	if chosen_mode == &"hardcore":
+		story_phase_manager.allow_protoss_phases = false
+		if player_console:
+			player_console.allow_buff_purchase = false
+		var rally_origin: Vector3 = command_center.global_position + Vector3(5.0, 0.0, 0.0) if command_center else Vector3(-20.0, 0.0, 24.0)
+		_spawn_hardcore_starting_roster(game_mode_manager.get_hardcore_starting_roster(), rally_origin)
+
+	# Mode Nightmare: cyclical wave progression wire
+	if chosen_mode == &"nightmare":
+		game_mode_manager.nightmare_level_updated.connect(func(lvl: int, slot: int):
+			if sc2_hud_root:
+				var t_name: String = GameModeManager.NIGHTMARE_CYCLE_TYPES[slot - 1] if slot <= GameModeManager.NIGHTMARE_CYCLE_TYPES.size() else "Élite"
+				sc2_hud_root.update_nightmare_status(lvl, slot, t_name)
+			if lvl >= 2:
+				AchievementSystem.unlock_achievement(&"ach_nightmare_survivor")
+		)
+		var first_wave_desc := game_mode_manager.advance_nightmare_wave()
+		if sc2_hud_root:
+			sc2_hud_root.update_nightmare_status(first_wave_desc.get("level", 1), first_wave_desc.get("cycle_slot", 1), first_wave_desc.get("type", ""))
+
+	# Mode Mutation: spawner speed +35%, enemy HP/dmg +25%, mineral bounty +25%
+	if chosen_mode == &"mutation":
+		_apply_mutation_mode_multipliers()
 
 	var bounty_rate: int = 50
 	if economy_manager and "bounty_per_kill" in economy_manager:
@@ -572,6 +691,8 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 		]
 		if diff_tier >= 0 and diff_tier < diff_paths.size() and ResourceLoader.exists(diff_paths[diff_tier]):
 			active_hero.current_difficulty_data = load(diff_paths[diff_tier])
+			if chosen_mode == &"torment" and active_hero.current_difficulty_data:
+				active_hero.current_difficulty_data.permadeath = true
 
 		if not active_hero.revive_countdown_updated.is_connected(_on_hero_revive_countdown_updated):
 			active_hero.revive_countdown_updated.connect(_on_hero_revive_countdown_updated)
@@ -646,6 +767,82 @@ func _on_deployment_confirmed(selected_hero: HeroData, diff_tier: int, is_random
 					first_spawner.unlock()
 					first_spawner._try_spawn_cycle()
 				_refresh_phase_hud()
+
+
+func _spawn_hardcore_starting_roster(roster: Array[Dictionary], origin: Vector3) -> void:
+	var angle_step: float = TAU / 12.0
+	var current_idx: int = 0
+	for entry in roster:
+		var u_type: String = str(entry.get("type", "marine"))
+		var count: int = int(entry.get("count", 1))
+		for _c in range(count):
+			var offset := Vector3(cos(current_idx * angle_step), 0.0, sin(current_idx * angle_step)) * 5.0
+			var spawn_pos := origin + offset
+			var unit := BaseUnit3D.new()
+			unit.name = "%s_elite_%d" % [u_type.capitalize(), current_idx + 1]
+			unit.position = spawn_pos
+			match u_type:
+				"marine":
+					unit.max_health = 45.0
+					unit.attack_damage = 7.0
+					unit.attack_cooldown = 0.6
+					unit.attack_range = 10.0
+					unit.move_speed = 5.0
+				"marauder":
+					unit.max_health = 125.0
+					unit.attack_damage = 10.0
+					unit.attack_cooldown = 1.0
+					unit.attack_range = 6.0
+					unit.move_speed = 4.8
+				"zealot":
+					unit.max_health = 160.0
+					unit.attack_damage = 16.0
+					unit.attack_cooldown = 0.8
+					unit.attack_range = 2.0
+					unit.move_speed = 5.2
+				"stalker":
+					unit.max_health = 160.0
+					unit.attack_damage = 13.0
+					unit.attack_cooldown = 1.0
+					unit.attack_range = 7.0
+					unit.move_speed = 5.5
+				"zergling":
+					unit.max_health = 35.0
+					unit.attack_damage = 5.0
+					unit.attack_cooldown = 0.5
+					unit.attack_range = 1.5
+					unit.move_speed = 6.0
+				"roach":
+					unit.max_health = 145.0
+					unit.attack_damage = 16.0
+					unit.attack_cooldown = 1.4
+					unit.attack_range = 4.0
+					unit.move_speed = 4.5
+			unit.current_health = unit.max_health
+			unit.add_to_group("allies")
+			if unit.has_method("promote_to_elite"):
+				unit.promote_to_elite()
+			elif unit.has_node("EliteComponent"):
+				var el = unit.get_node("EliteComponent")
+				if el.has_method("promote_to_elite"):
+					el.promote_to_elite()
+			else:
+				unit.set_meta("is_elite", true)
+			add_child(unit)
+			current_idx += 1
+
+
+func _apply_mutation_mode_multipliers() -> void:
+	SFEDifficultyManager.enemy_health_multiplier *= 1.25
+	SFEDifficultyManager.enemy_damage_multiplier *= 1.25
+	if economy_manager:
+		economy_manager.bounty_per_kill = int(economy_manager.bounty_per_kill * 1.25)
+	if is_inside_tree():
+		for sp in get_tree().get_nodes_in_group("spawners"):
+			if sp is SpawnerNode:
+				sp.cycle_seconds = maxf(1.0, sp.cycle_seconds / 1.35)
+				sp.max_health *= 1.25
+				sp.current_health = sp.max_health
 
 
 func _on_hero_revive_countdown_updated(remaining: float, total: float) -> void:
@@ -789,6 +986,10 @@ func _on_spawner_unlocked(spawner: SpawnerNode) -> void:
 
 func _on_spawner_step_completed(_sid: StringName, remaining: int) -> void:
 	spawners_destroyed_count += 1
+	if tutorial_manager:
+		tutorial_manager.record_spawner_destroyed()
+	if spawners_destroyed_count >= 3 and match_timer < 300.0:
+		AchievementSystem.unlock_achievement(&"ach_speedrunner")
 	var race: StringName = &"zerg"
 	if story_phase_manager and story_phase_manager.current_phase == StoryPhaseManager.StoryPhase.PROTOSS_1:
 		race = &"protoss"
@@ -1784,6 +1985,67 @@ func _end_game(victory: bool) -> void:
 	var cleared: int = spawners_destroyed_count if not victory else total_sp
 	var sess := _get_game_session()
 	var current_seed: int = sess.map_seed if sess and "map_seed" in sess else 0
+	var diff_tier: int = sess.difficulty_tier if sess and "difficulty_tier" in sess else SFEDifficultyManager.current_difficulty
+
+	# 1. Rank delta calculation & Bank persistence (Tasks 12.1, 12.2)
+	var bosses_slain: int = 0
+	if story_phase_manager:
+		bosses_slain = story_phase_manager.pinnacle_bosses_defeated_count
+	var match_outcome: Dictionary = RankSystem.calculate_match_outcome(
+		"victory" if victory else "defeat",
+		diff_tier,
+		1,
+		bosses_slain
+	)
+	var rank_delta: int = match_outcome.get("delta", 0)
+	var bank: Dictionary = BankManager.load_bank()
+	var cur_rank_pts: int = bank.get("rank_points", 0)
+	var new_rank_pts: int = cur_rank_pts + rank_delta
+	bank["rank_points"] = new_rank_pts
+	BankManager.save_bank(bank)
+
+	# 2. Lifetime stats in PlayerProfileStats (Task 12.10)
+	var profile_stats := PlayerProfileStats.new()
+	var ped_solved: int = 1 if (sess and "pedestal_bonus_active" in sess and sess.pedestal_bonus_active) else 0
+	profile_stats.record_game_finished(
+		victory,
+		diff_tier,
+		total_min,
+		final_kills,
+		bosses_slain,
+		ped_solved
+	)
+
+	# 3. Evaluate and unlock achievements (Tasks 12.3, 12.4, 16.1)
+	var session_unlocked_achievements: Array[String] = []
+	var achievements_enabled: bool = true
+	if sess and sess.has_meta("achievements_enabled"):
+		achievements_enabled = bool(sess.get_meta("achievements_enabled"))
+	elif active_hero and active_hero.hero_data and active_hero.hero_data.is_secret:
+		achievements_enabled = false
+
+	if achievements_enabled:
+		if victory:
+			if AchievementSystem.unlock_achievement(&"ach_first_blood"):
+				session_unlocked_achievements.append("Primera Sangre")
+			if diff_tier >= 3:
+				if AchievementSystem.unlock_achievement(&"ach_brutal_conqueror"):
+					session_unlocked_achievements.append("Conquistador Brutal")
+			if diff_tier >= 4:
+				if AchievementSystem.unlock_achievement(&"ach_torment_conqueror"):
+					session_unlocked_achievements.append("Señor del Tormento")
+			if sess and sess.has_meta("is_random_selected") and bool(sess.get_meta("is_random_selected")):
+				if AchievementSystem.unlock_achievement(&"ach_random_faith"):
+					session_unlocked_achievements.append("Fe en el Destino")
+			if game_mode_manager and game_mode_manager.current_mode_id == &"hardcore":
+				if AchievementSystem.unlock_achievement(&"ach_hardcore_hero"):
+					session_unlocked_achievements.append("Sin Atajos (Hardcore)")
+			if command_center and command_center.current_health >= command_center.max_health:
+				if AchievementSystem.unlock_achievement(&"ach_iron_defense"):
+					session_unlocked_achievements.append("Muralla Inexpugnable")
+		if total_min >= 500000:
+			if AchievementSystem.unlock_achievement(&"ach_mineral_tycoon"):
+				session_unlocked_achievements.append("Magnate del Mineral")
 
 	var modal := SFEGameOverModal.new()
 	modal.setup(
@@ -1794,7 +2056,10 @@ func _end_game(victory: bool) -> void:
 		cleared,
 		total_sp,
 		SFEDifficultyManager.get_difficulty_name(),
-		current_seed
+		current_seed,
+		RankSystem.get_rank_string(new_rank_pts),
+		rank_delta,
+		session_unlocked_achievements
 	)
 	add_child(modal)
 
@@ -1803,10 +2068,15 @@ func _on_all_spawners_cleared() -> void:
 	if story_phase_manager:
 		match story_phase_manager.current_phase:
 			StoryPhaseManager.StoryPhase.ZERG:
-				story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PROTOSS_1)
-				_setup_protoss_spawner_network()
-				_refresh_phase_hud()
-				return
+				if story_phase_manager.allow_protoss_phases:
+					story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PROTOSS_1)
+					_setup_protoss_spawner_network()
+					_refresh_phase_hud()
+					return
+				else:
+					story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PINNACLE_BOSSES)
+					_refresh_phase_hud()
+					return
 			StoryPhaseManager.StoryPhase.PROTOSS_1:
 				story_phase_manager.advance_to_phase(StoryPhaseManager.StoryPhase.PROTOSS_2)
 				_spawn_xelnaga_crystals()

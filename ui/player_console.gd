@@ -12,12 +12,14 @@ const EliteComponent = preload("res://core/components/elite_component.gd")
 const UnitRecruitmentManager = preload("res://core/recruitment/unit_recruitment_manager.gd")
 const SFEEconomyManager = preload("res://core/economy/sfe_economy_manager.gd")
 const GameConfig = preload("res://core/game_config.gd")
+const AchievementSystem = preload("res://core/meta/achievement_system.gd")
 
 var target_unit: Node = null
 var stats_comp: StatsComponent = null
 var buff_comp: BuffComponent = null
 var elite_comp: EliteComponent = null
 var economy_manager: SFEEconomyManager = null
+var allow_buff_purchase: bool = true
 
 # UI Root Containers
 var root_panel: PanelContainer = null
@@ -602,15 +604,33 @@ func _apply_racial_upgrade_effects(upgrade_id: String, count: int) -> void:
 			stats_comp.base_damage += 2.0 * float(count)
 		"unit_concussion":
 			stats_comp.base_max_hp += 25.0 * float(count)
+			if target_unit:
+				target_unit.set_meta("concussive_slow", true)
+				if "concussive_slow" in target_unit:
+					target_unit.concussive_slow = true
 		"unit_cloak":
 			stats_comp.base_max_energy += 30.0 * float(count)
+			if target_unit:
+				if "attack_range" in target_unit:
+					target_unit.attack_range += 1.5 * float(count)
+				if "hero_data" in target_unit and target_unit.hero_data and "attack_range" in target_unit.hero_data:
+					target_unit.hero_data.attack_range += 1.5 * float(count)
 		"unit_void_blade":
 			stats_comp.base_damage += 8.0 * float(count)
 			stats_comp.base_move_speed += 0.5 * float(count)
 		"unit_storm":
 			stats_comp.base_shield += 15.0 * float(count)
+			stats_comp.ability_power_upgrade_bonus += 0.20 * float(count)
+			if target_unit and "hero_data" in target_unit and target_unit.hero_data:
+				target_unit.hero_data.max_shield += 15.0 * float(count)
+				target_unit.hero_data.current_shield = target_unit.hero_data.max_shield
 		"unit_nano":
 			stats_comp.base_max_hp += 150.0 * float(count)
+			if target_unit:
+				var cur_b: float = target_unit.get_meta("healing_power_bonus", 0.0)
+				target_unit.set_meta("healing_power_bonus", cur_b + 0.25 * float(count))
+				if "healing_power" in target_unit:
+					target_unit.healing_power += 0.25 * float(count)
 	stats_comp.mark_dirty()
 
 
@@ -842,6 +862,10 @@ func _refresh_all_tabs() -> void:
 		var check: Dictionary = UnitRecruitmentManager.can_recruit(u_id, economy_manager.current_minerals if economy_manager else 0, cur_sup, max_sup)
 		recruit_buttons[u_id].disabled = not check.get("can_recruit", false)
 
+	# If allow_buff_purchase is false (e.g. Hardcore mode), disable buff tab / purchases
+	if tab_container and tab_container.get_tab_count() > 1:
+		tab_container.set_tab_disabled(1, not allow_buff_purchase)
+
 
 func _on_attribute_clicked(attr_id: String, is_shift: bool) -> void:
 	if not stats_comp or not economy_manager:
@@ -878,7 +902,7 @@ func _on_neutron_armor_pressed() -> void:
 
 
 func _on_buy_buff_pressed(tier: int, buff_id: String, buff_name: String, cost: int) -> void:
-	if not buff_comp or not economy_manager:
+	if not allow_buff_purchase or not buff_comp or not economy_manager:
 		return
 	if economy_manager.current_minerals < cost:
 		return
@@ -893,7 +917,7 @@ func _on_buy_buff_pressed(tier: int, buff_id: String, buff_name: String, cost: i
 
 
 func _on_buy_supreme_pressed(buff_id: String, cost: int) -> void:
-	if not buff_comp or not economy_manager:
+	if not allow_buff_purchase or not buff_comp or not economy_manager:
 		return
 	
 	if buff_id == "ace":
@@ -904,13 +928,31 @@ func _on_buy_supreme_pressed(buff_id: String, cost: int) -> void:
 			buff_comp.unlock_demiurge()
 	elif buff_id == "maxima_experiencia":
 		var hero_lvl := 1
-		if target_unit and "level" in target_unit:
-			hero_lvl = target_unit.level
+		if target_unit:
+			if "experience_component" in target_unit and target_unit.experience_component:
+				hero_lvl = target_unit.experience_component.current_level
+			elif "hero_data" in target_unit and target_unit.hero_data and "xp_level" in target_unit.hero_data:
+				hero_lvl = target_unit.hero_data.xp_level
+			elif "level" in target_unit:
+				hero_lvl = target_unit.level
 		var res := buff_comp.purchase_maxima_experiencia(hero_lvl, economy_manager.current_minerals)
 		if res.get("success", false):
 			var actual_cost: int = res.get("cost", cost)
 			economy_manager.spend_minerals(actual_cost)
-			if target_unit and "level" in target_unit:
-				target_unit.level = 100
+			if target_unit:
+				if "experience_component" in target_unit and target_unit.experience_component:
+					target_unit.experience_component.current_level = 100
+				if "hero_data" in target_unit and target_unit.hero_data and "xp_level" in target_unit.hero_data:
+					target_unit.hero_data.xp_level = 100
+				if "level" in target_unit:
+					target_unit.level = 100
+			var gained: int = maxi(0, 100 - hero_lvl)
+			if stats_comp:
+				stats_comp.strength += gained * 2
+				stats_comp.dexterity += gained * 2
+				stats_comp.intelligence += gained * 2
+				stats_comp.endurance += gained * 2
+				stats_comp.mark_dirty()
+			AchievementSystem.unlock_achievement(&"ach_hero_ascendance")
 	
 	_refresh_all_tabs()

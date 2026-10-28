@@ -11,6 +11,9 @@ const HeroSelector = preload("res://core/heroes/hero_selector.gd")
 const HeroData = preload("res://core/heroes/hero_data.gd")
 const BankManager = preload("res://core/persistence/bank_manager.gd")
 const GameModeManager = preload("res://core/modes/game_mode_manager.gd")
+const RankSystem = preload("res://core/meta/rank_system.gd")
+const AchievementSystem = preload("res://core/meta/achievement_system.gd")
+const SecretHeroManager = preload("res://core/meta/secret_hero_manager.gd")
 
 signal deployment_confirmed(selected_hero: HeroData, difficulty_tier: int, is_random_hero: bool)
 signal mode_selected(mode_id: StringName)
@@ -19,6 +22,7 @@ var selected_mode_id: StringName = &"classic"
 var selected_difficulty: int = 1 # 1 = NORMAL
 var selected_archetype_id: StringName = &"raynor"
 var is_random_selected: bool = false
+var achievements_enabled: bool = true
 var bank_data: Dictionary = {}
 
 # UI Nodes
@@ -75,10 +79,14 @@ func _ready() -> void:
 func load_player_profile() -> void:
 	bank_data = BankManager.load_bank()
 	var acc_id: String = bank_data.get("account_id", "Recruit")
-	var vet_lvl: int = bank_data.get("veterancy_level", 1)
+	var rank_pts: int = bank_data.get("rank_points", 0)
+	var rank_str: String = RankSystem.get_rank_string(rank_pts)
+	var ach_pts: int = AchievementSystem.get_total_achievement_points()
 	var kills: int = bank_data.get("total_kills", 0)
 	if profile_label:
-		profile_label.text = "OPERATOR: %s  |  VETERANCY LEVEL: %d  |  CAREER KILLS: %d" % [acc_id, vet_lvl, kills]
+		profile_label.text = "OPERADOR: %s  |  RANGO: %s (%d pts)  |  LOGROS: %d pts  |  BAJAS: %d" % [
+			acc_id, rank_str, rank_pts, ach_pts, kills
+		]
 
 
 func _build_modal_layout() -> void:
@@ -400,19 +408,36 @@ func _update_hero_selection(id: StringName, is_rand: bool) -> void:
 
 
 func _on_deploy_pressed() -> void:
+	achievements_enabled = true
 	var final_hero: HeroData = null
-	if is_random_selected:
-		final_hero = HeroSelector.select_hero_random()
-	else:
-		var allow_secret: bool = (selected_mode_id == &"debug")
-		final_hero = HeroSelector.select_hero_manual(selected_archetype_id, allow_secret)
-		if final_hero == null:
-			# If user clicked a secret hero without debug, fall back to random roll with bonus
+
+	# Roll Secret Hero if eligible (>= 3000 achievement points and difficulty < Torment (4))
+	var ach_pts: int = AchievementSystem.get_total_achievement_points()
+	if ach_pts >= 3000 and selected_difficulty < 4:
+		var secret_roll: Dictionary = SecretHeroManager.roll_secret_hero_activation(ach_pts, selected_difficulty)
+		if secret_roll.get("activated", false) and secret_roll.get("hero_data") != null:
+			final_hero = secret_roll["hero_data"]
+			achievements_enabled = false
+
+	if final_hero == null:
+		if is_random_selected:
 			final_hero = HeroSelector.select_hero_random()
-			is_random_selected = true
+		else:
+			var allow_secret: bool = (selected_mode_id == &"debug")
+			final_hero = HeroSelector.select_hero_manual(selected_archetype_id, allow_secret)
+			if final_hero == null:
+				# If user clicked a secret hero without debug, fall back to random roll with bonus
+				final_hero = HeroSelector.select_hero_random()
+				is_random_selected = true
 
 	if final_hero == null:
 		final_hero = HeroSelector.select_hero_manual(&"raynor")
+
+	var sess = Engine.get_singleton("GameSession") if Engine.has_singleton("GameSession") else null
+	if not sess and is_inside_tree() and get_tree() and get_tree().root.has_node("GameSession"):
+		sess = get_tree().root.get_node("GameSession")
+	if sess:
+		sess.set_meta("achievements_enabled", achievements_enabled)
 
 	deployment_confirmed.emit(final_hero, selected_difficulty, is_random_selected)
 	visible = false
