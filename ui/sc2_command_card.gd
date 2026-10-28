@@ -316,6 +316,51 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 
+func _resolve_cursor_target() -> Variant:
+	var vp: Viewport = get_viewport()
+	if not vp:
+		return null
+	var cam: Camera3D = vp.get_camera_3d()
+	if not cam:
+		var tree := get_tree()
+		if tree:
+			var rts_cam = tree.get_first_node_in_group("rts_camera")
+			if rts_cam and rts_cam.has_method("get_camera"):
+				cam = rts_cam.get_camera()
+	if not cam or DisplayServer.get_name() == "headless":
+		return null
+
+	var mouse_pos: Vector2 = vp.get_mouse_position()
+	var ray_origin: Vector3 = cam.project_ray_origin(mouse_pos)
+	var ray_dir: Vector3 = cam.project_ray_normal(mouse_pos)
+	var ray_end: Vector3 = ray_origin + (ray_dir * 1000.0)
+
+	var world_3d: World3D = cam.get_world_3d()
+	if world_3d:
+		var space_state: PhysicsDirectSpaceState3D = world_3d.direct_space_state
+		if space_state:
+			var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+			query.collide_with_areas = false
+			query.collide_with_bodies = true
+			query.collision_mask = 7 # Detect 1 (World), 2 (Allies), 4 (Enemies)
+			var result: Dictionary = space_state.intersect_ray(query)
+			if not result.is_empty():
+				var col: Object = result.collider
+				if col is Node3D and (col.is_in_group("enemies") or col.is_in_group("bosses") or (col.get_script() != null and col.get_script().get_global_name() in ["BaseEnemy3D", "SpawnerNode"])):
+					return col
+				var hit_pos: Vector3 = result.position
+				hit_pos.y = 0.0
+				return hit_pos
+
+	var ground_plane := Plane(Vector3.UP, 0.0)
+	var hit = ground_plane.intersects_ray(ray_origin, ray_dir)
+	if hit:
+		hit.y = 0.0
+		return hit
+
+	return null
+
+
 func _on_slot_pressed(slot_idx: int) -> void:
 	if slot_idx >= slot_data.size():
 		return
@@ -326,11 +371,12 @@ func _on_slot_pressed(slot_idx: int) -> void:
 	var slot_type: String = info.get("type", "")
 	if slot_type == "skill":
 		var skill: HeroSkillData = info.get("skill")
+		var target: Variant = _resolve_cursor_target()
 		if bound_unit and is_instance_valid(bound_unit):
 			if bound_unit.has_method("activate_skill"):
-				bound_unit.activate_skill(slot_idx, null)
+				bound_unit.activate_skill(slot_idx, target)
 			elif bound_unit.has_method("cast_skill"):
-				bound_unit.cast_skill(skill, null)
+				bound_unit.cast_skill(skill, target)
 		command_triggered.emit("cast_skill", skill)
 	elif slot_type == "order":
 		var order_id: String = info.get("id", "")

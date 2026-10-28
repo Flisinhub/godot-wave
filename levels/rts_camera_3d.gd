@@ -174,3 +174,48 @@ func pan_to_position(target_pos: Vector3) -> void:
 		position.x = target_pos.x
 		position.z = target_pos.z
 	_clamp_to_bounds()
+
+
+## Returns a Rect2 in world coordinates (X, Z) representing the camera viewport on the ground plane Y = 0.0.
+func get_ground_viewport_rect() -> Rect2:
+	var cur_pos: Vector3 = global_position if is_inside_tree() else position
+	var default_rect := Rect2(cur_pos.x - 16.0, cur_pos.z - 12.0, 32.0, 24.0)
+
+	if not camera or not is_inside_tree() or DisplayServer.get_name() == "headless":
+		return default_rect
+
+	var vp := get_viewport()
+	if not vp:
+		return default_rect
+
+	var win_size: Vector2 = vp.get_visible_rect().size
+	if win_size.x <= 0.0 or win_size.y <= 0.0:
+		return default_rect
+
+	var corners: Array[Vector2] = [
+		Vector2(0.0, 0.0),
+		Vector2(win_size.x, 0.0),
+		Vector2(win_size.x, win_size.y),
+		Vector2(0.0, win_size.y)
+	]
+	var plane := Plane(Vector3.UP, 0.0)
+	var min_x: float = INF
+	var max_x: float = -INF
+	var min_z: float = INF
+	var max_z: float = -INF
+
+	for c in corners:
+		var orig := camera.project_ray_origin(c)
+		var dir := camera.project_ray_normal(c)
+		var hit = plane.intersects_ray(orig, dir)
+		if hit:
+			min_x = minf(min_x, hit.x)
+			max_x = maxf(max_x, hit.x)
+			min_z = minf(min_z, hit.z)
+			max_z = maxf(max_z, hit.z)
+
+	if min_x != INF and max_x != -INF and min_z != INF and max_z != -INF:
+		return Rect2(min_x, min_z, max_x - min_x, max_z - min_z)
+
+	return default_rect
+

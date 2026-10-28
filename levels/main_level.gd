@@ -94,6 +94,7 @@ var active_hero: HeroUnit3D = null
 var is_waves_mode: bool = false
 var start_modal: SFEStartModal = null
 var session_kills: int = 0
+var _last_base_attack_sfx_time: float = -999.0
 
 # Swarm Combat Throttle
 var _swarm_combat_accumulator: float = 0.0
@@ -400,6 +401,10 @@ func _on_scheduled_attack_dispatched(wave_index: int, leader_data: Dictionary, h
 		state_label.text = "¡ASALTO DE LA COLMENA: %s EN CAMINO!" % leader_data.get("leader_name", "Líder")
 		state_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
 
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_voice_alert(&"wave_incoming")
+
 	# Spawn escort swarm wave
 	if swarm_simulation:
 		var escort_type: Variant = leader_data.get("escort_type", &"zergling")
@@ -435,6 +440,10 @@ func _on_nydus_tremor_started(crater_index: int, pos: Vector3, _delay: float) ->
 
 
 func _on_nydus_emerged(_crater_index: int, pos: Vector3, nydus_data: Dictionary) -> void:
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_voice_alert(&"wave_incoming")
+
 	var nydus := BossNydus3D.new()
 	nydus.global_position = pos
 	nydus.max_health = float(nydus_data.get("max_health", 8000.0))
@@ -1168,6 +1177,9 @@ func _on_xelnaga_crystal_harmonized(crystal_index: int) -> void:
 func _spawn_final_pinnacle_boss() -> void:
 	if final_pinnacle_boss and is_instance_valid(final_pinnacle_boss):
 		return
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_voice_alert(&"wave_incoming")
 	var boss := BossHybrid3D.new()
 	boss.name = "FinalBossNarud"
 	boss.boss_name = "Narud / Hybrid Behemoth"
@@ -1884,6 +1896,10 @@ func _spawn_pinnacle_boss(boss_id: StringName, spawn_pos: Vector3) -> PinnacleBo
 	var info: Dictionary = PinnacleBossCatalog.get_boss_info(boss_id)
 	if info.is_empty():
 		return null
+
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_voice_alert(&"wave_incoming")
 
 	var boss := PinnacleBossBase.new()
 	boss.name = "PinnacleBoss_" + str(boss_id).capitalize()
@@ -2910,6 +2926,14 @@ func _on_structure_destroyed(structure: Node) -> void:
 
 
 func _on_structure_damaged(structure: Node, current_hp: float, max_hp: float) -> void:
+	if structure is CommandCenter or (structure is Node and structure.is_in_group("structures")):
+		var now_sec: float = Time.get_ticks_msec() / 1000.0
+		if (now_sec - _last_base_attack_sfx_time) >= 12.0:
+			_last_base_attack_sfx_time = now_sec
+			var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+			if SFXM and SFXM.instance != null:
+				SFXM.instance.play_voice_alert(&"base_under_attack")
+
 	if structure is CommandCenter:
 		if cc_health_label:
 			cc_health_label.text = "Integridad Command Center: %d / %d" % [int(current_hp), int(max_hp)]

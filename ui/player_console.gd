@@ -579,7 +579,12 @@ func _on_racial_upgrade_clicked(upgrade_id: String, is_shift: bool, is_ctrl: boo
 			racial_levels[upgrade_id] += actual_bought
 			_apply_racial_upgrade_effects(upgrade_id, actual_bought)
 			racial_upgrade_purchased.emit(upgrade_id, racial_levels[upgrade_id])
+			_play_purchase_sfx(true)
 			_refresh_all_tabs()
+		else:
+			_play_purchase_sfx(false)
+	else:
+		_play_purchase_sfx(false)
 
 
 func _apply_racial_upgrade_effects(upgrade_id: String, count: int) -> void:
@@ -867,6 +872,15 @@ func _refresh_all_tabs() -> void:
 		tab_container.set_tab_disabled(1, not allow_buff_purchase)
 
 
+func _play_purchase_sfx(success: bool) -> void:
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		if success:
+			SFXM.instance.play_sfx_2d(&"upgrade_complete")
+		else:
+			SFXM.instance.play_voice_alert(&"insufficient_minerals")
+
+
 func _on_attribute_clicked(attr_id: String, is_shift: bool) -> void:
 	if not stats_comp or not economy_manager:
 		return
@@ -880,6 +894,9 @@ func _on_attribute_clicked(attr_id: String, is_shift: bool) -> void:
 		if spent > 0:
 			economy_manager.spend_minerals(spent)
 			attribute_purchased.emit(attr_id, bought)
+			_play_purchase_sfx(true)
+		else:
+			_play_purchase_sfx(false)
 	else:
 		# Single point purchase
 		var cost := stats_comp.get_next_attribute_cost(attr_id)
@@ -887,6 +904,11 @@ func _on_attribute_clicked(attr_id: String, is_shift: bool) -> void:
 			if economy_manager.spend_minerals(cost):
 				stats_comp.invest_attribute(attr_id, 1)
 				attribute_purchased.emit(attr_id, 1)
+				_play_purchase_sfx(true)
+			else:
+				_play_purchase_sfx(false)
+		else:
+			_play_purchase_sfx(false)
 	
 	_refresh_all_tabs()
 
@@ -898,13 +920,19 @@ func _on_neutron_armor_pressed() -> void:
 	if economy_manager.current_minerals >= cost:
 		if economy_manager.spend_minerals(cost):
 			stats_comp.upgrade_neutron_armor()
+			_play_purchase_sfx(true)
 			_refresh_all_tabs()
+		else:
+			_play_purchase_sfx(false)
+	else:
+		_play_purchase_sfx(false)
 
 
 func _on_buy_buff_pressed(tier: int, buff_id: String, buff_name: String, cost: int) -> void:
 	if not allow_buff_purchase or not buff_comp or not economy_manager:
 		return
 	if economy_manager.current_minerals < cost:
+		_play_purchase_sfx(false)
 		return
 	
 	if economy_manager.spend_minerals(cost):
@@ -913,19 +941,25 @@ func _on_buy_buff_pressed(tier: int, buff_id: String, buff_name: String, cost: i
 		if refund > 0:
 			economy_manager.add_minerals(refund)
 		buff_purchased.emit(tier, buff_id)
+		_play_purchase_sfx(true)
 		_refresh_all_tabs()
+	else:
+		_play_purchase_sfx(false)
 
 
 func _on_buy_supreme_pressed(buff_id: String, cost: int) -> void:
 	if not allow_buff_purchase or not buff_comp or not economy_manager:
 		return
 	
+	var success: bool = false
 	if buff_id == "ace":
 		if economy_manager.current_minerals >= cost and economy_manager.spend_minerals(cost):
 			buff_comp.unlock_ace()
+			success = true
 	elif buff_id == "demiurge":
 		if economy_manager.current_minerals >= cost and economy_manager.spend_minerals(cost):
 			buff_comp.unlock_demiurge()
+			success = true
 	elif buff_id == "maxima_experiencia":
 		var hero_lvl := 1
 		if target_unit:
@@ -954,5 +988,7 @@ func _on_buy_supreme_pressed(buff_id: String, cost: int) -> void:
 				stats_comp.endurance += gained * 2
 				stats_comp.mark_dirty()
 			AchievementSystem.unlock_achievement(&"ach_hero_ascendance")
-	
+			success = true
+
+	_play_purchase_sfx(success)
 	_refresh_all_tabs()

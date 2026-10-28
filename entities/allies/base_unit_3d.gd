@@ -32,6 +32,13 @@ var is_selected: bool = false
 var focus_target: Node3D = null
 var _attack_timer: float = 0.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
+
+# Tactical RTS Orders
+var is_attack_moving: bool = false
+var is_patrolling: bool = false
+var patrol_origin: Vector3 = Vector3.ZERO
+var patrol_target: Vector3 = Vector3.ZERO
+var _patrol_forward: bool = true
 var elite_component: EliteComponent = null
 var stats_component: StatsComponent = null
 var buff_component: BuffComponent = null
@@ -181,8 +188,19 @@ func _physics_process(delta: float) -> void:
 	else:
 		focus_target = null
 
-	# Handle normal movement navigation
+	# Handle movement navigation (including Attack-Move & Patrol)
 	if nav_agent and not nav_agent.is_navigation_finished():
+		if is_attack_moving or is_patrolling:
+			var nearby_enemy: Node3D = _find_nearest_enemy_in_range()
+			if nearby_enemy:
+				_stop_movement(delta)
+				_look_at_target(nearby_enemy.global_position, delta)
+				if _attack_timer <= 0.0:
+					_attack_timer = attack_cooldown
+					_fire_at(nearby_enemy)
+				_update_animations()
+				return
+
 		var next_pos: Vector3 = nav_agent.get_next_path_position()
 		var move_dir: Vector3 = (next_pos - global_position)
 		move_dir.y = 0.0
@@ -198,6 +216,15 @@ func _physics_process(delta: float) -> void:
 			_stop_movement(delta)
 		_update_animations()
 		return
+	else:
+		if is_attack_moving:
+			is_attack_moving = false
+		elif is_patrolling:
+			_patrol_forward = not _patrol_forward
+			var next_dest: Vector3 = patrol_target if _patrol_forward else patrol_origin
+			if nav_agent:
+				next_dest.y = 0.0
+				nav_agent.target_position = next_dest
 
 	# Stationary behavior: Auto-Attack nearby enemies within attack_range
 	_stop_movement(delta)
@@ -268,6 +295,10 @@ func _look_at_target(target_pos: Vector3, delta: float) -> void:
 func _fire_at(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
+
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_sfx_3d(&"gauss_fire", global_position if is_inside_tree() else position)
 		
 	var bonus_dmg: float = elite_component.get_bonus_damage() if elite_component else 0.0
 	var final_damage: float = attack_damage + bonus_dmg
@@ -322,9 +353,32 @@ func _apply_movement_velocity(vel: Vector3, delta: float) -> void:
 
 func move_to(target_pos: Vector3) -> void:
 	focus_target = null
+	is_attack_moving = false
+	is_patrolling = false
+	_internal_move_to(target_pos)
+
+
+func _internal_move_to(target_pos: Vector3) -> void:
 	if nav_agent:
 		target_pos.y = 0.0
 		nav_agent.target_position = target_pos
+
+
+func attack_move_to(dest: Vector3) -> void:
+	focus_target = null
+	is_attack_moving = true
+	is_patrolling = false
+	_internal_move_to(dest)
+
+
+func patrol_to(dest: Vector3) -> void:
+	focus_target = null
+	is_attack_moving = false
+	is_patrolling = true
+	patrol_origin = global_position if is_inside_tree() else position
+	patrol_target = dest
+	_patrol_forward = true
+	_internal_move_to(dest)
 
 
 func set_attack_target(target: Node3D) -> void:
@@ -333,6 +387,8 @@ func set_attack_target(target: Node3D) -> void:
 
 func stop_action() -> void:
 	focus_target = null
+	is_attack_moving = false
+	is_patrolling = false
 	if nav_agent:
 		nav_agent.target_position = global_position
 	velocity = Vector3.ZERO

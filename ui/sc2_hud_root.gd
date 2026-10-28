@@ -546,6 +546,10 @@ func _on_command_card_command_triggered(cmd_id: String, _payload: Variant) -> vo
 		open_armory_modal()
 	elif cmd_id == "recall_base":
 		recall_base_requested.emit()
+	elif cmd_id == "ATTACK" or cmd_id == "PATROL":
+		var rts_ctrl = get_tree().current_scene.get_node_or_null("RTSController") if get_tree() and get_tree().current_scene else null
+		if rts_ctrl and rts_ctrl.has_method("set_order_mode_by_name"):
+			rts_ctrl.set_order_mode_by_name(cmd_id)
 
 
 func update_story_phase(phase_title: String, bounty_info: int) -> void:
@@ -613,12 +617,46 @@ func _on_minimap_draw() -> void:
 		return
 
 	var map_half_extent: float = 50.0
+
+	var to_mm := func(wx: float, wz: float) -> Vector2:
+		var nx: float = clampf((wx + map_half_extent) / (map_half_extent * 2.0), 0.04, 0.96)
+		var ny: float = clampf((wz + map_half_extent) / (map_half_extent * 2.0), 0.04, 0.96)
+		return Vector2(nx * box_size.x, ny * box_size.y)
+
+	var tree: SceneTree = get_tree()
+
+	# 1. Base Terran & allied structures: small blue/cyan squares ("structures")
+	if tree:
+		var structures: Array[Node] = tree.get_nodes_in_group("structures")
+		for st in structures:
+			if st is Node3D and is_instance_valid(st):
+				var pos_3d: Vector3 = st.global_position if st.is_inside_tree() else st.position
+				var pt: Vector2 = to_mm.call(pos_3d.x, pos_3d.z)
+				minimap_overlay.draw_rect(Rect2(pt - Vector2(3.0, 3.0), Vector2(6.0, 6.0)), Color(0.2, 0.65, 1.0, 0.95), true)
+				minimap_overlay.draw_rect(Rect2(pt - Vector2(3.0, 3.0), Vector2(6.0, 6.0)), Color(0.05, 0.15, 0.3, 0.9), false, 1.0)
+
+	# 2. Active swarm (SwarmSimulation): small 2.0px red/purple dots
+	if tree and tree.root:
+		var sim: Node = tree.root.find_child("SwarmSimulation", true, false)
+		if sim and "swarm_data" in sim and sim.swarm_data:
+			var s_data = sim.swarm_data
+			var active_count: int = s_data.active_count if "active_count" in s_data else 0
+			var step: int = 1
+			if active_count > 250:
+				step = 2
+			for i in range(0, active_count, step):
+				if not s_data.alive[i]:
+					continue
+				var wx: float = s_data.pos_x[i]
+				var wz: float = s_data.pos_z[i]
+				var pt: Vector2 = to_mm.call(wx, wz)
+				minimap_overlay.draw_circle(pt, 2.0, Color(0.95, 0.22, 0.25, 0.9))
+
+	# 3. Spawners & Bosses: circular markers with borders
 	for m in spawner_markers:
 		var world_pos: Vector3 = m.get("position", Vector3.ZERO)
 		var state: int = m.get("state", 0)
-		var nx: float = clampf((world_pos.x + map_half_extent) / (map_half_extent * 2.0), 0.08, 0.92)
-		var ny: float = clampf((world_pos.z + map_half_extent) / (map_half_extent * 2.0), 0.08, 0.92)
-		var draw_pos := Vector2(nx * box_size.x, ny * box_size.y)
+		var draw_pos: Vector2 = to_mm.call(world_pos.x, world_pos.z)
 
 		var color := Color(0.6, 0.6, 0.6) # Gris = Bloqueado (LOCKED)
 		if state == 1: # ACTIVE
@@ -629,9 +667,54 @@ func _on_minimap_draw() -> void:
 		minimap_overlay.draw_circle(draw_pos, 5.0, color)
 		minimap_overlay.draw_arc(draw_pos, 6.0, 0, TAU, 16, Color(0.05, 0.08, 0.12), 1.5)
 
+	# Bosses: pulsing circular markers
+	if tree:
+		var bosses: Array[Node] = tree.get_nodes_in_group("bosses")
+		var pulse: float = sin(Time.get_ticks_msec() * 0.007) * 1.5
+		for b in bosses:
+			if b is Node3D and is_instance_valid(b) and ("is_dead" not in b or not b.is_dead):
+				var b_pos: Vector3 = b.global_position if b.is_inside_tree() else b.position
+				var pt: Vector2 = to_mm.call(b_pos.x, b_pos.z)
+				var boss_col := Color(1.0, 0.2, 0.85) if (b.get_script() != null and "Pinnacle" in b.get_script().get_global_name()) else Color(1.0, 0.45, 0.1)
+				minimap_overlay.draw_circle(pt, 6.5 + pulse, boss_col)
+				minimap_overlay.draw_arc(pt, 7.5 + pulse, 0, TAU, 16, Color(1.0, 1.0, 1.0, 0.9), 1.5)
+
+	# 4. Allied units & Hero: bright green dots for "allies", prominent gold circle for Hero ("heroes")
+	if tree:
+		var allies: Array[Node] = tree.get_nodes_in_group("allies")
+		for a in allies:
+			if a is Node3D and is_instance_valid(a) and not a.is_in_group("heroes") and ("is_dead" not in a or not a.is_dead):
+				var a_pos: Vector3 = a.global_position if a.is_inside_tree() else a.position
+				var pt: Vector2 = to_mm.call(a_pos.x, a_pos.z)
+				minimap_overlay.draw_circle(pt, 2.5, Color(0.2, 0.95, 0.35, 0.95))
+
+		var heroes: Array[Node] = tree.get_nodes_in_group("heroes")
+		for h in heroes:
+			if h is Node3D and is_instance_valid(h) and ("is_dead" not in h or not h.is_dead):
+				var h_pos: Vector3 = h.global_position if h.is_inside_tree() else h.position
+				var pt: Vector2 = to_mm.call(h_pos.x, h_pos.z)
+				minimap_overlay.draw_circle(pt, 5.0, Color(1.0, 0.85, 0.15, 1.0))
+				minimap_overlay.draw_arc(pt, 5.5, 0, TAU, 16, Color(0.05, 0.05, 0.08, 0.95), 1.5)
+
+	# 5. Camera Viewport Box: white semi-transparent rect representing RTSCamera3D view
+	var cam_rig: Node = tree.get_first_node_in_group("rts_camera") if tree else null
+	if not cam_rig and tree and tree.current_scene:
+		cam_rig = tree.current_scene.get_node_or_null("RTSCamera3D")
+
+	if cam_rig and cam_rig.has_method("get_ground_viewport_rect"):
+		var v_rect: Rect2 = cam_rig.get_ground_viewport_rect()
+		var p_min: Vector2 = to_mm.call(v_rect.position.x, v_rect.position.y)
+		var p_max: Vector2 = to_mm.call(v_rect.position.x + v_rect.size.x, v_rect.position.y + v_rect.size.y)
+		var cam_box := Rect2(p_min, p_max - p_min)
+		minimap_overlay.draw_rect(cam_box, Color(1.0, 1.0, 1.0, 0.12), true)
+		minimap_overlay.draw_rect(cam_box, Color(1.0, 1.0, 1.0, 0.75), false, 1.2)
 
 
 func _process(delta: float) -> void:
+	if DisplayServer.get_name() != "headless":
+		if minimap_overlay:
+			minimap_overlay.queue_redraw()
+
 	if _alert_timer > 0.0:
 		_alert_timer -= delta
 		if _alert_timer <= 0.0:

@@ -68,6 +68,14 @@ var focus_target: Node3D = null
 var _attack_timer: float = 0.0
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 
+# Tactical RTS Orders & SFX
+var is_attack_moving: bool = false
+var is_patrolling: bool = false
+var patrol_origin: Vector3 = Vector3.ZERO
+var patrol_target: Vector3 = Vector3.ZERO
+var _patrol_forward: bool = true
+var _last_weapon_sfx_time: float = -999.0
+
 # Subsystems
 var buff_engine: SFEBuffEngine = null
 var skill_cooldowns: Dictionary = {} # skill_id -> remaining_seconds
@@ -375,6 +383,29 @@ func _physics_process(delta: float) -> void:
 
 	# 6. Handle NavigationAgent movement
 	if nav_agent and not nav_agent.is_navigation_finished():
+		# Attack-Move & Patrol: pause movement and engage if hostiles are in attack range
+		if is_attack_moving or is_patrolling:
+			var nearby_enemy: Node3D = _find_nearest_enemy_in_range()
+			if nearby_enemy:
+				_stop_movement(delta)
+				_look_at_target(nearby_enemy.global_position, delta)
+				if _attack_timer <= 0.0:
+					_attack_timer = attack_cooldown
+					_fire_at(nearby_enemy)
+				_update_animations()
+				return
+			else:
+				var nearby_swarm: Dictionary = _find_nearest_swarm_unit(attack_range)
+				if not nearby_swarm.is_empty():
+					_stop_movement(delta)
+					var swarm_pos: Vector3 = nearby_swarm["position"]
+					_look_at_target(swarm_pos, delta)
+					if _attack_timer <= 0.0:
+						_attack_timer = attack_cooldown
+						_fire_at_swarm(int(nearby_swarm["index"]), swarm_pos)
+					_update_animations()
+					return
+
 		var next_pos: Vector3 = nav_agent.get_next_path_position()
 		var move_dir: Vector3 = (next_pos - global_position)
 		move_dir.y = 0.0
@@ -390,6 +421,15 @@ func _physics_process(delta: float) -> void:
 			_stop_movement(delta)
 		_update_animations()
 		return
+	else:
+		if is_attack_moving:
+			is_attack_moving = false
+		elif is_patrolling:
+			_patrol_forward = not _patrol_forward
+			var next_dest: Vector3 = patrol_target if _patrol_forward else patrol_origin
+			if nav_agent:
+				next_dest.y = 0.0
+				nav_agent.target_position = next_dest
 
 	# 7. Stationary Behavior: Auto-Attack nearby enemies within attack_range (Hostile Nodes & Swarm Units)
 	_stop_movement(delta)
@@ -532,7 +572,29 @@ func _find_nearest_swarm_unit(max_dist: float) -> Dictionary:
 	return {}
 
 
+func _play_weapon_sfx() -> void:
+	var now_sec: float = Time.get_ticks_msec() / 1000.0
+	if (now_sec - _last_weapon_sfx_time) < 0.12:
+		return
+	_last_weapon_sfx_time = now_sec
+	var sound_id: StringName = &"gauss_fire"
+	var arch: StringName = hero_data.archetype_id if hero_data else &"marine"
+	match arch:
+		&"ghost", &"nova", &"spectre":
+			sound_id = &"snipe"
+		&"marauder", &"tychus", &"reaper":
+			sound_id = &"shotgun"
+		&"tassadar", &"zeratul", &"harbinger":
+			sound_id = &"plasma"
+		_:
+			sound_id = &"gauss_fire"
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		SFXM.instance.play_sfx_3d(sound_id, global_position if is_inside_tree() else position)
+
+
 func _fire_at_swarm(target_idx: int, target_pos: Vector3) -> void:
+	_play_weapon_sfx()
 	var sim = _get_swarm_simulation()
 	if sim == null:
 		return
@@ -638,6 +700,7 @@ func take_damage(amount: float) -> void:
 func _fire_at(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
+	_play_weapon_sfx()
 
 	# Tychus Minigun Passive: Each attack stacks minigun cadence buff up to 20 stacks
 	if hero_data and (hero_data.archetype_id == &"tychus" or hero_data.archetype_id == &"marauder"):
@@ -832,8 +895,9 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 		&"penetrating_round":
 			var cur_pos: Vector3 = get_world_pos()
 			var dir: Vector3 = get_facing_direction()
-			if target is Vector3:
-				var delta_v: Vector3 = (target as Vector3) - cur_pos
+			var t_pos: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else Vector3.ZERO)
+			if target is Node3D or target is Vector3:
+				var delta_v: Vector3 = t_pos - cur_pos
 				delta_v.y = 0.0
 				if delta_v.length_squared() > 0.001:
 					dir = delta_v.normalized()
@@ -845,7 +909,7 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 
 		&"orbital_bombardment":
 			var cur_pos: Vector3 = get_world_pos()
-			var bomb_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 12.0))
+			var bomb_center: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else (cur_pos + (get_facing_direction() * 12.0)))
 			var bomb_radius: float = skill.area_radius if skill.area_radius > 0.0 else 8.0
 			_apply_aoe_damage(bomb_center, bomb_radius, skill.base_power, CombatTypes.DamageType.SPELL)
 			_spawn_orbital_bombardment_vfx(bomb_center, bomb_radius)
@@ -858,7 +922,7 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 
 		&"frag_grenade", &"shredder_grenade":
 			var cur_pos: Vector3 = get_world_pos()
-			var nade_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0))
+			var nade_center: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0)))
 			var nade_radius: float = skill.area_radius if skill.area_radius > 0.0 else 4.5
 			_apply_aoe_damage(nade_center, nade_radius, skill.base_power, skill.damage_type)
 			_spawn_grenade_explosion_vfx(nade_center, nade_radius)
@@ -873,7 +937,7 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 			else:
 				target_enemy = _find_nearest_enemy_in_range()
 
-			var target_pos: Vector3 = target_enemy.global_position if (target_enemy and target_enemy.is_inside_tree()) else (cur_pos + get_facing_direction() * (skill.cast_range if skill.cast_range > 0.0 else 14.0))
+			var target_pos: Vector3 = (target_enemy.global_position if target_enemy.is_inside_tree() else target_enemy.position) if (target_enemy and is_instance_valid(target_enemy)) else (cur_pos + get_facing_direction() * (skill.cast_range if skill.cast_range > 0.0 else 14.0))
 			if target_enemy:
 				_apply_single_target_damage(target_enemy, skill.base_power if skill.base_power > 0.0 else 250.0, CombatTypes.DamageType.SPELL)
 			_spawn_snipe_vfx(cur_pos + Vector3(0, 1.2, 0), target_pos + Vector3(0, 0.8, 0))
@@ -886,8 +950,9 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 		&"blink":
 			var cur_pos: Vector3 = get_world_pos()
 			var dest: Vector3 = cur_pos + (get_facing_direction() * 8.0)
-			if target is Vector3:
-				var delta_v: Vector3 = (target as Vector3) - cur_pos
+			var t_pos: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else Vector3.ZERO)
+			if target is Node3D or target is Vector3:
+				var delta_v: Vector3 = t_pos - cur_pos
 				delta_v.y = 0.0
 				if delta_v.length() > 8.0:
 					delta_v = delta_v.normalized() * 8.0
@@ -905,7 +970,7 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 
 		&"psionic_storm":
 			var cur_pos: Vector3 = get_world_pos()
-			var storm_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0))
+			var storm_center: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else (cur_pos + (get_facing_direction() * 6.0)))
 			var storm_radius: float = skill.area_radius if skill.area_radius > 0.0 else 5.2
 			_apply_aoe_damage(storm_center, storm_radius, skill.base_power, CombatTypes.DamageType.SPELL)
 			_spawn_psionic_storm_vfx(storm_center, storm_radius)
@@ -958,7 +1023,7 @@ func cast_skill(skill: HeroSkillData, target: Variant = null) -> bool:
 
 		&"celestial_singularity":
 			var cur_pos: Vector3 = get_world_pos()
-			var sing_center: Vector3 = target if target is Vector3 else (cur_pos + (get_facing_direction() * 8.0))
+			var sing_center: Vector3 = (target.global_position if target.is_inside_tree() else target.position) if (target is Node3D and is_instance_valid(target)) else (target if target is Vector3 else (cur_pos + (get_facing_direction() * 8.0)))
 			var sing_radius: float = skill.area_radius if skill.area_radius > 0.0 else 6.0
 			_apply_gravitational_pull(sing_center, sing_radius)
 			_apply_aoe_damage(sing_center, sing_radius, skill.base_power, CombatTypes.DamageType.SPELL)
@@ -1150,9 +1215,32 @@ func allocate_attribute(attr_name: String, amount: int = 1) -> bool:
 
 func move_to(target_pos: Vector3) -> void:
 	focus_target = null
+	is_attack_moving = false
+	is_patrolling = false
+	_internal_move_to(target_pos)
+
+
+func _internal_move_to(target_pos: Vector3) -> void:
 	if nav_agent:
 		target_pos.y = 0.0
 		nav_agent.target_position = target_pos
+
+
+func attack_move_to(dest: Vector3) -> void:
+	focus_target = null
+	is_attack_moving = true
+	is_patrolling = false
+	_internal_move_to(dest)
+
+
+func patrol_to(dest: Vector3) -> void:
+	focus_target = null
+	is_attack_moving = false
+	is_patrolling = true
+	patrol_origin = global_position if is_inside_tree() else position
+	patrol_target = dest
+	_patrol_forward = true
+	_internal_move_to(dest)
 
 
 func set_attack_target(target: Node3D) -> void:
@@ -1161,6 +1249,8 @@ func set_attack_target(target: Node3D) -> void:
 
 func stop_action() -> void:
 	focus_target = null
+	is_attack_moving = false
+	is_patrolling = false
 	if nav_agent:
 		nav_agent.target_position = global_position
 	velocity = Vector3.ZERO
@@ -1289,6 +1379,12 @@ func apply_archetype_visuals(h_data: HeroData) -> void:
 		&"harbinger":
 			glb_path = "res://assets/models/heroes/harbinger.glb"
 			scale_vec = Vector3(1.25, 1.25, 1.25)
+		&"reaper":
+			glb_path = "res://assets/models/heroes/reaper.glb"
+			scale_vec = Vector3(0.92, 0.92, 0.92)
+		&"spectre":
+			glb_path = "res://assets/models/heroes/spectre.glb"
+			scale_vec = Vector3(0.96, 0.98, 0.96)
 
 	visual_root.scale = scale_vec
 
@@ -1326,6 +1422,16 @@ func apply_archetype_visuals(h_data: HeroData) -> void:
 			mat.emission_enabled = true
 			mat.emission = Color(0.9, 0.4, 1.0)
 			mat.emission_energy_multiplier = 1.5
+		&"reaper":
+			mat.albedo_color = Color(0.12, 0.12, 0.14)
+			mat.emission_enabled = true
+			mat.emission = Color(1.0, 0.45, 0.05)
+			mat.emission_energy_multiplier = 1.3
+		&"spectre":
+			mat.albedo_color = Color(0.08, 0.08, 0.11)
+			mat.emission_enabled = true
+			mat.emission = Color(0.75, 0.2, 1.0)
+			mat.emission_energy_multiplier = 1.1
 
 	var hero_scene: Node = null
 	if not glb_path.is_empty() and FileAccess.file_exists(glb_path):

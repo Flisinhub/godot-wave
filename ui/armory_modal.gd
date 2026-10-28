@@ -143,6 +143,15 @@ func get_current_minerals() -> int:
 	return 0
 
 
+func _play_armory_sfx(success: bool) -> void:
+	var SFXM: GDScript = load("res://core/audio/sfx_manager.gd") as GDScript
+	if SFXM and SFXM.instance != null:
+		if success:
+			SFXM.instance.play_sfx_2d(&"upgrade_complete")
+		else:
+			SFXM.instance.play_voice_alert(&"insufficient_minerals")
+
+
 func can_purchase_ballistics() -> bool:
 	var mgr: Object = _get_upgrade_manager()
 	if mgr != null and mgr.has_method("can_purchase_ballistics"):
@@ -159,6 +168,7 @@ func purchase_ballistics() -> bool:
 			var cost: int = BALLISTICS_COSTS[old_tier] if old_tier < BALLISTICS_COSTS.size() else 0
 			_apply_upgrades_to_scene_heroes(mgr)
 			upgrade_purchased.emit(&"ballistics", new_tier, cost)
+			_play_armory_sfx(true)
 			refresh_ui()
 			return true
 	return false
@@ -180,6 +190,7 @@ func purchase_armor() -> bool:
 			var cost: int = ARMOR_COSTS[old_tier] if old_tier < ARMOR_COSTS.size() else 0
 			_apply_upgrades_to_scene_heroes(mgr)
 			upgrade_purchased.emit(&"armor", new_tier, cost)
+			_play_armory_sfx(true)
 			refresh_ui()
 			return true
 	return false
@@ -211,6 +222,7 @@ func deploy_turret(world_position: Vector3 = Vector3.ZERO) -> Node3D:
 				p.add_child(turret)
 		var dep_count: int = mgr.deployed_turrets.size() if "deployed_turrets" in mgr else 1
 		turret_deployed.emit(turret, MAX_TURRETS - dep_count)
+		_play_armory_sfx(true)
 		refresh_ui()
 	return turret
 
@@ -598,15 +610,18 @@ func _build_turrets_card(parent: VBoxContainer) -> void:
 
 
 func _on_buy_ballistics_pressed() -> void:
-	purchase_ballistics()
+	if not purchase_ballistics():
+		_play_armory_sfx(false)
 
 
 func _on_buy_armor_pressed() -> void:
-	purchase_armor()
+	if not purchase_armor():
+		_play_armory_sfx(false)
 
 
 func _on_deploy_turret_pressed() -> void:
-	deploy_turret()
+	if deploy_turret() == null:
+		_play_armory_sfx(false)
 
 
 func _on_backdrop_gui_input(event: InputEvent) -> void:
